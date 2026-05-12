@@ -1,5 +1,6 @@
 import { createClient } from "@supabase/supabase-js";
 
+// Tenta ler do .env; se não existir usa os valores directos como fallback
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL
   ?? "https://gexlmuclvadddhlbmgkl.supabase.co";
 
@@ -32,10 +33,16 @@ export async function fetchAdminConfig() {
 export async function uploadProof(userId, orderId, file) {
   const ext  = file.name.split(".").pop().toLowerCase();
   const path = `${userId}/${orderId}/${Date.now()}.${ext}`;
+
   const { error } = await sb.storage
     .from("payment-proofs")
     .upload(path, file, { cacheControl: "3600", contentType: file.type });
+
   if (error) throw error;
-  const { data } = await sb.storage.from("payment-proofs").createSignedUrl(path, 3600);
+
+  const { data } = await sb.storage
+    .from("payment-proofs")
+    .createSignedUrl(path, 3600);
+
   return { path, signedUrl: data?.signedUrl ?? null };
 }

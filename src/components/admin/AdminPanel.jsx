@@ -3,7 +3,7 @@ import { sb } from "../../lib/supabase.js";
 import { DESTS, STATUS_META } from "../../lib/constants.js";
 import { Toast } from "../shared/UI.jsx";
 
-// ── ConfigField — componente separado para cada campo (regra dos hooks) ──────
+// ── ConfigField — each field needs its own component so hooks work correctly ──
 function ConfigField({ field, initialValue, onSave }) {
   const [val, setVal] = useState(initialValue ?? "");
   useEffect(() => { setVal(initialValue ?? ""); }, [initialValue]);
@@ -18,7 +18,8 @@ function ConfigField({ field, initialValue, onSave }) {
           type={field.type} placeholder={field.ph}
           value={val} onChange={e => setVal(e.target.value)}
         />
-        <button onClick={() => onSave(field.key, val)}
+        <button
+          onClick={() => onSave(field.key, val)}
           style={{ padding: "10px 14px", border: "none", borderRadius: 9, background: "#6366f1", color: "#fff", cursor: "pointer", fontSize: 12, fontWeight: 800, flexShrink: 0 }}>
           Guardar
         </button>
@@ -112,6 +113,7 @@ export function AdminPanel({ user, onLogout }) {
     const { data } = await sb.from("admin_config").select("key,value");
     if (data) setConfig(Object.fromEntries(data.map(r => [r.key, r.value])));
   }
+
   async function markRead(id) {
     await sb.from("admin_alerts").update({ read: true }).eq("id", id);
     setAlerts(prev => prev.map(a => a.id === id ? { ...a, read: true } : a));
@@ -144,15 +146,16 @@ export function AdminPanel({ user, onLogout }) {
   }
 
   const TABS = [
-    ["alerts", `🔔${unread > 0 ? ` (${unread})` : ""}`],
-    ["orders", "📋"],
-    ["rate",   "📊"],
-    ["config", "⚙️"],
+    ["alerts",  `🔔${unread > 0 ? ` (${unread})` : ""}`],
+    ["orders",  "📋"],
+    ["rate",    "📊"],
+    ["config",  "⚙️"],
   ];
 
   return (
     <div className="adm-shell">
       <Toast toast={toast} />
+
       <div className="adm-hdr">
         <div className="adm-logo">
           ⚙️ Bridge Admin
@@ -172,29 +175,49 @@ export function AdminPanel({ user, onLogout }) {
 
       <div className="adm-pg">
 
+        {/* ── ALERTS ── */}
         {tab === "alerts" && (
           <>
+            {/* Stats */}
             {stats && (
               <div className="adm-stat-grid">
-                <div className="adm-stat"><div className="adm-stat-val">{stats.orders_completed ?? 0}</div><div className="adm-stat-lbl">Pedidos hoje</div></div>
-                <div className="adm-stat"><div className="adm-stat-val">${parseFloat(stats.total_usd_sent ?? 0).toFixed(0)}</div><div className="adm-stat-lbl">USD enviados</div></div>
-                <div className="adm-stat"><div className="adm-stat-val">{stats.orders_pending ?? 0}</div><div className="adm-stat-lbl">Pendentes</div></div>
-                <div className="adm-stat"><div className="adm-stat-val">{parseFloat(stats.current_rate ?? rate.applied_rate).toLocaleString("pt-AO")}</div><div className="adm-stat-lbl">Kz/$ actual</div></div>
+                <div className="adm-stat">
+                  <div className="adm-stat-val">{stats.orders_completed ?? 0}</div>
+                  <div className="adm-stat-lbl">Pedidos hoje</div>
+                </div>
+                <div className="adm-stat">
+                  <div className="adm-stat-val">${parseFloat(stats.total_usd_sent ?? 0).toFixed(0)}</div>
+                  <div className="adm-stat-lbl">USD enviados hoje</div>
+                </div>
+                <div className="adm-stat">
+                  <div className="adm-stat-val">{stats.orders_pending ?? 0}</div>
+                  <div className="adm-stat-lbl">A aguardar pagto.</div>
+                </div>
+                <div className="adm-stat">
+                  <div className="adm-stat-val">{parseFloat(stats.current_rate ?? rate.applied_rate).toLocaleString("pt-AO")}</div>
+                  <div className="adm-stat-lbl">Kz/$ actual</div>
+                </div>
               </div>
             )}
+
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
-              <span className="adm-section" style={{ marginBottom: 0 }}>Notificações</span>
+              <span className="adm-section" style={{ marginBottom: 0 }}>Notificações em tempo real</span>
               {unread > 0 && <button onClick={markAllRead} style={{ background: "none", border: "none", fontSize: 10, fontWeight: 700, color: "#6366f1", cursor: "pointer" }}>Marcar todas lidas</button>}
             </div>
+
             {alerts.length === 0 && (
               <div style={{ textAlign: "center", padding: "36px 0", color: "#334155", fontSize: 13, fontWeight: 600 }}>
                 <div style={{ fontSize: 34, marginBottom: 8 }}>🔕</div>Sem notificações
               </div>
             )}
+
             {alerts.map(a => (
-              <div key={a.id} className={`adm-card${!a.read ? " alert-new" : ""}`} onClick={() => !a.read && markRead(a.id)}>
+              <div key={a.id} className={`adm-card${!a.read ? " alert-new" : ""}`}
+                onClick={() => !a.read && markRead(a.id)}>
                 <div className="adm-alert-type" style={{ color: ALERT_COLOR[a.type] ?? "#94a3b8" }}>
-                  {a.type === "new_order" ? "🛒 NOVO PEDIDO" : a.type === "payment_received" ? "💰 PAGAMENTO RECEBIDO" : "🔔 ALERTA"}
+                  {a.type === "new_order" ? "🛒 NOVO PEDIDO"
+                    : a.type === "payment_received" ? "💰 PAGAMENTO RECEBIDO"
+                    : "🔔 ALERTA"}
                 </div>
                 <div className="adm-alert-title">{a.title}</div>
                 <div className="adm-alert-body">{a.body}</div>
@@ -209,44 +232,61 @@ export function AdminPanel({ user, onLogout }) {
           </>
         )}
 
+        {/* ── ORDERS ── */}
         {tab === "orders" && (
           <>
             <span className="adm-section">Todos os pedidos</span>
             {orders.map(o => {
-              const d  = DESTS.find(x => x.id === o.destination);
-              const sm = STATUS_META[o.status] ?? STATUS_META.failed;
+              const d     = DESTS.find(x => x.id === o.destination);
+              const sm    = STATUS_META[o.status] ?? STATUS_META.failed;
               const proof = proofs[o.id];
               return (
                 <div key={o.id} className="adm-card" style={{ cursor: "default" }}>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 7 }}>
                     <div>
                       <div style={{ fontSize: 9, fontFamily: "monospace", color: "#334155", fontWeight: 700 }}>{o.order_ref ?? "#" + o.id.slice(0, 8).toUpperCase()}</div>
-                      <div style={{ fontSize: 12, fontWeight: 700, color: "#e2e8f0", marginTop: 2 }}>{d?.icon} {d?.label} · {o.destination_account}</div>
+                      <div style={{ fontSize: 12, fontWeight: 700, color: "#e2e8f0", marginTop: 2 }}>
+                        {d?.icon} {d?.label} · {o.destination_account}
+                      </div>
                     </div>
                     <div style={{ textAlign: "right" }}>
                       <div style={{ fontSize: 17, fontWeight: 900, color: "#a5b4fc" }}>${parseFloat(o.amount_usd).toFixed(2)}</div>
                       <div style={{ fontSize: 10, color: "#334155", fontFamily: "monospace" }}>{parseFloat(o.amount_aoa).toLocaleString("pt-AO")} Kz</div>
                     </div>
                   </div>
+
                   <span className="pill" style={{ background: "rgba(255,255,255,.05)", color: sm.color, border: `1px solid ${sm.color}44`, marginBottom: 5 }}>
                     {sm.icon} {sm.label}
                   </span>
+
                   <div style={{ fontSize: 10, color: "#64748b", fontWeight: 500, marginTop: 4 }}>
                     Taxa {parseFloat(o.rate_applied).toLocaleString("pt-AO")} Kz/$ · {new Date(o.created_at).toLocaleString("pt-AO")}
                   </div>
+
                   {proof && (
                     <div className="proof-box">
-                      <div style={{ fontSize: 9, fontWeight: 800, color: "#10b981", textTransform: "uppercase", letterSpacing: .4, marginBottom: 3 }}>📄 Comprovante recebido</div>
+                      <div style={{ fontSize: 9, fontWeight: 800, color: "#10b981", textTransform: "uppercase", letterSpacing: .4, marginBottom: 3 }}>
+                        📄 Comprovante recebido
+                      </div>
                       {proof.file_url?.startsWith("https") ? (
-                        <a href={proof.file_url} target="_blank" rel="noopener noreferrer" className="proof-link">🔗 Ver ficheiro →</a>
+                        <a href={proof.file_url} target="_blank" rel="noopener noreferrer" className="proof-link">
+                          🔗 Ver ficheiro →
+                        </a>
                       ) : (
-                        <div style={{ fontSize: 11, color: "#94a3b8", fontWeight: 500 }}>{proof.file_name || proof.tx_reference || proof.file_url}</div>
+                        <div style={{ fontSize: 11, color: "#94a3b8", fontWeight: 500 }}>
+                          {proof.file_name || proof.tx_reference || proof.file_url}
+                        </div>
                       )}
-                      <div style={{ fontSize: 9, color: "#334155", marginTop: 3 }}>{new Date(proof.created_at).toLocaleString("pt-AO")}</div>
+                      <div style={{ fontSize: 9, color: "#334155", marginTop: 3 }}>
+                        {new Date(proof.created_at).toLocaleString("pt-AO")}
+                      </div>
                     </div>
                   )}
+
                   {(o.status === "awaiting_payment" || o.status === "payment_received") && (
-                    <button className="adm-sent-btn" onClick={() => markSent(o.id)}>✅ Confirmar envio do dólar</button>
+                    <button className="adm-sent-btn" onClick={() => markSent(o.id)}>
+                      ✅ Confirmar envio do dólar
+                    </button>
                   )}
                 </div>
               );
@@ -254,6 +294,7 @@ export function AdminPanel({ user, onLogout }) {
           </>
         )}
 
+        {/* ── RATE ── */}
         {tab === "rate" && (
           <>
             <span className="adm-section">Câmbio actual</span>
@@ -265,6 +306,7 @@ export function AdminPanel({ user, onLogout }) {
                 Base {parseFloat(rate.base_rate).toLocaleString("pt-AO")} + Margem {parseFloat(rate.margin)} Kz
               </div>
             </div>
+
             <span className="adm-section">Publicar novo câmbio</span>
             <div className="adm-card" style={{ cursor: "default" }}>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 10 }}>
@@ -292,6 +334,7 @@ export function AdminPanel({ user, onLogout }) {
           </>
         )}
 
+        {/* ── CONFIG ── */}
         {tab === "config" && (
           <ConfigTab config={config} updateConfig={updateConfig} />
         )}
