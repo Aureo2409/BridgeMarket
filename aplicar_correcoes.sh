@@ -131,6 +131,7 @@ export function AdminPanel({ user, onLogout }) {
   const [stats, setStats]     = useState(null);
   const [rate, setRate]       = useState({ base_rate: 1150, margin: 15, applied_rate: 1165 });
   const [config, setConfig]   = useState({});
+  const [kycs, setKycs]       = useState([]);
   const [newBase, setNB]      = useState("");
   const [newMargin, setNM]    = useState("");
   const [rateLoad, setRL]     = useState(false);
@@ -150,6 +151,7 @@ export function AdminPanel({ user, onLogout }) {
         setProofs(prev => ({ ...prev, [p.new.order_id]: p.new }));
         toast_("📄 Comprovante recebido!");
       })
+      .on("postgres_changes", { event: "*", schema: "public", table: "kyc_verifications" }, () => fetchKycs())
       .on("postgres_changes", { event: "*", schema: "public", table: "orders" }, () => { fetchOrders(); fetchStats(); })
       .on("postgres_changes", { event: "INSERT", schema: "public", table: "exchange_rates" }, p => setRate(p.new))
       .subscribe();
@@ -157,8 +159,7 @@ export function AdminPanel({ user, onLogout }) {
   }, []);
 
   async function boot() {
-    await Promise.all([fetchAlerts(), fetchOrders(), fetchProofs(), fetchStats(), fetchConfig()]);
-    const { data } = await sb.from("exchange_rates").select("*").order("fetched_at", { ascending: false }).limit(1).maybeSingle();
+    await Promise.all([fetchAlerts(), fetchOrders(), fetchProofs(), fetchStats(), fetchConfig()g: false }).limit(1).maybeSingle();
     if (data) setRate(data);
   }
 
@@ -181,6 +182,10 @@ export function AdminPanel({ user, onLogout }) {
   async function fetchConfig() {
     const { data } = await sb.from("admin_config").select("key,value");
     if (data) setConfig(Object.fromEntries(data.map(r => [r.key, r.value])));
+  }
+  async function fetchKycs() {
+    const { data } = await sb.from("kyc_verifications").select("*, profiles(full_name, phone)").eq("ocr_status", "pending").order("created_at", { ascending: false });
+    if (data) setKycs(data);
   }
   async function markRead(id) {
     await sb.from("admin_alerts").update({ read: true }).eq("id", id);
@@ -212,11 +217,20 @@ export function AdminPanel({ user, onLogout }) {
     setConfig(prev => ({ ...prev, [key]: value }));
     toast_("✅ Configuração guardada!");
   }
+  async function updateKyc(id, status) {
+    const { error } = await sb.from("kyc_verifications").update({ liveness_status: status, ocr_status: status, updated_at: new Date().toISOString() }).eq("id", id);
+    if (error) toast_(error.message, "err");
+    else {
+      toast_("KYC " + (status === "passed" ? "Aprovado" : "Rejeitado"));
+      fetchKycs();
+    }
+  }
 
   const TABS = [
     ["alerts", `🔔${unread > 0 ? ` (${unread})` : ""}`],
     ["orders", "📋"],
     ["rate",   "📊"],
+    ["kyc",    "👤"],
     ["config", "⚙️"],
   ];
 
@@ -359,6 +373,24 @@ export function AdminPanel({ user, onLogout }) {
                 {rateLoad ? "A publicar..." : "📊 Publicar — propaga em realtime"}
               </button>
             </div>
+          </>
+        )}
+
+        {tab === "kyc" && (
+          <>
+            <span className="adm-section">Verificações de Identidade (KYC)</span>
+            {kycs.length === 0 && <div style={{textAlign:"center", padding:"36px 0", color:"#94a3b8", fontWeight:600, fontSize:13}}>Nenhum KYC pendente de aprovação.</div>}
+            {kycs.map(k => (
+              <div key={k.id} className="adm-card">
+                <div style={{fontSize:13, fontWeight:800, color:"#1e1b4b"}}>{k.profiles?.full_name || "Utilizador"}</div>
+                <div style={{fontSize:11, color:"#64748b", marginBottom:10}}>{k.profiles?.phone || "Sem telefone"}</div>
+                <div style={{fontSize:10, color:"#10b981", fontWeight:600, marginBottom:10}}>✓ Documentos submetidos</div>
+                <div style={{display:"flex", gap:8}}>
+                  <button className="adm-btn" style={{background:"#10b981", flex:1, color:"#fff", border:"none"}} onClick={() => updateKyc(k.id, "passed")}>Aprovar</button>
+                  <button className="adm-btn" style={{background:"#ef4444", flex:1, color:"#fff", border:"none"}} onClick={() => updateKyc(k.id, "rejected")}>Rejeitar</button>
+                </div>
+              </div>
+            ))}
           </>
         )}
 
