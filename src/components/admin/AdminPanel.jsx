@@ -29,11 +29,11 @@ function ConfigField({ field, initialValue, onSave }) {
 }
 
 const CONFIG_FIELDS = [
-  { key: "mcx_number",       label: "Número MCX Express",       type: "text",   ph: "923 000 000" },
-  { key: "mcx_name",         label: "Nome na conta MCX",        type: "text",   ph: "Bridge Marketplace" },
-  { key: "min_amount_usd",   label: "Valor mínimo (USD)",       type: "number", ph: "10" },
-  { key: "max_amount_usd",   label: "Valor máximo (USD)",       type: "number", ph: "5000" },
-  { key: "support_whatsapp", label: "WhatsApp suporte (intl.)", type: "text",   ph: "244923000000" },
+  { key: "mcx_number", label: "Número MCX Express", type: "text", ph: "923 000 000" },
+  { key: "mcx_name", label: "Nome na conta MCX", type: "text", ph: "Bridge Marketplace" },
+  { key: "min_amount_usd", label: "Valor mínimo (USD)", type: "number", ph: "10" },
+  { key: "max_amount_usd", label: "Valor máximo (USD)", type: "number", ph: "5000" },
+  { key: "support_whatsapp", label: "WhatsApp suporte (intl.)", type: "text", ph: "244923000000" },
 ];
 
 function ConfigTab({ config, updateConfig }) {
@@ -48,24 +48,27 @@ function ConfigTab({ config, updateConfig }) {
 }
 
 const ALERT_COLOR = {
-  new_order:        "#f59e0b",
+  new_order: "#f59e0b",
   payment_received: "#10b981",
-  kyc_pending:      "#6366f1",
-  cancelled:        "#ef4444",
+  kyc_pending: "#6366f1",
+  cancelled: "#ef4444",
 };
 
 export function AdminPanel({ user, onLogout }) {
-  const [tab, setTab]         = useState("alerts");
-  const [alerts, setAlerts]   = useState([]);
-  const [orders, setOrders]   = useState([]);
-  const [proofs, setProofs]   = useState({});
-  const [stats, setStats]     = useState(null);
-  const [rate, setRate]       = useState({ base_rate: 1150, margin: 15, applied_rate: 1165 });
-  const [config, setConfig]   = useState({});
-  const [newBase, setNB]      = useState("");
-  const [newMargin, setNM]    = useState("");
-  const [rateLoad, setRL]     = useState(false);
-  const [toast, setToast]     = useState(null);
+  const [tab, setTab] = useState("alerts");
+  const [alerts, setAlerts] = useState([]);
+  const [orders, setOrders] = useState([]);
+  const [proofs, setProofs] = useState({});
+  const [stats, setStats] = useState(null);
+  const [rate, setRate] = useState({ base_rate: 1150, margin: 15, applied_rate: 1165 });
+  const [config, setConfig] = useState({});
+  const [newBase, setNB] = useState("");
+  const [newMargin, setNM] = useState("");
+  const [rateLoad, setRL] = useState(false);
+  const [toast, setToast] = useState(null);
+  const [kycs, setKycs] = useState([]);
+  const [editingOrder, setEditingOrder] = useState(null);
+  const [editForm, setEditForm] = useState({});
 
   const unread = alerts.filter(a => !a.read).length;
   const toast_ = (msg, type = "ok") => { setToast({ msg, type }); setTimeout(() => setToast(null), 3000); };
@@ -81,6 +84,7 @@ export function AdminPanel({ user, onLogout }) {
         setProofs(prev => ({ ...prev, [p.new.order_id]: p.new }));
         toast_("📄 Comprovante recebido!");
       })
+      .on("postgres_changes", { event: "*", schema: "public", table: "kyc_verifications" }, () => fetchKycs())
       .on("postgres_changes", { event: "*", schema: "public", table: "orders" }, () => { fetchOrders(); fetchStats(); })
       .on("postgres_changes", { event: "INSERT", schema: "public", table: "exchange_rates" }, p => setRate(p.new))
       .subscribe();
@@ -88,7 +92,7 @@ export function AdminPanel({ user, onLogout }) {
   }, []);
 
   async function boot() {
-    await Promise.all([fetchAlerts(), fetchOrders(), fetchProofs(), fetchStats(), fetchConfig()]);
+    await Promise.all([fetchAlerts(), fetchOrders(), fetchProofs(), fetchStats(), fetchConfig(), fetchKycs()]);
     const { data } = await sb.from("exchange_rates").select("*").order("fetched_at", { ascending: false }).limit(1).maybeSingle();
     if (data) setRate(data);
   }
@@ -98,7 +102,7 @@ export function AdminPanel({ user, onLogout }) {
     if (data) setAlerts(data);
   }
   async function fetchOrders() {
-    const { data } = await sb.from("orders").select("*").order("created_at", { ascending: false }).limit(60);
+    const { data } = await sb.from("orders").select("*").order("created_at", { ascending: false }).limit(1000);
     if (data) setOrders(data);
   }
   async function fetchProofs() {
@@ -112,6 +116,25 @@ export function AdminPanel({ user, onLogout }) {
   async function fetchConfig() {
     const { data } = await sb.from("admin_config").select("key,value");
     if (data) setConfig(Object.fromEntries(data.map(r => [r.key, r.value])));
+  }
+
+  async function fetchKycs() {
+    const { data } = await sb.from("kyc_verifications").select("*, profiles(full_name, phone)").eq("ocr_status", "pending").order("created_at", { ascending: false });
+    if (!data) return;
+    const updatedKycs = await Promise.all(data.map(async (k) => {
+      let docSigned = k.document_url;
+      let selfieSigned = k.selfie_url;
+      if (k.document_url && !k.document_url.startsWith("http")) {
+        const { data: dData } = await sb.storage.from("kyc-documents").createSignedUrl(k.document_url, 3600);
+        if (dData) docSigned = dData.signedUrl;
+      }
+      if (k.selfie_url && !k.selfie_url.startsWith("http")) {
+        const { data: sData } = await sb.storage.from("kyc-documents").createSignedUrl(k.selfie_url, 3600);
+        if (sData) selfieSigned = sData.signedUrl;
+      }
+      return { ...k, docSigned, selfieSigned };
+    }));
+    setKycs(updatedKycs);
   }
 
   async function markRead(id) {
@@ -130,7 +153,7 @@ export function AdminPanel({ user, onLogout }) {
     else { toast_("✅ Marcado como enviado!"); fetchOrders(); fetchStats(); }
   }
   async function updateRate() {
-    const base   = parseFloat(newBase);
+    const base = parseFloat(newBase);
     const margin = parseFloat(newMargin) || parseFloat(rate.margin);
     if (!base || base <= 0) { toast_("Taxa inválida", "err"); return; }
     setRL(true);
@@ -145,11 +168,62 @@ export function AdminPanel({ user, onLogout }) {
     toast_("✅ Configuração guardada!");
   }
 
+  async function updateKyc(id, status) {
+    const { error } = await sb.from("kyc_verifications").update({ liveness_status: status, ocr_status: status, updated_at: new Date().toISOString() }).eq("id", id);
+    if (error) toast_(error.message, "err");
+    else {
+      toast_("KYC " + (status === "passed" ? "Aprovado" : "Rejeitado"));
+      fetchKycs();
+      sb.functions.invoke("send-kyc-email", { body: { recordId: id, status: status } }).catch(() => { });
+    }
+  }
+
+  async function remindKyc(userId) {
+    toast_("A enviar lembrete...");
+    const { error } = await sb.functions.invoke("remind-kyc", { body: { userId } });
+    if (error) toast_("Erro ao enviar: " + error.message, "err");
+    else toast_("✅ Lembrete enviado com sucesso!");
+  }
+
+  function startEdit(o) { setEditingOrder(o.id); setEditForm({ ...o }); }
+  function cancelEdit() { setEditingOrder(null); }
+  async function saveEdit() {
+    const { error } = await sb.from("orders").update({
+      amount_usd: editForm.amount_usd,
+      amount_aoa: editForm.amount_aoa,
+      rate_applied: editForm.rate_applied,
+      destination: editForm.destination,
+      destination_account: editForm.destination_account,
+      status: editForm.status
+    }).eq("id", editingOrder);
+    if (error) toast_(error.message, "err");
+    else { toast_("✅ Atualizado!"); setEditingOrder(null); fetchOrders(); fetchStats(); }
+  }
+
+  function exportToCSV() {
+    if (orders.length === 0) { toast_("Nenhum pedido", "err"); return; }
+    const headers = ["ID", "Ref", "Data", "Status", "USD", "AOA", "Taxa", "Destino", "Conta"];
+    const rows = orders.map(o => [
+      o.id, o.order_ref || "", new Date(o.created_at).toLocaleString("pt-AO").replace(/,/g, ""), o.status,
+      o.amount_usd, o.amount_aoa, o.rate_applied, o.destination, o.destination_account
+    ]);
+    const csvContent = [headers.join(","), ...rows.map(e => e.join(","))].join("\n");
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const link = document.createElement("a");
+    link.href = URL.createObjectURL(blob);
+    link.download = `pedidos_${new Date().toISOString().slice(0, 10)}.csv`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  }
+
   const TABS = [
-    ["alerts",  `🔔${unread > 0 ? ` (${unread})` : ""}`],
-    ["orders",  "📋"],
-    ["rate",    "📊"],
-    ["config",  "⚙️"],
+    ["alerts", `🔔${unread > 0 ? ` (${unread})` : ""}`],
+    ["orders", "📋"],
+    ["cancelled", "🚫"],
+    ["rate", "📊"],
+    ["kyc", "👤"],
+    ["config", "⚙️"],
   ];
 
   return (
@@ -217,7 +291,8 @@ export function AdminPanel({ user, onLogout }) {
                 <div className="adm-alert-type" style={{ color: ALERT_COLOR[a.type] ?? "#94a3b8" }}>
                   {a.type === "new_order" ? "🛒 NOVO PEDIDO"
                     : a.type === "payment_received" ? "💰 PAGAMENTO RECEBIDO"
-                    : "🔔 ALERTA"}
+                      : a.type === "cancelled" ? "🚫 PEDIDO CANCELADO"
+                        : "🔔 ALERTA"}
                 </div>
                 <div className="adm-alert-title">{a.title}</div>
                 <div className="adm-alert-body">{a.body}</div>
@@ -235,10 +310,14 @@ export function AdminPanel({ user, onLogout }) {
         {/* ── ORDERS ── */}
         {tab === "orders" && (
           <>
-            <span className="adm-section">Todos os pedidos</span>
-            {orders.map(o => {
-              const d     = DESTS.find(x => x.id === o.destination);
-              const sm    = STATUS_META[o.status] ?? STATUS_META.failed;
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
+              <span className="adm-section" style={{ marginBottom: 0 }}>Pedidos pendentes / concluídos</span>
+              <button onClick={exportToCSV} style={{ background: "none", border: "none", fontSize: 10, fontWeight: 700, color: "#10b981", cursor: "pointer" }}>📥 Exportar CSV</button>
+            </div>
+            {orders.filter(o => o.status !== "cancelled" && o.status !== "failed").length === 0 && <div style={{ textAlign: "center", padding: "36px 0", color: "#94a3b8", fontWeight: 600, fontSize: 13 }}>Nenhum pedido activo.</div>}
+            {orders.filter(o => o.status !== "cancelled" && o.status !== "failed").map(o => {
+              const d = DESTS.find(x => x.id === o.destination);
+              const sm = STATUS_META[o.status] ?? STATUS_META.failed;
               const proof = proofs[o.id];
               return (
                 <div key={o.id} className="adm-card" style={{ cursor: "default" }}>
@@ -283,10 +362,37 @@ export function AdminPanel({ user, onLogout }) {
                     </div>
                   )}
 
-                  {(o.status === "awaiting_payment" || o.status === "payment_received") && (
-                    <button className="adm-sent-btn" onClick={() => markSent(o.id)}>
-                      ✅ Confirmar envio do dólar
-                    </button>
+                  {editingOrder === o.id ? (
+                    <div style={{ marginTop: 10, padding: 10, background: "rgba(0,0,0,.2)", borderRadius: 8 }}>
+                      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 10 }}>
+                        <div><div style={{ fontSize: 9, color: "#94a3b8", marginBottom: 3 }}>USD</div><input className="adm-inp" style={{ padding: 6, fontSize: 11, marginBottom: 0 }} type="number" value={editForm.amount_usd} onChange={e => setEditForm({ ...editForm, amount_usd: e.target.value })} /></div>
+                        <div><div style={{ fontSize: 9, color: "#94a3b8", marginBottom: 3 }}>AOA</div><input className="adm-inp" style={{ padding: 6, fontSize: 11, marginBottom: 0 }} type="number" value={editForm.amount_aoa} onChange={e => setEditForm({ ...editForm, amount_aoa: e.target.value })} /></div>
+                        <div><div style={{ fontSize: 9, color: "#94a3b8", marginBottom: 3 }}>Taxa</div><input className="adm-inp" style={{ padding: 6, fontSize: 11, marginBottom: 0 }} type="number" value={editForm.rate_applied} onChange={e => setEditForm({ ...editForm, rate_applied: e.target.value })} /></div>
+                        <div>
+                          <div style={{ fontSize: 9, color: "#94a3b8", marginBottom: 3 }}>Status</div>
+                          <select className="adm-inp" style={{ padding: 6, fontSize: 11, marginBottom: 0 }} value={editForm.status} onChange={e => setEditForm({ ...editForm, status: e.target.value })}>
+                            {Object.keys(STATUS_META).map(k => <option key={k} value={k}>{STATUS_META[k].label}</option>)}
+                          </select>
+                        </div>
+                        <div>
+                          <div style={{ fontSize: 9, color: "#94a3b8", marginBottom: 3 }}>Destino</div>
+                          <select className="adm-inp" style={{ padding: 6, fontSize: 11, marginBottom: 0 }} value={editForm.destination} onChange={e => setEditForm({ ...editForm, destination: e.target.value })}>
+                            {DESTS.map(d => <option key={d.id} value={d.id}>{d.label}</option>)}
+                          </select>
+                        </div>
+                        <div><div style={{ fontSize: 9, color: "#94a3b8", marginBottom: 3 }}>Conta Dest.</div><input className="adm-inp" style={{ padding: 6, fontSize: 11, marginBottom: 0 }} type="text" value={editForm.destination_account} onChange={e => setEditForm({ ...editForm, destination_account: e.target.value })} /></div>
+                      </div>
+                      <div style={{ display: "flex", gap: 8 }}>
+                        <button className="adm-btn" style={{ padding: 8, fontSize: 11 }} onClick={saveEdit}>💾 Guardar</button>
+                        <button className="adm-btn" style={{ padding: 8, fontSize: 11, background: "#475569" }} onClick={cancelEdit}>Cancelar</button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 8 }}>
+                      {(o.status === "awaiting_payment" || o.status === "payment_received") && <button className="adm-sent-btn" style={{ flex: 1, margin: 0 }} onClick={() => markSent(o.id)}>✅ Confirmar envio</button>}
+                      {o.status === "awaiting_kyc" && <button className="adm-sent-btn" style={{ flex: 1, margin: 0, background: "#f59e0b", color: "#fff" }} onClick={() => remindKyc(o.user_id)}>📧 Lembrete KYC</button>}
+                      <button className="adm-sent-btn" style={{ flex: 1, margin: 0, background: "#334155" }} onClick={() => startEdit(o)}>✏️ Editar</button>
+                    </div>
                   )}
                 </div>
               );
@@ -331,6 +437,72 @@ export function AdminPanel({ user, onLogout }) {
                 {rateLoad ? "A publicar..." : "📊 Publicar — propaga em realtime"}
               </button>
             </div>
+          </>
+        )}
+
+        {tab === "cancelled" && (
+          <>
+            <span className="adm-section">Pedidos cancelados</span>
+            {orders.filter(o => o.status === "cancelled" || o.status === "failed").length === 0 && <div style={{ textAlign: "center", padding: "36px 0", color: "#94a3b8", fontWeight: 600, fontSize: 13 }}>Nenhum pedido cancelado.</div>}
+            {orders.filter(o => o.status === "cancelled" || o.status === "failed").map(o => {
+              const d = DESTS.find(x => x.id === o.destination);
+              const sm = STATUS_META[o.status] ?? STATUS_META.failed;
+              return (
+                <div key={o.id} className="adm-card" style={{ cursor: "default" }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 7 }}>
+                    <div>
+                      <div style={{ fontSize: 9, fontFamily: "monospace", color: "#334155", fontWeight: 700 }}>{o.order_ref ?? "#" + o.id.slice(0, 8).toUpperCase()}</div>
+                      <div style={{ fontSize: 12, fontWeight: 700, color: "#e2e8f0", marginTop: 2 }}>{d?.icon} {d?.label} · {o.destination_account}</div>
+                    </div>
+                    <div style={{ textAlign: "right" }}>
+                      <div style={{ fontSize: 17, fontWeight: 900, color: "#a5b4fc" }}>${parseFloat(o.amount_usd).toFixed(2)}</div>
+                      <div style={{ fontSize: 10, color: "#334155", fontFamily: "monospace" }}>{parseFloat(o.amount_aoa).toLocaleString("pt-AO")} Kz</div>
+                    </div>
+                  </div>
+                  <span className="pill" style={{ background: "rgba(255,255,255,.05)", color: sm.color, border: `1px solid ${sm.color}44`, marginBottom: 5 }}>
+                    {sm.icon} {sm.label}
+                  </span>
+                  <div style={{ fontSize: 10, color: "#64748b", fontWeight: 500, marginTop: 4 }}>
+                    Taxa {parseFloat(o.rate_applied).toLocaleString("pt-AO")} Kz/$ · {new Date(o.created_at).toLocaleString("pt-AO")}
+                  </div>
+                </div>
+              );
+            })}
+          </>
+        )}
+
+        {tab === "kyc" && (
+          <>
+            <span className="adm-section">Verificações de Identidade (KYC)</span>
+            {kycs.length === 0 && <div style={{ textAlign: "center", padding: "36px 0", color: "#94a3b8", fontWeight: 600, fontSize: 13 }}>Nenhum KYC pendente de aprovação.</div>}
+            {kycs.map(k => (
+              <div key={k.id} className="adm-card">
+                <div style={{ fontSize: 13, fontWeight: 800, color: "#1e1b4b" }}>{k.profiles?.full_name || "Utilizador"}</div>
+                <div style={{ fontSize: 11, color: "#64748b", marginBottom: 10 }}>{k.profiles?.phone || "Sem telefone"}</div>
+                <div style={{ fontSize: 10, color: "#10b981", fontWeight: 600, marginBottom: 10 }}>✓ Documentos submetidos</div>
+
+                {(k.docSigned || k.selfieSigned) && (
+                  <div style={{ display: "flex", gap: 10, marginBottom: 12 }}>
+                    {k.docSigned && (
+                      <div style={{ flex: 1 }}>
+                        <div style={{ fontSize: 9, color: "#64748b", marginBottom: 4, fontWeight: 700, textTransform: "uppercase" }}>Documento (BI)</div>
+                        <a href={k.docSigned} target="_blank" rel="noreferrer"><img src={k.docSigned} alt="BI" style={{ width: "100%", height: 80, objectFit: "cover", borderRadius: 6, border: "1px solid #cbd5e1" }} /></a>
+                      </div>
+                    )}
+                    {k.selfieSigned && (
+                      <div style={{ flex: 1 }}>
+                        <div style={{ fontSize: 9, color: "#64748b", marginBottom: 4, fontWeight: 700, textTransform: "uppercase" }}>Prova de Vida (Selfie)</div>
+                        <a href={k.selfieSigned} target="_blank" rel="noreferrer"><img src={k.selfieSigned} alt="Selfie" style={{ width: "100%", height: 80, objectFit: "cover", borderRadius: 6, border: "1px solid #cbd5e1" }} /></a>
+                      </div>
+                    )}
+                  </div>
+                )}
+                <div style={{ display: "flex", gap: 8 }}>
+                  <button className="adm-btn" style={{ background: "#10b981", flex: 1, color: "#fff", border: "none" }} onClick={() => updateKyc(k.id, "passed")}>Aprovar</button>
+                  <button className="adm-btn" style={{ background: "#ef4444", flex: 1, color: "#fff", border: "none" }} onClick={() => updateKyc(k.id, "rejected")}>Rejeitar</button>
+                </div>
+              </div>
+            ))}
           </>
         )}
 

@@ -103,29 +103,51 @@ function AuthScreen() {
 function KycOnboarding({ user, currentStep, kycRecord, onLogout }) {
   const [step, setStep] = useState(currentStep);
   const [loading, setLoading] = useState(false);
+  const [selfieFile, setSelfieFile] = useState(null);
+  const [docFile, setDocFile] = useState(null);
 
   const isPending = kycRecord?.ocr_status === "pending" || kycRecord?.liveness_status === "pending";
   const isRejected = kycRecord?.ocr_status === "rejected" || kycRecord?.liveness_status === "rejected";
 
+  async function uploadFile(file, path) {
+    const { error } = await sb.storage.from("kyc-documents").upload(path, file, { upsert: true });
+    if (error) throw error;
+    return path; // Retorna apenas o caminho (o Admin gerará o link final na hora)
+  }
+
   async function handleNext() {
     setLoading(true);
-    const updates = { user_id: user.id, updated_at: new Date().toISOString() };
-    if (step === 0) updates.step_personal_done = true;
-    if (step === 1) updates.liveness_status = "pending";
-    if (step === 2) updates.ocr_status = "pending";
+    try {
+      const updates = { user_id: user.id, updated_at: new Date().toISOString() };
 
-    // Busca o registo existente para garantir que o upsert não duplica
-    const { data: existing } = await sb.from("kyc_verifications").select("id").eq("user_id", user.id).maybeSingle();
-    if (existing) updates.id = existing.id;
+      if (step === 0) {
+        updates.step_personal_done = true;
+      }
+      if (step === 1) {
+        if (!selfieFile) { alert("Por favor, anexa uma selfie."); setLoading(false); return; }
+        const ext = selfieFile.name.split(".").pop().toLowerCase();
+        updates.selfie_url = await uploadFile(selfieFile, `${user.id}/selfie_${Date.now()}.${ext}`);
+        updates.liveness_status = "pending";
+      }
+      if (step === 2) {
+        if (!docFile) { alert("Por favor, anexa o teu documento (BI/Passaporte)."); setLoading(false); return; }
+        const ext = docFile.name.split(".").pop().toLowerCase();
+        updates.document_url = await uploadFile(docFile, `${user.id}/document_${Date.now()}.${ext}`);
+        updates.ocr_status = "pending";
+      }
 
-    const { error } = await sb.from("kyc_verifications").upsert(updates);
-    setLoading(false);
+      // Busca o registo existente para garantir que o upsert não duplica
+      const { data: existing } = await sb.from("kyc_verifications").select("id").eq("user_id", user.id).maybeSingle();
+      if (existing) updates.id = existing.id;
 
-    if (!error) {
+      const { error } = await sb.from("kyc_verifications").upsert(updates);
+      if (error) throw error;
+
       setStep(s => s + 1);
-    } else {
-      alert("Erro ao guardar o progresso do KYC: " + error.message);
+    } catch (e) {
+      alert("Erro ao enviar o ficheiro: " + e.message);
     }
+    setLoading(false);
   }
 
   async function handleRetry() {
@@ -187,8 +209,21 @@ function KycOnboarding({ user, currentStep, kycRecord, onLogout }) {
             {step === 2 && "Nesta etapa, fazes o upload do teu BI ou Passaporte."}
           </div>
 
+          {step === 1 && (
+            <div style={{ marginBottom: 16 }}>
+              <label className="lbl">Tira ou anexa uma Selfie</label>
+              <input type="file" accept="image/*" capture="user" onChange={e => setSelfieFile(e.target.files[0])} className="inp" style={{ padding: "8px", cursor: "pointer" }} />
+            </div>
+          )}
+          {step === 2 && (
+            <div style={{ marginBottom: 16 }}>
+              <label className="lbl">Fotografia do BI ou Passaporte</label>
+              <input type="file" accept="image/*" onChange={e => setDocFile(e.target.files[0])} className="inp" style={{ padding: "8px", cursor: "pointer" }} />
+            </div>
+          )}
+
           <button className="btn btn-p" onClick={handleNext} disabled={loading}>
-            {loading ? "A processar..." : step === 2 ? "Enviar para Revisão" : "Simular Etapa Concluída →"}
+            {loading ? "A enviar ficheiros..." : step === 0 ? "Confirmar Dados →" : step === 1 ? "Enviar Selfie →" : "Enviar Documento e Concluir"}
           </button>
           <button className="btn btn-o" onClick={onLogout} style={{ marginTop: 10 }}>Sair</button>
         </div>
@@ -275,6 +310,28 @@ function ClientApp({ user, onLogout }) {
   }
 
   function resetFlow() { setStep(0); setOrder(null); }
+
+  async function handleCancelOrder(orderId) {
+    if (!window.confirm("Tens a certeza que queres cancelar este pedido?")) return;
+    const { error } = await sb.from("orders").update({ status: "cancelled" }).eq("id", orderId).eq("user_id", user.id);
+    if (error) { toast_("Erro ao cancelar: " + error.message, "err"); }
+    else {
+      toast_("🚫 Pedido cancelado.");
+
+      // Enviar notificação em tempo real para o painel do Administrador
+      const oRef = (orders.find(o => o.id === orderId) || currentOrder)?.order_ref || `#${orderId.slice(0, 8).toUpperCase()}`;
+      sb.from("admin_alerts").insert({
+        type: "cancelled",
+        title: "Pedido Cancelado",
+        body: `O cliente cancelou o pedido ${oRef}.`,
+        order_id: orderId
+      }).then(); // Executa em background (não atrasa a interface do cliente)
+
+      if (currentOrder?.id === orderId) resetFlow();
+      loadOrders();
+    }
+  }
+
   const destInfo = DESTS.find(d => d.id === currentOrder?.destination);
   const applied = parseFloat(rate.applied_rate) || 1165;
 
@@ -297,7 +354,7 @@ function ClientApp({ user, onLogout }) {
       {showOrders ? (
         <div className="pg">
           <div style={{ fontWeight: 900, fontSize: 17, color: "#1e1b4b", marginBottom: 12, letterSpacing: "-.4px" }}>Os meus pedidos</div>
-          <OrderList orders={orders} />
+          <OrderList orders={orders} onCancel={handleCancelOrder} />
         </div>
       ) : (
         <>
@@ -328,7 +385,7 @@ function ClientApp({ user, onLogout }) {
                   ))}
                 </div>
                 <button className="btn btn-p" onClick={() => setStep(2)}>Já paguei — Enviar comprovante →</button>
-                <button className="btn btn-o" onClick={resetFlow}>← Alterar pedido</button>
+                <button className="btn btn-o" onClick={() => handleCancelOrder(currentOrder.id)}>← Cancelar pedido</button>
               </>
             )}
 
