@@ -56,6 +56,12 @@ const model = genAI.getGenerativeModel({
 // Utiliza um Map para guardar as sessões de chat de cada utilizador
 const userChats = new Map();
 
+// Limpeza periódica a cada 24 horas para evitar vazamento de memória (Memory Leak)
+setInterval(() => {
+    userChats.clear();
+    console.log('🧹 Cache de chats locais limpo para libertar memória do servidor.');
+}, 24 * 60 * 60 * 1000);
+
 // 5. Lógica de resposta a mensagens
 client.on('message', async (msg) => {
     // Ignorar status e mensagens de grupos
@@ -86,9 +92,13 @@ client.on('message', async (msg) => {
 
         // Guarda o histórico atualizado no Supabase (faz Update ou Insert)
         const updatedHistory = await chat.getHistory();
-        await supabase
+        const { error: dbError } = await supabase
             .from('bot_history')
             .upsert({ phone: msg.from, history: updatedHistory }, { onConflict: 'phone' });
+
+        if (dbError) {
+            console.error('Erro ao guardar histórico no Supabase:', dbError);
+        }
     } catch (error) {
         console.error('Erro na integração com a IA:', error);
         msg.reply('🔒 Ocorreu uma interrupção inesperada nos nossos sistemas. Por favor, tente novamente em instantes ou contacte a linha de suporte direto no número 52 340023.');

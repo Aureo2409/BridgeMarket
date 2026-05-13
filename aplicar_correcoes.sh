@@ -229,7 +229,7 @@ export function AdminPanel({ user, onLogout }) {
           {unread > 0 && <span className="adm-badge">{unread}</span>}
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-          <span style={{ fontSize: 10, color: "#334155", fontWeight: 600 }}>{user.email}</span>
+          <span style={{ fontSize: 10, color: "#334155", fontWeight: 600 }}>{user?.email || "Admin"}</span>
           <button onClick={onLogout} style={{ background: "#0f172a", border: "1px solid rgba(255,255,255,.1)", borderRadius: 7, padding: "5px 10px", fontSize: 11, fontWeight: 700, color: "#94a3b8", cursor: "pointer" }}>Sair</button>
         </div>
       </div>
