@@ -1,0 +1,30 @@
+providers = ["node"]
+
+[phases.setup]
+# Instala as bibliotecas de sistema (Linux) necessárias para o Puppeteer/WhatsApp Web funcionar
+aptPkgs = [
+  "...",
+  "libnss3",
+  "libnspr4",
+  "libatk1.0-0",
+  "libatk-bridge2.0-0",
+  "libcups2",
+  "libdrm2",
+  "libxkbcommon0",
+  "libxcomposite1",
+  "libxdamage1",
+  "libxfixes3",
+  "libxrandr2",
+  "libgbm1",
+  "libasound2",
+  "libpango-1.0-0",
+  "libgtk-3-0"
+]
+
+[phases.build]
+# Ignora o build do Vite (frontend) para não esgotar a memória do Railway
+cmds = ["npm install"]
+
+[start]
+# Comando exclusivo para arrancar o teu bot
+cmd = "npm start"
