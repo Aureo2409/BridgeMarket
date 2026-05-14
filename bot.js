@@ -27,6 +27,10 @@ const systemInstruction = `
 Papel e Identidade:
 És o assistente virtual da Pixel Flex, chamado "Responda", uma plataforma focada em segurança digital e transformação tecnológica. O teu tom de voz deve refletir a nossa interface de utilizador: minimalista, profissional, objetivo e altamente moderno. Não sejas excessivamente coloquial, mas sê sempre educado, claro e eficiente. Usa mensagens curtas e bem formatadas.
 
+Capacidades Visuais:
+- Se o utilizador enviar um COMPROVATIVO: Identifica o valor, o banco e a data se visível. Confirma que a equipa administrativa vai validar o pagamento.
+- Se o utilizador enviar um DOCUMENTO (ID): Informa que o KYC (Verificação de Identidade) deve ser feito obrigatoriamente no site por motivos de segurança (https://bridge-market-delta.vercel.app).
+
 Diretrizes de Resposta:
 - Clareza e Estrutura: Usa parágrafos curtos. Organiza a informação em tópicos ou listas sempre que o utilizador perguntar sobre múltiplos serviços ou dados.
 - Uso de Emojis: Mantém o minimalismo visual. Usa apenas emojis que remetam a tecnologia, crescimento e aprovação (ex: 🟢, 📊, 💻, 🔒, 📱). Evita excessos.
@@ -192,6 +196,17 @@ setInterval(() => {
     console.log('🧹 Cache de chats locais limpo para libertar memória do servidor.');
 }, 24 * 60 * 60 * 1000);
 
+// 4.5. Função para converter imagens/ficheiros do WhatsApp para a IA (Gemini Vision)
+async function prepareMediaForGemini(msg) {
+    const media = await msg.downloadMedia();
+    return {
+        inlineData: {
+            data: media.data,
+            mimeType: media.mimetype
+        }
+    };
+}
+
 // 5. Lógica de resposta a mensagens
 client.on('message', async (msg) => {
     // Ignorar status e mensagens de grupos
@@ -216,21 +231,31 @@ client.on('message', async (msg) => {
             userChats.set(msg.from, chat);
         }
 
-        // Injeta a taxa de câmbio silenciosamente caso a pergunta seja sobre valores/taxas
-        let finalMessage = msg.body;
-        if (/(taxa|câmbio|cambio|kwanza|kz|dólar|dolar|usd|aoa|preço|valor|custa|pagar)/i.test(msg.body)) {
-            finalMessage = `[INSTRUÇÃO DO SISTEMA (Apenas para tua referência, usa para responder ao cliente): A taxa de câmbio de hoje na Bridge é de ${currentRateStr} Kwanzas por cada 1 Dólar USD.]\n\nMensagem do cliente: ${msg.body}`;
+        let promptPayload = [];
+
+        // Tratar Imagem ou Ficheiro
+        if (msg.hasMedia) {
+            const mediaPart = await prepareMediaForGemini(msg);
+            promptPayload.push(mediaPart);
+            promptPayload.push(msg.body || "Analisa esta imagem/documento e responde de acordo com as tuas instruções.");
+        } else {
+            // Tratar Texto com contexto de taxa
+            let text = msg.body;
+            if (/(taxa|câmbio|cambio|kwanza|kz|dólar|dolar|usd|aoa|preço|valor|custa|pagar)/i.test(text)) {
+                text = `[INSTRUÇÃO DO SISTEMA (Apenas para tua referência, usa para responder ao cliente): A taxa de câmbio de hoje na Bridge é de ${currentRateStr} Kwanzas por cada 1 Dólar USD.]\n\nMensagem do cliente: ${text}`;
+            }
+            promptPayload.push(text);
         }
 
         // Envia a mensagem dentro da sessão (que retém o contexto)
-        const result = await chat.sendMessage(finalMessage);
+        const result = await chat.sendMessage(promptPayload);
         msg.reply(result.response.text());
 
         // Guarda o histórico atualizado no Supabase (faz Update ou Insert)
         const updatedHistory = await chat.getHistory();
         const { error: dbError } = await supabase
             .from('bot_history')
-            .upsert({ phone: msg.from, history: updatedHistory }, { onConflict: 'phone' });
+            .upsert({ phone: msg.from, history: updatedHistory.slice(-16) }, { onConflict: 'phone' }); // Mantém apenas as últimas interações na DB
 
         if (dbError) {
             console.error('Erro ao guardar histórico no Supabase:', dbError);
