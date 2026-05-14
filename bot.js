@@ -4,6 +4,13 @@ const { GoogleGenerativeAI } = require('@google/generative-ai');
 const { createClient } = require('@supabase/supabase-js');
 require('dotenv').config();
 
+// 0. Servidor Web (Obrigatório para o Railway manter o Bot ligado)
+const express = require('express');
+const app = express();
+const port = process.env.PORT || 3000;
+app.get('/', (req, res) => res.send('🤖 Bot do WhatsApp está online e a funcionar!'));
+app.listen(port, () => console.log(`🌐 Servidor web ativo na porta ${port}`));
+
 // 1. Inicializa o cliente de IA com a tua chave API
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
@@ -38,7 +45,10 @@ Se o utilizador solicitar uma compra de dólares, pedir o link da plataforma, ou
 
 // 3. Inicializa o cliente do WhatsApp
 const client = new Client({
-    authStrategy: new LocalAuth() // Salva a sessão localmente para não precisares de ler o QR sempre
+    authStrategy: new LocalAuth(), // Salva a sessão localmente para não precisares de ler o QR sempre
+    puppeteer: {
+        args: ['--no-sandbox', '--disable-setuid-sandbox'] // Essencial para rodar em servidores cloud/Linux sem crashar
+    }
 });
 
 // Mostra o QR Code no terminal para emparelhar com o WhatsApp
