@@ -3,7 +3,6 @@ providers = ["node"]
 [phases.setup]
 # Instala as bibliotecas de sistema (Linux) necessárias para o Puppeteer/WhatsApp Web funcionar
 aptPkgs = [
-  "...",
   "libnss3",
   "libnspr4",
   "libatk1.0-0",
