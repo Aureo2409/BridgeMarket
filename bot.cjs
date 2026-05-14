@@ -54,14 +54,13 @@ const client = new Client({
 // Mostra o QR Code no terminal para emparelhar com o WhatsApp
 client.on('qr', (qr) => {
     console.log('================================================================================');
+    console.log('    ⚠️ ATENÇÃO: NÃO USES A CÂMARA NORMAL DO TELEMÓVEL! ⚠️                       ');
     console.log('                                                                                ');
-    console.log('    O QR Code no terminal pode estar ilegível.                                  ');
-    console.log('    Usa o link abaixo para ver a imagem nítida num novo separador do navegador: ');
+    console.log('    1. Abre o link abaixo no navegador do teu computador.                       ');
+    console.log('    2. No telemóvel, abre o WhatsApp > Dispositivos Associados.                 ');
+    console.log('    3. Clica em "Conectar um aparelho" e aponta a câmara para o ecrã.           ');
     console.log('                                                                                ');
     console.log(`    🔗 LINK PARA O QR CODE: https://quickchart.io/qr?text=${encodeURIComponent(qr)}&size=400`);
-    console.log('                                                                                ');
-    console.log('    (Se o link não abrir, copia o texto abaixo e cola num gerador de QR Code:)  ');
-    console.log(`    ${qr}`);
     console.log('                                                                                ');
     console.log('================================================================================');
 });
