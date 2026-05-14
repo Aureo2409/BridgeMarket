@@ -28,7 +28,6 @@ VITE_SUPABASE_URL=https://gexlmuclvadddhlbmgkl.supabase.co
 VITE_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdleGxtdWNsdmFkZGRobGJtZ2tsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzgwOTM2NjksImV4cCI6MjA5MzY2OTY2OX0.c4Bgf2C-QcTSsl_CzCvyBHzpFDmKVXVdQ0x34LywFTk
 ENVEOF
   echo "✅ .env criado"
-  echo "✅ .env criado"
 fi
 
 # ── 6. Gerar ficheiro de correcção SQL ────────────────────────
@@ -49,9 +48,14 @@ cat > "$ROOT/setup_delete_user.sql" << 'SQLEOF'
 CREATE OR REPLACE FUNCTION delete_user()
 RETURNS void
 LANGUAGE plpgsql
-SECURITY DEFINER
+SECURITY DEFINER SET search_path = public
 AS $$
 BEGIN
+  DELETE FROM public.admin_alerts WHERE order_id IN (SELECT id FROM public.orders WHERE user_id = auth.uid());
+  DELETE FROM public.payment_proofs WHERE user_id = auth.uid();
+  DELETE FROM public.orders WHERE user_id = auth.uid();
+  DELETE FROM public.kyc_verifications WHERE user_id = auth.uid();
+
   DELETE FROM public.profiles WHERE id = auth.uid();
   DELETE FROM auth.users WHERE id = auth.uid();
 END;

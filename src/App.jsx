@@ -662,12 +662,21 @@ export default function App() {
   }, [darkMode]);
 
   useEffect(() => {
-    sb.auth.getSession().then(async ({ data }) => {
-      const u = data?.session?.user ?? null;
-      setUser(u);
-      if (u) setAdmin(await checkIsAdmin());
-      setReady(true);
-    });
+    sb.auth.getSession()
+      .then(async ({ data }) => {
+        try {
+          const u = data?.session?.user ?? null;
+          setUser(u);
+          if (u) setAdmin(await checkIsAdmin());
+        } finally {
+          setReady(true);
+        }
+      })
+      .catch((err) => {
+        console.error("Erro de sessão:", err);
+        setReady(true); // Garante que a página abre mesmo se houver erro!
+      });
+
     const { data: { subscription } } = sb.auth.onAuthStateChange(async (_e, s) => {
       const u = s?.user ?? null;
       setUser(u);
