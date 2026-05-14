@@ -53,14 +53,15 @@ const client = new Client({
 
 // Mostra o QR Code no terminal para emparelhar com o WhatsApp
 client.on('qr', (qr) => {
-    // O qrcode-terminal pode distorcer a imagem nos logs da nuvem.
-    // A forma mais segura é usar o link direto.
     console.log('================================================================================');
     console.log('                                                                                ');
     console.log('    O QR Code no terminal pode estar ilegível.                                  ');
     console.log('    Usa o link abaixo para ver a imagem nítida num novo separador do navegador: ');
     console.log('                                                                                ');
-    console.log(`    🔗 LINK PARA O QR CODE: https://api.qrserver.com/v1/create-qr-code/?size=400x400&data=${encodeURIComponent(qr)}`);
+    console.log(`    🔗 LINK PARA O QR CODE: https://quickchart.io/qr?text=${encodeURIComponent(qr)}&size=400`);
+    console.log('                                                                                ');
+    console.log('    (Se o link não abrir, copia o texto abaixo e cola num gerador de QR Code:)  ');
+    console.log(`    ${qr}`);
     console.log('                                                                                ');
     console.log('================================================================================');
 });
