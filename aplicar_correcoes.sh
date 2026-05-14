@@ -132,6 +132,7 @@ export function AdminPanel({ user, onLogout }) {
   const [rate, setRate]       = useState({ base_rate: 1150, margin: 15, applied_rate: 1165 });
   const [config, setConfig]   = useState({});
   const [kycs, setKycs]       = useState([]);
+  const [rejectedKycs, setRejectedKycs] = useState([]);
   const [newBase, setNB]      = useState("");
   const [newMargin, setNM]    = useState("");
   const [rateLoad, setRL]     = useState(false);
@@ -142,12 +143,21 @@ export function AdminPanel({ user, onLogout }) {
   const unread = alerts.filter(a => !a.read).length;
   const toast_ = (msg, type = "ok") => { setToast({ msg, type }); setTimeout(() => setToast(null), 3000); };
 
+  function playAlertSound() {
+    try {
+      const audio = new Audio("https://actions.google.com/sounds/v1/cartoon/pop.ogg");
+      audio.volume = 0.6;
+      audio.play().catch(e => console.warn("O navegador bloqueou o áudio automático:", e));
+    } catch (e) {}
+  }
+
   useEffect(() => {
     boot();
     const ch = sb.channel("adm_rt")
       .on("postgres_changes", { event: "INSERT", schema: "public", table: "admin_alerts" }, p => {
         setAlerts(prev => [p.new, ...prev]);
         toast_("🔔 " + p.new.title);
+        playAlertSound();
       })
       .on("postgres_changes", { event: "INSERT", schema: "public", table: "payment_proofs" }, p => {
         setProofs(prev => ({ ...prev, [p.new.order_id]: p.new }));
@@ -187,11 +197,10 @@ export function AdminPanel({ user, onLogout }) {
     if (data) setConfig(Object.fromEntries(data.map(r => [r.key, r.value])));
   }
   async function fetchKycs() {
-    const { data } = await sb.from("kyc_verifications").select("*, profiles(full_name, phone)").eq("ocr_status", "pending").order("created_at", { ascending: false });
-    if (!data) return;
-    
+    const { data: pData } = await sb.from("kyc_verifications").select("*, profiles(full_name, phone)").eq("ocr_status", "pending").order("created_at", { ascending: false });
+    if (pData) {
     // Gerar links frescos automaticamente (válidos por 1 hora) para o Admin ver
-    const updatedKycs = await Promise.all(data.map(async (k) => {
+    const updatedKycs = await Promise.all(pData.map(async (k) => {
       let docSigned = k.document_url;
       let selfieSigned = k.selfie_url;
 
@@ -205,7 +214,11 @@ export function AdminPanel({ user, onLogout }) {
       }
       return { ...k, docSigned, selfieSigned };
     }));
-    setKycs(updatedKycs);
+    setKycs(updatedKycs); } else setKycs([]);
+
+    // Puxar também o histórico de rejeitados
+    const { data: rData } = await sb.from("kyc_verifications").select("*, profiles(full_name, phone)").eq("ocr_status", "rejected").order("updated_at", { ascending: false });
+    if (rData) setRejectedKycs(rData);
   }
   async function markRead(id) {
     await sb.from("admin_alerts").update({ read: true }).eq("id", id);
@@ -238,7 +251,15 @@ export function AdminPanel({ user, onLogout }) {
     toast_("✅ Configuração guardada!");
   }
   async function updateKyc(id, status) {
-    const { error } = await sb.from("kyc_verifications").update({ liveness_status: status, ocr_status: status, updated_at: new Date().toISOString() }).eq("id", id);
+    let reason = null;
+    if (status === "rejected") {
+      reason = window.prompt("Motivo da rejeição (será mostrado ao cliente):");
+      if (reason === null) return;
+    }
+    const updates = { liveness_status: status, ocr_status: status, updated_at: new Date().toISOString() };
+    if (status === "rejected") updates.rejection_reason = reason || "Documentos ilegíveis ou inválidos.";
+
+    const { error } = await sb.from("kyc_verifications").update(updates).eq("id", id);
     if (error) toast_(error.message, "err");
     else {
       toast_("KYC " + (status === "passed" ? "Aprovado" : "Rejeitado"));
@@ -246,7 +267,7 @@ export function AdminPanel({ user, onLogout }) {
 
       // Dispara a Edge Function para enviar o email em background
       sb.functions.invoke("send-kyc-email", {
-        body: { recordId: id, status: status }
+        body: { recordId: k.id, status: status }
       }).catch(err => console.error("Falha ao enviar email:", err));
     }
   }
@@ -562,6 +583,22 @@ export function AdminPanel({ user, onLogout }) {
                 </div>
               </div>
             ))}
+
+            <span className="adm-section" style={{ marginTop: 24 }}>Histórico de Rejeições</span>
+            {rejectedKycs.length === 0 && <div style={{textAlign:"center", padding:"36px 0", color:"#94a3b8", fontWeight:600, fontSize:13}}>Nenhum histórico de rejeições.</div>}
+            {rejectedKycs.map(k => (
+              <div key={k.id} className="adm-card" style={{ opacity: 0.8 }}>
+                <div style={{display:"flex", justifyContent:"space-between", marginBottom:4}}>
+                  <div style={{fontSize:13, fontWeight:800, color:"#1e1b4b"}}>{k.profiles?.full_name || "Utilizador"}</div>
+                  <div style={{fontSize:10, color:"#64748b"}}>{new Date(k.updated_at).toLocaleString("pt-AO")}</div>
+                </div>
+                <div style={{fontSize:11, color:"#64748b", marginBottom:10}}>{k.profiles?.phone || "Sem telefone"}</div>
+                <div style={{fontSize:11, color:"#ef4444", fontWeight: 600, padding: "8px", background: "#fef2f2", borderRadius: "6px", border: "1px solid #fecaca"}}>
+                  <span style={{display:"block", fontSize:9, textTransform:"uppercase", color:"#ef4444", marginBottom:2}}>Motivo da recusa:</span>
+                  {k.rejection_reason || "Documentos inválidos."}
+                </div>
+              </div>
+            ))}
           </>
         )}
 
@@ -585,6 +622,34 @@ VITE_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFz
 ENVEOF
   echo "✅ .env criado"
 fi
+
+# ── 6. Gerar ficheiro de correcção SQL ────────────────────────
+cat > "$ROOT/fix_kyc_constraints.sql" << 'SQLEOF'
+-- 0. Adiciona a coluna para guardar o motivo da rejeição
+ALTER TABLE public.kyc_verifications ADD COLUMN IF NOT EXISTS rejection_reason TEXT;
+
+ALTER TABLE public.kyc_verifications DROP CONSTRAINT IF EXISTS kyc_verifications_liveness_status_check;
+ALTER TABLE public.kyc_verifications DROP CONSTRAINT IF EXISTS kyc_verifications_ocr_status_check;
+
+ALTER TABLE public.kyc_verifications ADD CONSTRAINT kyc_verifications_liveness_status_check CHECK (liveness_status IN ('pending', 'passed', 'rejected'));
+ALTER TABLE public.kyc_verifications ADD CONSTRAINT kyc_verifications_ocr_status_check CHECK (ocr_status IN ('pending', 'passed', 'rejected'));
+SQLEOF
+echo "✅ Ficheiro fix_kyc_constraints.sql gerado"
+
+# ── 7. Gerar ficheiro SQL para Apagar Conta ───────────────────
+cat > "$ROOT/setup_delete_user.sql" << 'SQLEOF'
+CREATE OR REPLACE FUNCTION delete_user()
+RETURNS void
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+BEGIN
+  DELETE FROM public.profiles WHERE id = auth.uid();
+  DELETE FROM auth.users WHERE id = auth.uid();
+END;
+$$;
+SQLEOF
+echo "✅ Ficheiro setup_delete_user.sql gerado"
 
 # ── 5. Git commit e push ──────────────────────────────────────
 echo ""

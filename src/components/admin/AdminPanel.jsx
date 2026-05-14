@@ -3,6 +3,31 @@ import { sb } from "../../lib/supabase.js";
 import { DESTS, STATUS_META } from "../../lib/constants.js";
 import { Toast } from "../shared/UI.jsx";
 
+const Icon = ({ name, size = 16, color = "currentColor", className, style }) => {
+  const paths = {
+    bell: <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9 M13.73 21a2 2 0 0 1-3.46 0" />,
+    bellOff: <><path d="M13.73 21a2 2 0 0 1-3.46 0" /><path d="M18.63 13A17.89 17.89 0 0 1 18 8" /><path d="M6.26 6.26A5.86 5.86 0 0 0 6 8c0 7-3 9-3 9h14" /><path d="M18 8a6 6 0 0 0-9.33-5" /><line x1="1" y1="1" x2="23" y2="23" /></>,
+    clipboard: <><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2" /><rect x="8" y="2" width="8" height="4" rx="1" ry="1" /></>,
+    ban: <><circle cx="12" cy="12" r="10" /><line x1="4.93" y1="4.93" x2="19.07" y2="19.07" /></>,
+    chart: <><line x1="12" y1="20" x2="12" y2="10" /><line x1="18" y1="20" x2="18" y2="4" /><line x1="6" y1="20" x2="6" y2="16" /></>,
+    user: <><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" /><circle cx="12" cy="7" r="4" /></>,
+    settings: <><circle cx="12" cy="12" r="3" /><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z" /></>,
+    cart: <><circle cx="9" cy="21" r="1" /><circle cx="20" cy="21" r="1" /><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6" /></>,
+    money: <><line x1="12" y1="1" x2="12" y2="23" /><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" /></>,
+    check: <polyline points="20 6 9 17 4 12" />,
+    mail: <><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" /><polyline points="22,6 12,13 2,6" /></>,
+    edit: <><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" /><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" /></>,
+    save: <><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z" /><polyline points="17 21 17 13 7 13 7 21" /><polyline points="7 3 7 8 15 8" /></>,
+    download: <><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="7 10 12 15 17 10" /><line x1="12" y1="15" x2="12" y2="3" /></>,
+    file: <><path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z" /><polyline points="13 2 13 9 20 9" /></>
+  };
+  return (
+    <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className} style={style}>
+      {paths[name]}
+    </svg>
+  );
+};
+
 // ── ConfigField — each field needs its own component so hooks work correctly ──
 function ConfigField({ field, initialValue, onSave }) {
   const [val, setVal] = useState(initialValue ?? "");
@@ -67,22 +92,32 @@ export function AdminPanel({ user, onLogout }) {
   const [rateLoad, setRL] = useState(false);
   const [toast, setToast] = useState(null);
   const [kycs, setKycs] = useState([]);
+  const [rejectedKycs, setRejectedKycs] = useState([]);
   const [editingOrder, setEditingOrder] = useState(null);
   const [editForm, setEditForm] = useState({});
 
   const unread = alerts.filter(a => !a.read).length;
   const toast_ = (msg, type = "ok") => { setToast({ msg, type }); setTimeout(() => setToast(null), 3000); };
 
+  function playAlertSound() {
+    try {
+      const audio = new Audio("https://actions.google.com/sounds/v1/cartoon/pop.ogg");
+      audio.volume = 0.6; // Ajusta o volume (0.0 a 1.0)
+      audio.play().catch(e => console.warn("O navegador bloqueou o áudio automático:", e));
+    } catch (e) { }
+  }
+
   useEffect(() => {
     boot();
     const ch = sb.channel("adm_rt")
       .on("postgres_changes", { event: "INSERT", schema: "public", table: "admin_alerts" }, p => {
         setAlerts(prev => [p.new, ...prev]);
-        toast_("🔔 " + p.new.title);
+        toast_("Novo alerta: " + p.new.title);
+        playAlertSound();
       })
       .on("postgres_changes", { event: "INSERT", schema: "public", table: "payment_proofs" }, p => {
         setProofs(prev => ({ ...prev, [p.new.order_id]: p.new }));
-        toast_("📄 Comprovante recebido!");
+        toast_("Comprovante recebido!");
       })
       .on("postgres_changes", { event: "*", schema: "public", table: "kyc_verifications" }, () => fetchKycs())
       .on("postgres_changes", { event: "*", schema: "public", table: "orders" }, () => { fetchOrders(); fetchStats(); })
@@ -119,22 +154,27 @@ export function AdminPanel({ user, onLogout }) {
   }
 
   async function fetchKycs() {
-    const { data } = await sb.from("kyc_verifications").select("*, profiles(full_name, phone)").eq("ocr_status", "pending").order("created_at", { ascending: false });
-    if (!data) return;
-    const updatedKycs = await Promise.all(data.map(async (k) => {
-      let docSigned = k.document_url;
-      let selfieSigned = k.selfie_url;
-      if (k.document_url && !k.document_url.startsWith("http")) {
-        const { data: dData } = await sb.storage.from("kyc-documents").createSignedUrl(k.document_url, 3600);
-        if (dData) docSigned = dData.signedUrl;
-      }
-      if (k.selfie_url && !k.selfie_url.startsWith("http")) {
-        const { data: sData } = await sb.storage.from("kyc-documents").createSignedUrl(k.selfie_url, 3600);
-        if (sData) selfieSigned = sData.signedUrl;
-      }
-      return { ...k, docSigned, selfieSigned };
-    }));
-    setKycs(updatedKycs);
+    const { data: pData } = await sb.from("kyc_verifications").select("*, profiles(full_name, phone)").eq("ocr_status", "pending").order("created_at", { ascending: false });
+    if (pData) {
+      const updatedKycs = await Promise.all(pData.map(async (k) => {
+        let docSigned = k.document_url;
+        let selfieSigned = k.selfie_url;
+        if (k.document_url && !k.document_url.startsWith("http")) {
+          const { data: dData } = await sb.storage.from("kyc-documents").createSignedUrl(k.document_url, 3600);
+          if (dData) docSigned = dData.signedUrl;
+        }
+        if (k.selfie_url && !k.selfie_url.startsWith("http")) {
+          const { data: sData } = await sb.storage.from("kyc-documents").createSignedUrl(k.selfie_url, 3600);
+          if (sData) selfieSigned = sData.signedUrl;
+        }
+        return { ...k, docSigned, selfieSigned };
+      }));
+      setKycs(updatedKycs);
+    } else setKycs([]);
+
+    // Puxar também o histórico de rejeitados
+    const { data: rData } = await sb.from("kyc_verifications").select("*, profiles(full_name, phone)").eq("ocr_status", "rejected").order("updated_at", { ascending: false });
+    if (rData) setRejectedKycs(rData);
   }
 
   async function markRead(id) {
@@ -160,7 +200,7 @@ export function AdminPanel({ user, onLogout }) {
     const { error } = await sb.from("exchange_rates").insert({ base_rate: base, margin, source: "manual" });
     setRL(false);
     if (error) { toast_(error.message, "err"); return; }
-    toast_("📊 Câmbio publicado!"); setNB(""); setNM("");
+    toast_("Câmbio publicado!"); setNB(""); setNM("");
   }
   async function updateConfig(key, value) {
     await sb.from("admin_config").upsert({ key, value, updated_at: new Date().toISOString() });
@@ -168,13 +208,40 @@ export function AdminPanel({ user, onLogout }) {
     toast_("✅ Configuração guardada!");
   }
 
-  async function updateKyc(id, status) {
-    const { error } = await sb.from("kyc_verifications").update({ liveness_status: status, ocr_status: status, updated_at: new Date().toISOString() }).eq("id", id);
-    if (error) toast_(error.message, "err");
-    else {
+  async function updateKyc(k, status) {
+    let reason = null;
+    if (status === "rejected") {
+      reason = window.prompt("Motivo da rejeição (será mostrado ao cliente):");
+      if (reason === null) return; // Cancela a acção se fechares a janela
+    }
+
+    const updates = { liveness_status: status, ocr_status: status, updated_at: new Date().toISOString() };
+    if (status === "rejected") {
+      updates.rejection_reason = reason || "Documentos ilegíveis ou inválidos.";
+
+      // Apagar permanentemente os ficheiros pesados do Supabase Storage
+      const toRemove = [];
+      if (k.document_url && !k.document_url.startsWith("http")) toRemove.push(k.document_url);
+      if (k.selfie_url && !k.selfie_url.startsWith("http")) toRemove.push(k.selfie_url);
+
+      if (toRemove.length > 0) {
+        await sb.storage.from("kyc-documents").remove(toRemove);
+      }
+      updates.document_url = null;
+      updates.selfie_url = null;
+    }
+
+    const { error } = await sb.from("kyc_verifications").update(updates).eq("id", k.id);
+    if (error) {
+      if (error.message.includes("violates check constraint") || error.message.includes("kyc_verifications_liven")) {
+        toast_("Erro SQL: Por favor, corre o ficheiro fix_kyc_constraints.sql no Supabase!", "err");
+      } else {
+        toast_(error.message, "err");
+      }
+    } else {
       toast_("KYC " + (status === "passed" ? "Aprovado" : "Rejeitado"));
       fetchKycs();
-      sb.functions.invoke("send-kyc-email", { body: { recordId: id, status: status } }).catch(() => { });
+      sb.functions.invoke("send-kyc-email", { body: { recordId: k.id, status: status } }).catch(() => { });
     }
   }
 
@@ -231,8 +298,8 @@ export function AdminPanel({ user, onLogout }) {
       <Toast toast={toast} />
 
       <div className="adm-hdr">
-        <div className="adm-logo">
-          ⚙️ Bridge Admin
+        <div className="adm-logo" style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <Icon name="settings" size={18} /> Bridge Admin
           {unread > 0 && <span className="adm-badge">{unread}</span>}
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
@@ -281,25 +348,32 @@ export function AdminPanel({ user, onLogout }) {
 
             {alerts.length === 0 && (
               <div style={{ textAlign: "center", padding: "36px 0", color: "#334155", fontSize: 13, fontWeight: 600 }}>
-                <div style={{ fontSize: 34, marginBottom: 8 }}>🔕</div>Sem notificações
+                <div style={{ marginBottom: 12, display: "flex", justifyContent: "center" }}><Icon name="bellOff" size={34} color="#94a3b8" /></div>Sem notificações
               </div>
             )}
 
             {alerts.map(a => (
-              <div key={a.id} className={`adm-card${!a.read ? " alert-new" : ""}`}
-                onClick={() => !a.read && markRead(a.id)}>
+              <div key={a.id} className={`adm-card${!a.read ? " alert-new" : ""}`} style={{ cursor: "pointer" }}
+                onClick={() => {
+                  if (!a.read) markRead(a.id);
+                  if (a.order_id) {
+                    setTab("orders");
+                    const targetOrder = orders.find(o => o.id === a.order_id);
+                    if (targetOrder) startEdit(targetOrder);
+                  }
+                }}>
                 <div className="adm-alert-type" style={{ color: ALERT_COLOR[a.type] ?? "#94a3b8" }}>
-                  {a.type === "new_order" ? "🛒 NOVO PEDIDO"
-                    : a.type === "payment_received" ? "💰 PAGAMENTO RECEBIDO"
-                      : a.type === "cancelled" ? "🚫 PEDIDO CANCELADO"
-                        : "🔔 ALERTA"}
+                  {a.type === "new_order" ? <div style={{ display: "flex", alignItems: "center", gap: 6 }}><Icon name="cart" size={14} /> NOVO PEDIDO</div>
+                    : a.type === "payment_received" ? <div style={{ display: "flex", alignItems: "center", gap: 6 }}><Icon name="money" size={14} /> PAGAMENTO RECEBIDO</div>
+                      : a.type === "cancelled" ? <div style={{ display: "flex", alignItems: "center", gap: 6 }}><Icon name="ban" size={14} /> PEDIDO CANCELADO</div>
+                        : <div style={{ display: "flex", alignItems: "center", gap: 6 }}><Icon name="bell" size={14} /> ALERTA</div>}
                 </div>
                 <div className="adm-alert-title">{a.title}</div>
                 <div className="adm-alert-body">{a.body}</div>
                 <div className="adm-alert-time">{new Date(a.created_at).toLocaleString("pt-AO")}</div>
                 {a.type === "payment_received" && a.order_id && (
                   <button className="adm-sent-btn" onClick={e => { e.stopPropagation(); markSent(a.order_id); }}>
-                    ✅ Confirmar envio do dólar
+                    <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}><Icon name="check" size={14} /> Confirmar envio</div>
                   </button>
                 )}
               </div>
@@ -312,7 +386,9 @@ export function AdminPanel({ user, onLogout }) {
           <>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
               <span className="adm-section" style={{ marginBottom: 0 }}>Pedidos pendentes / concluídos</span>
-              <button onClick={exportToCSV} style={{ background: "none", border: "none", fontSize: 10, fontWeight: 700, color: "#10b981", cursor: "pointer" }}>📥 Exportar CSV</button>
+              <button onClick={exportToCSV} style={{ background: "none", border: "none", fontSize: 10, fontWeight: 700, color: "#10b981", cursor: "pointer" }}>
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}><Icon name="download" size={14} /> Exportar CSV</div>
+              </button>
             </div>
             {orders.filter(o => o.status !== "cancelled" && o.status !== "failed").length === 0 && <div style={{ textAlign: "center", padding: "36px 0", color: "#94a3b8", fontWeight: 600, fontSize: 13 }}>Nenhum pedido activo.</div>}
             {orders.filter(o => o.status !== "cancelled" && o.status !== "failed").map(o => {
@@ -320,7 +396,7 @@ export function AdminPanel({ user, onLogout }) {
               const sm = STATUS_META[o.status] ?? STATUS_META.failed;
               const proof = proofs[o.id];
               return (
-                <div key={o.id} className="adm-card" style={{ cursor: "default" }}>
+                <div key={o.id} className="adm-card" style={{ cursor: editingOrder === o.id ? "default" : "pointer" }} onClick={() => { if (editingOrder !== o.id) startEdit(o); }}>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 7 }}>
                     <div>
                       <div style={{ fontSize: 9, fontFamily: "monospace", color: "#334155", fontWeight: 700 }}>{o.order_ref ?? "#" + o.id.slice(0, 8).toUpperCase()}</div>
@@ -345,10 +421,10 @@ export function AdminPanel({ user, onLogout }) {
                   {proof && (
                     <div className="proof-box">
                       <div style={{ fontSize: 9, fontWeight: 800, color: "#10b981", textTransform: "uppercase", letterSpacing: .4, marginBottom: 3 }}>
-                        📄 Comprovante recebido
+                        <div style={{ display: "flex", alignItems: "center", gap: 4 }}><Icon name="file" size={12} /> Comprovante recebido</div>
                       </div>
                       {proof.file_url?.startsWith("https") ? (
-                        <a href={proof.file_url} target="_blank" rel="noopener noreferrer" className="proof-link">
+                        <a href={proof.file_url} target="_blank" rel="noopener noreferrer" className="proof-link" onClick={e => e.stopPropagation()}>
                           🔗 Ver ficheiro →
                         </a>
                       ) : (
@@ -383,15 +459,15 @@ export function AdminPanel({ user, onLogout }) {
                         <div><div style={{ fontSize: 9, color: "#94a3b8", marginBottom: 3 }}>Conta Dest.</div><input className="adm-inp" style={{ padding: 6, fontSize: 11, marginBottom: 0 }} type="text" value={editForm.destination_account} onChange={e => setEditForm({ ...editForm, destination_account: e.target.value })} /></div>
                       </div>
                       <div style={{ display: "flex", gap: 8 }}>
-                        <button className="adm-btn" style={{ padding: 8, fontSize: 11 }} onClick={saveEdit}>💾 Guardar</button>
+                        <button className="adm-btn" style={{ padding: 8, fontSize: 11 }} onClick={saveEdit}><div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}><Icon name="save" size={14} /> Guardar</div></button>
                         <button className="adm-btn" style={{ padding: 8, fontSize: 11, background: "#475569" }} onClick={cancelEdit}>Cancelar</button>
                       </div>
                     </div>
                   ) : (
                     <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 8 }}>
-                      {(o.status === "awaiting_payment" || o.status === "payment_received") && <button className="adm-sent-btn" style={{ flex: 1, margin: 0 }} onClick={() => markSent(o.id)}>✅ Confirmar envio</button>}
-                      {o.status === "awaiting_kyc" && <button className="adm-sent-btn" style={{ flex: 1, margin: 0, background: "#f59e0b", color: "#fff" }} onClick={() => remindKyc(o.user_id)}>📧 Lembrete KYC</button>}
-                      <button className="adm-sent-btn" style={{ flex: 1, margin: 0, background: "#334155" }} onClick={() => startEdit(o)}>✏️ Editar</button>
+                      {(o.status === "awaiting_payment" || o.status === "payment_received") && <button className="adm-sent-btn" style={{ flex: 1, margin: 0 }} onClick={(e) => { e.stopPropagation(); markSent(o.id); }}><div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}><Icon name="check" size={14} /> Confirmar envio</div></button>}
+                      {o.status === "awaiting_kyc" && <button className="adm-sent-btn" style={{ flex: 1, margin: 0, background: "#f59e0b", color: "#fff" }} onClick={(e) => { e.stopPropagation(); remindKyc(o.user_id); }}><div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}><Icon name="mail" size={14} /> Lembrete KYC</div></button>}
+                      <button className="adm-sent-btn" style={{ flex: 1, margin: 0, background: "#334155" }} onClick={(e) => { e.stopPropagation(); startEdit(o); }}><div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}><Icon name="edit" size={14} /> Editar</div></button>
                     </div>
                   )}
                 </div>
@@ -434,7 +510,7 @@ export function AdminPanel({ user, onLogout }) {
                 </div>
               )}
               <button className="adm-btn" onClick={updateRate} disabled={rateLoad}>
-                {rateLoad ? "A publicar..." : "📊 Publicar — propaga em realtime"}
+                {rateLoad ? "A publicar..." : <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}><Icon name="chart" size={14} /> Publicar — propaga em realtime</div>}
               </button>
             </div>
           </>
@@ -448,7 +524,7 @@ export function AdminPanel({ user, onLogout }) {
               const d = DESTS.find(x => x.id === o.destination);
               const sm = STATUS_META[o.status] ?? STATUS_META.failed;
               return (
-                <div key={o.id} className="adm-card" style={{ cursor: "default" }}>
+                <div key={o.id} className="adm-card" style={{ cursor: editingOrder === o.id ? "default" : "pointer" }} onClick={() => { if (editingOrder !== o.id) startEdit(o); }}>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 7 }}>
                     <div>
                       <div style={{ fontSize: 9, fontFamily: "monospace", color: "#334155", fontWeight: 700 }}>{o.order_ref ?? "#" + o.id.slice(0, 8).toUpperCase()}</div>
@@ -479,7 +555,7 @@ export function AdminPanel({ user, onLogout }) {
               <div key={k.id} className="adm-card">
                 <div style={{ fontSize: 13, fontWeight: 800, color: "#1e1b4b" }}>{k.profiles?.full_name || "Utilizador"}</div>
                 <div style={{ fontSize: 11, color: "#64748b", marginBottom: 10 }}>{k.profiles?.phone || "Sem telefone"}</div>
-                <div style={{ fontSize: 10, color: "#10b981", fontWeight: 600, marginBottom: 10 }}>✓ Documentos submetidos</div>
+                <div style={{ fontSize: 10, color: "#10b981", fontWeight: 600, marginBottom: 10, display: "flex", alignItems: "center", gap: 4 }}><Icon name="check" size={12} /> Documentos submetidos</div>
 
                 {(k.docSigned || k.selfieSigned) && (
                   <div style={{ display: "flex", gap: 10, marginBottom: 12 }}>
@@ -491,15 +567,35 @@ export function AdminPanel({ user, onLogout }) {
                     )}
                     {k.selfieSigned && (
                       <div style={{ flex: 1 }}>
-                        <div style={{ fontSize: 9, color: "#64748b", marginBottom: 4, fontWeight: 700, textTransform: "uppercase" }}>Prova de Vida (Selfie)</div>
-                        <a href={k.selfieSigned} target="_blank" rel="noreferrer"><img src={k.selfieSigned} alt="Selfie" style={{ width: "100%", height: 80, objectFit: "cover", borderRadius: 6, border: "1px solid #cbd5e1" }} /></a>
+                        <div style={{ fontSize: 9, color: "#64748b", marginBottom: 4, fontWeight: 700, textTransform: "uppercase" }}>Prova de Vida</div>
+                        {k.selfie_url?.match(/\.(mp4|mov|webm)/i) ? (
+                          <video src={k.selfieSigned} controls style={{ width: "100%", height: 80, objectFit: "cover", borderRadius: 6, border: "1px solid #cbd5e1", backgroundColor: "#000" }} />
+                        ) : (
+                          <a href={k.selfieSigned} target="_blank" rel="noreferrer"><img src={k.selfieSigned} alt="Selfie" style={{ width: "100%", height: 80, objectFit: "cover", borderRadius: 6, border: "1px solid #cbd5e1" }} /></a>
+                        )}
                       </div>
                     )}
                   </div>
                 )}
                 <div style={{ display: "flex", gap: 8 }}>
-                  <button className="adm-btn" style={{ background: "#10b981", flex: 1, color: "#fff", border: "none" }} onClick={() => updateKyc(k.id, "passed")}>Aprovar</button>
-                  <button className="adm-btn" style={{ background: "#ef4444", flex: 1, color: "#fff", border: "none" }} onClick={() => updateKyc(k.id, "rejected")}>Rejeitar</button>
+                  <button className="adm-btn" style={{ background: "#10b981", flex: 1, color: "#fff", border: "none" }} onClick={() => updateKyc(k, "passed")}>Aprovar</button>
+                  <button className="adm-btn" style={{ background: "#ef4444", flex: 1, color: "#fff", border: "none" }} onClick={() => updateKyc(k, "rejected")}>Rejeitar</button>
+                </div>
+              </div>
+            ))}
+
+            <span className="adm-section" style={{ marginTop: 24 }}>Histórico de Rejeições</span>
+            {rejectedKycs.length === 0 && <div style={{ textAlign: "center", padding: "36px 0", color: "#94a3b8", fontWeight: 600, fontSize: 13 }}>Nenhum histórico de rejeições.</div>}
+            {rejectedKycs.map(k => (
+              <div key={k.id} className="adm-card" style={{ opacity: 0.8 }}>
+                <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
+                  <div style={{ fontSize: 13, fontWeight: 800, color: "#1e1b4b" }}>{k.profiles?.full_name || "Utilizador"}</div>
+                  <div style={{ fontSize: 10, color: "#64748b" }}>{new Date(k.updated_at).toLocaleString("pt-AO")}</div>
+                </div>
+                <div style={{ fontSize: 11, color: "#64748b", marginBottom: 10 }}>{k.profiles?.phone || "Sem telefone"}</div>
+                <div style={{ fontSize: 11, color: "#ef4444", fontWeight: 600, padding: "8px", background: "#fef2f2", borderRadius: "6px", border: "1px solid #fecaca" }}>
+                  <span style={{ display: "block", fontSize: 9, textTransform: "uppercase", color: "#ef4444", marginBottom: 2 }}>Motivo da recusa:</span>
+                  {k.rejection_reason || "Documentos inválidos."}
                 </div>
               </div>
             ))}
