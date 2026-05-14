@@ -385,11 +385,11 @@ function ClientApp({ user, onLogout }) {
   }, []);
 
   useEffect(() => {
-    fetchLatestRate().then(r => setRate(r));
-    fetchAdminConfig().then(c => setConfig(c));
+    fetchLatestRate().then(r => setRate(r)).catch(() => { });
+    fetchAdminConfig().then(c => setConfig(c)).catch(() => { });
     sb.from("profiles").select("full_name, phone").eq("id", user.id).maybeSingle().then(({ data }) => {
       if (data) setProfile({ full_name: data.full_name || "", phone: data.phone || "" });
-    });
+    }).catch(() => { });
     sb.from("kyc_verifications").select("*").eq("user_id", user.id)
       .order("created_at", { ascending: false }).limit(1).maybeSingle()
       .then(({ data: k }) => {
@@ -401,6 +401,9 @@ function ClientApp({ user, onLogout }) {
           if (k.ocr_status && k.ocr_status !== "rejected") s = 3;
         }
         setKycStep(s);
+        setKycLoading(false);
+      }).catch(() => {
+        setKycStep(0);
         setKycLoading(false);
       });
 
