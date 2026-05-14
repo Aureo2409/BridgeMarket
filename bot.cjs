@@ -9,7 +9,7 @@ const express = require('express');
 const app = express();
 const port = process.env.PORT || 3000;
 app.get('/', (req, res) => res.send('🤖 Bot do WhatsApp está online e a funcionar!'));
-app.listen(port, () => console.log(`🌐 Servidor web ativo na porta ${port}`));
+app.listen(port, '0.0.0.0', () => console.log(`🌐 Servidor web ativo na porta ${port}`));
 
 // 1. Inicializa o cliente de IA com a tua chave API
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
