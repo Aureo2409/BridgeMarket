@@ -3,6 +3,7 @@ const { Client, LocalAuth } = pkg;
 import qrcode from 'qrcode-terminal';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { createClient } from '@supabase/supabase-js';
+import WebSocket from 'ws';
 import dotenv from 'dotenv';
 dotenv.config();
 
@@ -19,7 +20,11 @@ const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 // 1.5. Inicializa o Supabase (usa as mesmas variáveis do teu projeto Frontend)
 const supabaseUrl = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
 const supabaseKey = process.env.VITE_SUPABASE_ANON_KEY || process.env.SUPABASE_KEY;
-const supabase = createClient(supabaseUrl, supabaseKey);
+const supabase = createClient(supabaseUrl, supabaseKey, {
+    realtime: {
+        transport: WebSocket
+    }
+});
 
 // Variável global para armazenar a taxa na memória do bot
 let currentRateStr = "1165";
