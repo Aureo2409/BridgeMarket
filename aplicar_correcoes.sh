@@ -70,7 +70,7 @@ echo "✅ Ficheiros React mantidos intactos."
 echo ""
 echo "📦 A fazer commit e push para o GitHub..."
 git add .
-git commit -m "fix: corrigir hooks em map e fallback env vars"
+git commit -m "fix: corrigir fallback de env vars do Supabase no Vercel para evitar ecrã branco"
 git push origin master
 
 echo ""
