@@ -95,7 +95,7 @@ client.on('ready', () => {
 
     // O teu número de administrador para receber alertas (Formato: indicativo + número + @c.us)
     // Usa a variável de ambiente, ou o número de suporte por defeito
-    const ADMIN_PHONE = process.env.ADMIN_PHONE_NUMBER || '244952740023@c.us';
+    const ADMIN_PHONE = process.env.ADMIN_PHONE_NUMBER || '244976344207@c.us';
 
     // Escutar eventos de submissão de KYC no banco de dados em tempo real
     supabase.channel('bot_admin_alerts')
