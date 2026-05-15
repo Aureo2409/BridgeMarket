@@ -1,11 +1,13 @@
-const { Client, LocalAuth } = require('whatsapp-web.js');
-const qrcode = require('qrcode-terminal');
-const { GoogleGenerativeAI } = require('@google/generative-ai');
-const { createClient } = require('@supabase/supabase-js');
-require('dotenv').config();
+import pkg from 'whatsapp-web.js';
+const { Client, LocalAuth } = pkg;
+import qrcode from 'qrcode-terminal';
+import { GoogleGenerativeAI } from '@google/generative-ai';
+import { createClient } from '@supabase/supabase-js';
+import dotenv from 'dotenv';
+dotenv.config();
 
 // 0. Servidor Web (Obrigatório para o Railway manter o Bot ligado)
-const express = require('express');
+import express from 'express';
 const app = express();
 const port = process.env.PORT || 3000;
 app.get('/', (req, res) => res.send('🤖 Bot do WhatsApp está online e a funcionar!'));
