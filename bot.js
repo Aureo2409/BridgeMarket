@@ -58,7 +58,7 @@ Se o utilizador solicitar uma compra de dólares, pedir o link da plataforma, ou
 const client = new Client({
     authStrategy: new LocalAuth(), // Salva a sessão localmente para não precisares de ler o QR sempre
     puppeteer: {
-        executablePath: '/usr/bin/chromium', // Força o uso do Chromium nativo do Linux
+        ...(process.platform === 'linux' ? { executablePath: '/usr/bin/chromium' } : {}), // Apenas usa no Linux
         args: ['--no-sandbox', '--disable-setuid-sandbox'] // Essencial para rodar em servidores cloud/Linux sem crashar
     }
 });
@@ -198,7 +198,7 @@ client.on('ready', () => {
 
 // 4. Configuração do modelo e estrutura de memória
 const model = genAI.getGenerativeModel({
-    model: "gemini-1.5-flash",
+    model: "gemini-2.5-flash",
     systemInstruction: systemInstruction,
 });
 
