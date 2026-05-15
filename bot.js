@@ -206,7 +206,7 @@ client.on('ready', () => {
 
 // 4. Configuração do modelo e estrutura de memória
 const model = genAI.getGenerativeModel({
-    model: "gemini-2.5-flash",
+    model: "gemini-2.0-flash", // Usar um modelo mais estável para evitar erros 503 de sobrecarga
     systemInstruction: systemInstruction,
 });
 
@@ -233,7 +233,7 @@ async function prepareMediaForGemini(msg) {
 // 5. Lógica de resposta a mensagens
 client.on('message', async (msg) => {
     // Ignorar status e mensagens de grupos
-    if (msg.from === 'status@broadcast' || msg.isGroup) return;
+    if (msg.from === 'status@broadcast' || msg.from.includes('@g.us')) return;
 
     console.log(`Mensagem recebida de ${msg.from}: ${msg.body}`);
 
