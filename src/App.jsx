@@ -217,55 +217,40 @@ function AuthScreen() {
 
 // ── KYC ONBOARDING ─────────────────────────────────────────────────────────────
 function KycOnboarding({ user, currentStep, kycRecord, onLogout }) {
-  const [step, setStep] = useState(currentStep);
   const [loading, setLoading] = useState(false);
-  const [selfieFile, setSelfieFile] = useState(null);
-  const [docFile, setDocFile] = useState(null);
 
   const isPending = kycRecord?.ocr_status === "pending" || kycRecord?.liveness_status === "pending";
   const isRejected = kycRecord?.ocr_status === "rejected" || kycRecord?.liveness_status === "rejected";
 
-  async function uploadFile(file, path) {
-    const { error } = await sb.storage.from("kyc-documents").upload(path, file, { upsert: true });
-    if (error) throw error;
-    return path; // Retorna apenas o caminho, o Admin vai gerar o link seguro
-  }
-
-  async function handleNext() {
+  async function handleStartVerification() {
     setLoading(true);
     try {
       const updates = { user_id: user.id, updated_at: new Date().toISOString() };
 
-      if (step === 0) updates.step_personal_done = true;
-      if (step === 1) {
-        if (!selfieFile) { alert("Por favor, grava o vídeo da tua prova de vida."); setLoading(false); return; }
-
-        if (selfieFile.size > 5 * 1024 * 1024) {
-          alert("O vídeo é demasiado grande. Grava um vídeo mais curto (máximo de 5MB).");
-          setLoading(false); return;
-        }
-
-        const ext = selfieFile.name.split(".").pop().toLowerCase() || "mp4";
-        updates.selfie_url = await uploadFile(selfieFile, `${user.id}/liveness_${Date.now()}.${ext}`);
-        updates.liveness_status = "pending";
-      }
-      if (step === 2) {
-        if (!docFile) { alert("Por favor, tira a fotografia do teu BI ou Passaporte."); setLoading(false); return; }
-        if (docFile.size > 5 * 1024 * 1024) {
-          alert("A imagem é demasiado grande. Tira uma foto com tamanho menor (máximo de 5MB).");
-          setLoading(false); return;
-        }
-        const ext = docFile.name.split(".").pop().toLowerCase();
-        updates.document_url = await uploadFile(docFile, `${user.id}/document_${Date.now()}.${ext}`);
-        updates.ocr_status = "pending";
-      }
+      // Coloca como 'pending' para mostrar o ecrã de análise em tempo real
+      updates.ocr_status = "pending";
+      updates.liveness_status = "pending";
 
       const { error } = await sb.from("kyc_verifications").upsert(updates);
       if (error) throw error;
 
-      setStep(s => s + 1);
+      // 1. Pede ao Bot/Backend para gerar a sessão segura usando a tua chave DIDIt
+      const botApiUrl = import.meta.env.VITE_BOT_API_URL || "http://localhost:3000";
+      const res = await fetch(`${botApiUrl}/api/didit/session`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ user_id: user.id })
+      });
+
+      const data = await res.json();
+      if (data.session_url) {
+        // 2. Transfere o cliente de forma fluída para a IA analisar o rosto dele
+        window.location.href = data.session_url;
+      } else {
+        throw new Error(data.error || "Não foi possível conectar ao sistema DIDIt.");
+      }
     } catch (e) {
-      alert("Erro ao enviar o ficheiro: " + e.message);
+      alert("Erro ao iniciar a verificação: " + e.message);
     }
     setLoading(false);
   }
@@ -315,42 +300,20 @@ function KycOnboarding({ user, currentStep, kycRecord, onLogout }) {
         </div>
 
         <div className="card" style={{ background: "rgba(255,255,255,.96)" }}>
-          <div style={{ display: "flex", flexDirection: "column", gap: 14, marginBottom: 20 }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 10, opacity: step > 0 ? 0.5 : 1 }}>
-              <div style={{ width: 30, height: 30, borderRadius: 15, background: step > 0 ? "#10b981" : "#6366f1", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 700 }}>{step > 0 ? <Icon name="check" size={16} /> : "1"}</div>
-              <div style={{ fontWeight: 600, color: "#1e1b4b" }}>Dados Pessoais</div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 14, marginBottom: 16 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+              <div style={{ width: 30, height: 30, borderRadius: 15, background: "#6366f1", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 700 }}>
+                <Icon name="lock" size={16} />
+              </div>
+              <div style={{ fontWeight: 600, color: "#1e1b4b", fontSize: 15 }}>Verificação Automática</div>
             </div>
-            <div style={{ display: "flex", alignItems: "center", gap: 10, opacity: step === 1 ? 1 : step > 1 ? 0.5 : 0.4 }}>
-              <div style={{ width: 30, height: 30, borderRadius: 15, background: step > 1 ? "#10b981" : step === 1 ? "#6366f1" : "#e2e8f0", color: step > 1 ? "#fff" : step === 1 ? "#fff" : "#64748b", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 700 }}>{step > 1 ? <Icon name="check" size={16} /> : "2"}</div>
-              <div style={{ fontWeight: 600, color: "#1e1b4b" }}>Prova de Vida (Vídeo)</div>
-            </div>
-            <div style={{ display: "flex", alignItems: "center", gap: 10, opacity: step === 2 ? 1 : step > 2 ? 0.5 : 0.4 }}>
-              <div style={{ width: 30, height: 30, borderRadius: 15, background: step > 2 ? "#10b981" : step === 2 ? "#6366f1" : "#e2e8f0", color: step > 2 ? "#fff" : step === 2 ? "#fff" : "#64748b", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 700 }}>{step > 2 ? <Icon name="check" size={16} /> : "3"}</div>
-              <div style={{ fontWeight: 600, color: "#1e1b4b" }}>Documento de Identidade</div>
+            <div style={{ fontSize: 13, color: "#475569", lineHeight: 1.5 }}>
+              A plataforma utiliza tecnologia baseada em IA para proteger a comunidade. O processo é rápido, simples e demora apenas 30 segundos.
             </div>
           </div>
 
-          <div style={{ background: "#f0fdfa", border: "1px solid #bbf7d0", padding: 12, borderRadius: 8, marginBottom: 16, fontSize: 12, color: "#166534", fontWeight: 500 }}>
-            {step === 0 && "Nesta etapa, confirmamos o teu nome, morada e data de nascimento."}
-            {step === 1 && "Nesta etapa, deves gravar um vídeo curto do teu rosto (em tempo real) para confirmarmos a tua identidade."}
-            {step === 2 && "Nesta etapa, tira uma fotografia nítida (em tempo real) ao teu BI ou Passaporte."}
-          </div>
-
-          {step === 1 && (
-            <div style={{ marginBottom: 16 }}>
-              <label className="lbl">Gravar Vídeo (Rosto)</label>
-              <input type="file" accept="video/*" capture="user" onChange={e => setSelfieFile(e.target.files[0])} className="inp" style={{ padding: "8px", cursor: "pointer" }} />
-            </div>
-          )}
-          {step === 2 && (
-            <div style={{ marginBottom: 16 }}>
-              <label className="lbl">Fotografia do BI ou Passaporte</label>
-              <input type="file" accept="image/*" capture="environment" onChange={e => setDocFile(e.target.files[0])} className="inp" style={{ padding: "8px", cursor: "pointer" }} />
-            </div>
-          )}
-
-          <button className="btn btn-p" onClick={handleNext} disabled={loading}>
-            {loading ? "A processar..." : step === 0 ? "Confirmar Dados →" : step === 1 ? "Enviar Vídeo →" : "Enviar Documento e Concluir"}
+          <button className="btn btn-p" onClick={handleStartVerification} disabled={loading}>
+            {loading ? "A processar..." : "Iniciar Verificação Segura →"}
           </button>
           <button className="btn btn-o" onClick={onLogout} style={{ marginTop: 10 }}>Sair</button>
         </div>

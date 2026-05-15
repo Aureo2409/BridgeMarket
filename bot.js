@@ -9,9 +9,74 @@ dotenv.config();
 
 // 0. Servidor Web (Obrigatório para o Railway manter o Bot ligado)
 import express from 'express';
+import cors from 'cors';
 const app = express();
 const port = process.env.PORT || 3000;
+
+app.use(cors());
+app.use(express.json()); // Permite ler JSON no corpo dos pedidos (necessário para Webhooks e chamadas do site)
+
 app.get('/', (req, res) => res.send('🤖 Bot do WhatsApp está online e a funcionar!'));
+
+// ── INTEGRAÇÃO DIDIT.ME ──────────────────────────────────────────────────────
+const DIDIT_API_KEY = process.env.DIDIT_API_KEY || 'JGASXPZM3NXefP3h6qDrtveLCLnOM-VKGC9tSkmRbpw.';
+
+// 1. Rota para gerar Sessão Segura (Chamada pelo Frontend de forma invisível)
+app.post('/api/didit/session', async (req, res) => {
+    const { user_id } = req.body;
+    try {
+        // Exemplo da chamada típica da API do DIDIt (Confirma apenas a URL base na doc oficial)
+        const response = await fetch('https://api.didit.me/v1/session', {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${DIDIT_API_KEY}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                vendor_data: user_id, // Enviamos o ID do cliente para reconhecê-lo no webhook depois
+                callback_url: 'https://bridge-market-delta.vercel.app' // Para onde o cliente volta após aprovação
+            })
+        });
+
+        if (!response.ok) throw new Error('Falha na comunicação com a API do DIDIt');
+        const data = await response.json();
+
+        // O DIDIt normalmente devolve o link da verificação sob a propriedade url ou session_url
+        res.json({ session_url: data.url || data.session_url });
+    } catch (error) {
+        console.error('Erro na sessão DIDIt:', error);
+        res.status(500).json({ error: 'Falha ao conectar com provedor de segurança DIDIt.' });
+    }
+});
+
+// 2. Webhook que vai receber a decisão do DIDIt em background
+app.post('/api/didit/webhook', async (req, res) => {
+    const payload = req.body;
+    console.log('🔔 Webhook DIDIt recebido:', payload);
+
+    try {
+        const userId = payload.vendor_data || payload.client_reference_id;
+        const status = payload.status; // Pode vir como "Approved" ou "passed"
+
+        if (userId) {
+            const isApproved = (status === 'Approved' || status === 'passed' || status === 'completed');
+
+            // ATUALIZAÇÃO MAGNÍFICA: Apenas alteramos o Supabase. 
+            // O Listener em tempo real que já codaste vai apanhar isto e avisar o cliente por WhatsApp automaticamente! ✨
+            await supabase.from('kyc_verifications').update({
+                ocr_status: isApproved ? 'passed' : 'rejected',
+                liveness_status: isApproved ? 'passed' : 'rejected',
+                rejection_reason: isApproved ? null : (payload.reason || "Verificação por IA não aprovada.")
+            }).eq('user_id', userId);
+        }
+        res.status(200).send('Webhook Processado com Sucesso');
+    } catch (error) {
+        console.error('Erro ao processar Webhook DIDIt:', error);
+        res.status(500).send('Erro interno do servidor');
+    }
+});
+// ─────────────────────────────────────────────────────────────────────────────
+
 app.listen(port, '0.0.0.0', () => console.log(`🌐 Servidor web ativo na porta ${port}`));
 
 // 1. Inicializa o cliente de IA com a tua chave API
