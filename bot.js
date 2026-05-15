@@ -58,6 +58,7 @@ Se o utilizador solicitar uma compra de dólares, pedir o link da plataforma, ou
 const client = new Client({
     authStrategy: new LocalAuth(), // Salva a sessão localmente para não precisares de ler o QR sempre
     puppeteer: {
+        executablePath: '/usr/bin/chromium', // Força o uso do Chromium nativo do Linux
         args: ['--no-sandbox', '--disable-setuid-sandbox'] // Essencial para rodar em servidores cloud/Linux sem crashar
     }
 });
