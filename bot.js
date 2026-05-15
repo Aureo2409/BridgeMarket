@@ -183,6 +183,7 @@ client.on('ready', () => {
         })
         .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'whatsapp_checks' }, async (payload) => {
             const check = payload.new;
+            console.log(`🔍 A verificar conta de WhatsApp do número: ${check.phone}`);
             if (check.status === 'pending') {
                 try {
                     let phone = check.phone.replace(/\D/g, '');
