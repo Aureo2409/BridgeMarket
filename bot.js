@@ -126,6 +126,7 @@ Se o utilizador solicitar uma compra de dólares, pedir o link da plataforma, ou
 const client = new Client({
     authStrategy: new LocalAuth(), // Salva a sessão localmente para não precisares de ler o QR sempre
     puppeteer: {
+        headless: true, // Força o modo invisível para poupar recursos
         ...(process.platform === 'linux' ? { executablePath: '/usr/bin/chromium' } : {}), // Apenas usa no Linux
         args: [
             '--no-sandbox',
@@ -134,6 +135,7 @@ const client = new Client({
             '--disable-accelerated-2d-canvas',
             '--no-first-run',
             '--no-zygote',
+            '--single-process', // 🚨 IMPORTANTE: Impede o Chromium de abrir múltiplas abas e esgotar a RAM
             '--disable-gpu'
         ]
     }
