@@ -1,10 +1,11 @@
-FROM node:22-bullseye
+FROM node:22-bookworm
 
-# 1. Instala o Chromium e as dependências do Linux de forma segura
-RUN apt-get update && apt-get install -y \
+# 1. Atualiza para o Debian 12 (Bookworm) e instala TODAS as dependências gráficas
+RUN apt-get update && apt-get install -y --no-install-recommends \
     chromium \
-    libegl1 libgles2 \
-    --no-install-recommends \
+    libnss3 libnspr4 libatk1.0-0 libatk-bridge2.0-0 libcups2 libdrm2 \
+    libxkbcommon0 libxcomposite1 libxdamage1 libxfixes3 libxrandr2 \
+    libgbm1 libasound2 libpango-1.0-0 libgtk-3-0 libegl1 libgles2 \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
