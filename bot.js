@@ -135,8 +135,8 @@ const client = new Client({
             '--disable-accelerated-2d-canvas',
             '--no-first-run',
             '--no-zygote',
-            '--single-process', // 🚨 IMPORTANTE: Impede o Chromium de abrir múltiplas abas e esgotar a RAM
-            '--disable-gpu'
+            '--disable-gpu',
+            '--disable-software-rasterizer'
         ]
     }
 });
