@@ -126,7 +126,6 @@ Se o utilizador solicitar uma compra de dólares, pedir o link da plataforma, ou
 const client = new Client({
     authStrategy: new LocalAuth(), // Salva a sessão localmente para não precisares de ler o QR sempre
     puppeteer: {
-        dumpio: true, // 🚨 IMPORTANTE: Força o navegador a mostrar os seus erros críticos no terminal!
         ...(process.platform === 'linux' ? { executablePath: '/usr/bin/chromium' } : {}), // Apenas usa no Linux
         args: [
             '--no-sandbox',
