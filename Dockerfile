@@ -3,6 +3,7 @@ FROM node:22-bullseye
 # 1. Instala o Chromium e as dependências do Linux de forma segura
 RUN apt-get update && apt-get install -y \
     chromium \
+    libegl1 libgles2 \
     --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 

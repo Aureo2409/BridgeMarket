@@ -128,7 +128,6 @@ const client = new Client({
     webVersionCache: { type: 'none' }, // 🚨 Evita que o bot congele ao tentar procurar atualizações do WhatsApp na nuvem
     puppeteer: {
         headless: true, // Força o modo invisível para poupar recursos
-        dumpio: true, // Permite-nos ver se o Chrome está a ser bloqueado pela rede (erros escondidos)
         ...(process.platform === 'linux' ? { executablePath: '/usr/bin/chromium' } : {}), // Apenas usa no Linux
         args: [
             '--no-sandbox',
@@ -142,6 +141,7 @@ const client = new Client({
             '--disable-site-isolation-trials', // 🚨 Poupa MUITA memória RAM para evitar Congelamentos
             '--disable-background-networking',
             '--disable-extensions',
+            '--disable-features=Vulkan', // 🚨 Impede que o Chromium tente usar o motor 3D e sofra crashes
             '--js-flags=--max-old-space-size=256' // 🚨 Força o motor de JS a usar o mínimo de memória possível
         ]
     }
