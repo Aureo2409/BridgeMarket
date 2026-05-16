@@ -11,6 +11,7 @@ WORKDIR /app
 # 2. Configurações para forçar o Puppeteer a usar o Chromium que acabámos de instalar
 ENV PUPPETEER_SKIP_DOWNLOAD=true
 ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium
+ENV DBUS_SESSION_BUS_ADDRESS=/dev/null
 
 COPY package*.json ./
 RUN npm install
