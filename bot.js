@@ -125,8 +125,10 @@ Se o utilizador solicitar uma compra de dólares, pedir o link da plataforma, ou
 // 3. Inicializa o cliente do WhatsApp
 const client = new Client({
     authStrategy: new LocalAuth(), // Salva a sessão localmente para não precisares de ler o QR sempre
+    webVersionCache: { type: 'none' }, // 🚨 Evita que o bot congele ao tentar procurar atualizações do WhatsApp na nuvem
     puppeteer: {
         headless: true, // Força o modo invisível para poupar recursos
+        dumpio: true, // Permite-nos ver se o Chrome está a ser bloqueado pela rede (erros escondidos)
         ...(process.platform === 'linux' ? { executablePath: '/usr/bin/chromium' } : {}), // Apenas usa no Linux
         args: [
             '--no-sandbox',
@@ -136,7 +138,11 @@ const client = new Client({
             '--no-first-run',
             '--no-zygote',
             '--disable-gpu',
-            '--disable-software-rasterizer'
+            '--disable-software-rasterizer',
+            '--disable-site-isolation-trials', // 🚨 Poupa MUITA memória RAM para evitar Congelamentos
+            '--disable-background-networking',
+            '--disable-extensions',
+            '--js-flags=--max-old-space-size=256' // 🚨 Força o motor de JS a usar o mínimo de memória possível
         ]
     }
 });
