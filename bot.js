@@ -126,6 +126,7 @@ Se o utilizador solicitar uma compra de dólares, pedir o link da plataforma, ou
 const client = new Client({
     authStrategy: new LocalAuth(), // Salva a sessão localmente para não precisares de ler o QR sempre
     puppeteer: {
+        dumpio: true, // 🚨 IMPORTANTE: Força o navegador a mostrar os seus erros críticos no terminal!
         ...(process.platform === 'linux' ? { executablePath: '/usr/bin/chromium' } : {}), // Apenas usa no Linux
         args: [
             '--no-sandbox',
@@ -137,6 +138,18 @@ const client = new Client({
             '--disable-gpu'
         ]
     }
+});
+
+client.on('loading_screen', (percent, message) => {
+    console.log('⏳ A carregar o WhatsApp no servidor:', percent, '%', message);
+});
+
+client.on('authenticated', () => {
+    console.log('✅ Sessão anterior restaurada com sucesso!');
+});
+
+client.on('auth_failure', msg => {
+    console.error('❌ Falha na autenticação do WhatsApp:', msg);
 });
 
 // Mostra o QR Code no terminal para emparelhar com o WhatsApp
@@ -355,4 +368,7 @@ client.on('message', async (msg) => {
     }
 });
 
-client.initialize();
+console.log('🚀 A inicializar o navegador do WhatsApp. Por favor, aguarde...');
+client.initialize().catch(err => {
+    console.error('❌ Erro crítico ao inicializar o bot:', err);
+});
