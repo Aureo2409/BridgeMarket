@@ -141,13 +141,16 @@ const client = new Client({
 
 // Mostra o QR Code no terminal para emparelhar com o WhatsApp
 client.on('qr', (qr) => {
-    qrcode.generate(qr, { small: true });
+    latestQR = qr; // Guarda o QR code na variável
     console.log('================================================================================');
-    console.log('    ⚠️ APONTA O WHATSAPP DO TELEMÓVEL PARA O QR CODE ACIMA ⚠️                     ');
+    console.log('    ⚠️ NOVO QR CODE GERADO! ⚠️                                                    ');
+    console.log('    Abre o link da tua aplicação no navegador e adiciona /qr no final.          ');
+    console.log('    Exemplo: https://<o-teu-app-no-railway>.up.railway.app/qr                   ');
     console.log('================================================================================');
 });
 
 client.on('ready', () => {
+    latestQR = ""; // Limpa da memória após conectar
     console.log('🟢 Bot "Responda" da Pixel Flex está online e pronto para receber mensagens!');
 
     // Vai buscar a taxa de câmbio inicial da plataforma
