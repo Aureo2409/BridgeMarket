@@ -131,7 +131,7 @@ const client = new Client({
     },
     puppeteer: {
         headless: true, // Força o modo invisível para poupar recursos
-        dumpio: true, // 🚨 LIGADO NOVAMENTE para vermos o erro real do Linux!
+        dumpio: false, // 🚨 DESLIGADO: Remove os erros "falsos" do Chromium (D-Bus, GCM) que poluem o terminal
         ...(process.platform === 'linux' ? { executablePath: '/usr/bin/chromium' } : {}), // Apenas usa no Linux
         args: [
             '--no-sandbox',
