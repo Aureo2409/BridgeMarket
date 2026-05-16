@@ -125,9 +125,13 @@ Se o utilizador solicitar uma compra de dólares, pedir o link da plataforma, ou
 // 3. Inicializa o cliente do WhatsApp
 const client = new Client({
     authStrategy: new LocalAuth(), // Salva a sessão localmente para não precisares de ler o QR sempre
-    webVersionCache: { type: 'none' }, // 🚨 Evita que o bot congele ao tentar procurar atualizações do WhatsApp na nuvem
+    webVersionCache: {
+        type: 'remote',
+        remotePath: 'https://raw.githubusercontent.com/wppconnect-team/wa-version/main/html/2.2412.54.html'
+    },
     puppeteer: {
         headless: true, // Força o modo invisível para poupar recursos
+        dumpio: true, // 🚨 LIGADO NOVAMENTE para vermos o erro real do Linux!
         ...(process.platform === 'linux' ? { executablePath: '/usr/bin/chromium' } : {}), // Apenas usa no Linux
         args: [
             '--no-sandbox',
@@ -374,6 +378,10 @@ client.on('message', async (msg) => {
         msg.reply('🔒 Ocorreu uma interrupção inesperada nos nossos sistemas. Por favor, tente novamente em instantes ou contacte a linha de suporte direto no número 52 340023.');
     }
 });
+
+// 🚨 Proteção contra crashes silenciosos do Node.js
+process.on('uncaughtException', err => console.error('🚨 [CRASH FATAL DO NODE]:', err));
+process.on('unhandledRejection', err => console.error('🚨 [PROMESSA REJEITADA]:', err));
 
 console.log('🚀 A inicializar o navegador do WhatsApp. Por favor, aguarde...');
 client.initialize().catch(err => {
