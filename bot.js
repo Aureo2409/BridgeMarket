@@ -19,10 +19,14 @@ app.use(express.json()); // Permite ler JSON no corpo dos pedidos (necessário p
 app.get('/', (req, res) => res.send('🤖 Bot do WhatsApp está online e a funcionar!'));
 
 // 0.5. Rota para mostrar o QR Code na Web (Caso quebre no terminal)
-let latestQR = "";
+let latestQR = '';
+let botReady = false; // Variável para saber se o bot já conectou
 app.get('/qr', (req, res) => {
+    if (botReady && !latestQR) {
+        return res.send('<h2 style="font-family:sans-serif;text-align:center;margin-top:50px;">✅ Bot já está conectado! Não é necessário ler o QR Code.</h2><p style="font-family:sans-serif;text-align:center;">Podes fechar esta página.</p>');
+    }
     if (!latestQR) {
-        return res.send('<h2 style="font-family:sans-serif;text-align:center;margin-top:50px;">Nenhum QR Code disponível. O bot já está conectado ou ainda a iniciar!</h2>');
+        return res.send('<h2 style="font-family:sans-serif;text-align:center;margin-top:50px;">⏳ A gerar QR Code... Por favor, atualize a página em alguns segundos.</h2>');
     }
     res.send(`
         <html>
@@ -200,6 +204,7 @@ client.on('qr', (qr) => {
 
 client.on('ready', () => {
     latestQR = ""; // Limpa o QR da memória após conectar
+    botReady = true; // Sinaliza que o bot está pronto
     console.log('🟢 Bot "Responda" da Pixel Flex está online e pronto para receber mensagens!');
 
     // Vai buscar a taxa de câmbio inicial da plataforma
