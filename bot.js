@@ -1,13 +1,8 @@
-import pkg from 'whatsapp-web.js';
-const { Client, LocalAuth } = pkg;
-import qrcode from 'qrcode-terminal';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { createClient } from '@supabase/supabase-js';
 import WebSocket from 'ws';
 import dotenv from 'dotenv';
 dotenv.config();
-import fs from 'fs';
-import path from 'path';
 
 // 0. Servidor Web (Obrigatório para o Railway manter o Bot ligado)
 import express from 'express';
@@ -20,50 +15,80 @@ app.use(express.json()); // Permite ler JSON no corpo dos pedidos (necessário p
 
 app.get('/', (req, res) => res.send('🤖 Bot do WhatsApp está online e a funcionar!'));
 
-// 0.5. Rota para mostrar o QR Code na Web (Caso quebre no terminal)
-let latestQR = '';
-let botReady = false; // Variável para saber se o bot já conectou
-app.get('/qr', (req, res) => {
-    if (botReady && !latestQR) {
-        return res.send('<h2 style="font-family:sans-serif;text-align:center;margin-top:50px;">✅ Bot já está conectado! Não é necessário ler o QR Code.</h2><p style="font-family:sans-serif;text-align:center;">Podes fechar esta página.</p>');
+// --- WHATSAPP CLOUD API ──────────────────────────────────────────────────────
+const WHATSAPP_TOKEN = process.env.WHATSAPP_TOKEN;
+const WHATSAPP_PHONE_NUMBER_ID = process.env.WHATSAPP_PHONE_NUMBER_ID;
+const WHATSAPP_VERIFY_TOKEN = process.env.WHATSAPP_VERIFY_TOKEN;
+
+// 1. Rota de verificação do Webhook (exigida pela Meta)
+app.get('/api/whatsapp/webhook', (req, res) => {
+    const mode = req.query['hub.mode'];
+    const token = req.query['hub.verify_token'];
+    const challenge = req.query['hub.challenge'];
+
+    if (mode && token) {
+        if (mode === 'subscribe' && token === WHATSAPP_VERIFY_TOKEN) {
+            console.log('✅ Webhook do WhatsApp verificado com sucesso!');
+            res.status(200).send(challenge);
+        } else {
+            console.error('❌ Falha na verificação do Webhook do WhatsApp. Tokens não batem.');
+            res.sendStatus(403);
+        }
+    } else {
+        res.sendStatus(404);
     }
-    if (!latestQR) {
-        return res.send('<h2 style="font-family:sans-serif;text-align:center;margin-top:50px;">⏳ A gerar QR Code... Por favor, atualize a página em alguns segundos.</h2>');
-    }
-    res.send(`
-        <html>
-            <head><title>Bridge - WhatsApp QR</title></head>
-            <body style="display:flex; flex-direction:column; justify-content:center; align-items:center; height:100vh; background-color:#0f172a; color:white; font-family:sans-serif;">
-                <h2>Abre o WhatsApp e faz a leitura:</h2>
-                <div id="qrcode" style="background:white; padding:20px; border-radius:10px;"></div>
-                <p style="color:#9ca3af; margin-top:20px;">A página atualiza sozinha a cada 15 segundos.</p>
-                <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
-                <script>
-                    new QRCode(document.getElementById("qrcode"), {
-                        text: "${latestQR}",
-                        width: 300,
-                        height: 300,
-                        colorDark : "#000000",
-                        colorLight : "#ffffff",
-                        correctLevel : QRCode.CorrectLevel.L
-                    });
-                    setTimeout(() => location.reload(), 15000);
-                </script>
-            </body>
-        </html>
-    `);
 });
 
-// 0.6. Rota para FORÇAR a limpeza da sessão (Gera um novo QR Code)
-app.get('/reset', (req, res) => {
-    try {
-        fs.rmSync('.wwebjs_auth', { recursive: true, force: true });
-        res.send('<h2 style="font-family:sans-serif;text-align:center;margin-top:50px;">🔄 Sessão apagada com sucesso!</h2><p style="font-family:sans-serif;text-align:center;">O bot vai reiniciar agora. Aguarda 1 minuto e clica <a href="/qr">aqui para ver o novo QR Code</a>.</p>');
-        setTimeout(() => process.exit(1), 2000); // O Railway reinicia automaticamente o bot
-    } catch (e) {
-        res.send('<h2 style="font-family:sans-serif;text-align:center;margin-top:50px;">Erro ao apagar sessão: ' + e.message + '</h2>');
+// 2. Rota para receber mensagens e eventos do WhatsApp
+app.post('/api/whatsapp/webhook', async (req, res) => {
+    const body = req.body;
+
+    // Garante que é uma notificação do WhatsApp
+    if (body.object === 'whatsapp_business_account') {
+        const entry = body.entry && body.entry[0];
+        const changes = entry.changes && entry.changes[0];
+        const value = changes.value;
+        const message = value.messages && value.messages[0];
+
+        if (message) {
+            const from = message.from; // Número do remetente (ex: 244976344207)
+            const msg_body = message.text?.body;
+            const hasMedia = message.type === 'image' || message.type === 'document';
+            const mediaId = message.image?.id || message.document?.id;
+
+            // Ignora mensagens sem texto ou multimédia relevante
+            if (msg_body || hasMedia) {
+                // Chama a função principal de processamento de mensagens
+                await handleIncomingMessage({ from, body: msg_body, hasMedia, mediaId });
+            }
+        }
+        res.sendStatus(200); // Responde OK para a Meta
+    } else {
+        // Se não for do WhatsApp, ignora
+        res.sendStatus(404);
     }
 });
+
+// 3. Função para enviar mensagens via Cloud API
+async function sendWhatsappMessage(to, text) {
+    if (!WHATSAPP_TOKEN || !WHATSAPP_PHONE_NUMBER_ID) {
+        console.error('❌ Variáveis de ambiente do WhatsApp (TOKEN, PHONE_NUMBER_ID) em falta!');
+        return;
+    }
+    try {
+        await fetch(`https://graph.facebook.com/v20.0/${WHATSAPP_PHONE_NUMBER_ID}/messages`, {
+            method: 'POST',
+            headers: { 'Authorization': `Bearer ${WHATSAPP_TOKEN}`, 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                messaging_product: 'whatsapp',
+                to: to,
+                text: { body: text }
+            })
+        });
+    } catch (error) {
+        console.error('❌ Erro ao enviar mensagem pelo Cloud API:', error);
+    }
+}
 
 // ── INTEGRAÇÃO DIDIT.ME ──────────────────────────────────────────────────────
 const DIDIT_API_KEY = process.env.DIDIT_API_KEY || 'JGASXPZM3NXefP3h6qDrtveLCLnOM-VKGC9tSkmRbpw.';
@@ -174,185 +199,381 @@ Contactos e Links Oficiais:
 - Escritório: Luanda, Estádio 11 de Novembro, Bairro Sapo 2.
 `;
 
-// Limpa o ficheiro de bloqueio de uma sessão anterior para evitar crashes no Railway
-try {
-    const lockFilePath = path.join('.wwebjs_auth', 'session', 'SingletonLock');
-    if (fs.existsSync(lockFilePath)) {
-        console.log('🔑 A remover ficheiro de bloqueio (SingletonLock) de uma sessão anterior...');
-        fs.unlinkSync(lockFilePath);
-        console.log('✅ Ficheiro de bloqueio removido. A iniciar o bot...');
-    }
-} catch (err) {
-    console.error('⚠️ Erro ao remover o ficheiro de bloqueio:', err.message);
-}
-
-// 3. Inicializa o cliente do WhatsApp
-const client = new Client({
-    authStrategy: new LocalAuth(), // Salva a sessão localmente para não precisares de ler o QR sempre
-    webVersionCache: {
-        type: 'remote',
-        remotePath: 'https://raw.githubusercontent.com/wppconnect-team/wa-version/main/html/2.2412.54.html'
-    },
-    puppeteer: {
-        headless: true, // Força o modo invisível para poupar recursos
-        dumpio: false, // 🚨 DESLIGADO: Remove os erros "falsos" do Chromium (D-Bus, GCM) que poluem o terminal
-        ...(process.platform === 'linux' ? { executablePath: '/usr/bin/chromium' } : {}), // Apenas usa no Linux
-        args: [
-            '--no-sandbox',
-            '--disable-setuid-sandbox',
-            '--disable-dev-shm-usage',
-            '--disable-accelerated-2d-canvas',
-            '--no-first-run',
-            '--no-zygote',
-            '--disable-gpu'
-        ]
-    }
+console.log('🟢 Bot da Bridge (Cloud API) está online e pronto para receber webhooks!');
+// Vai buscar a taxa de câmbio inicial da plataforma
+supabase.from('exchange_rates').select('applied_rate').order('fetched_at', { ascending: false }).limit(1).maybeSingle().then(({ data }) => {
+    if (data) currentRateStr = parseFloat(data.applied_rate).toLocaleString('pt-AO');
 });
 
-client.on('loading_screen', (percent, message) => {
-    console.log('⏳ A carregar o WhatsApp no servidor:', percent, '%', message);
-});
+// O teu número de administrador para receber alertas (Formato: indicativo + número)
+const ADMIN_PHONE = process.env.ADMIN_PHONE_NUMBER || '244976344207';
 
-client.on('authenticated', () => {
-    console.log('✅ Sessão anterior restaurada com sucesso!');
-});
+// Escutar eventos de submissão de KYC no banco de dados em tempo real
+supabase.channel('bot_admin_alerts')
+    .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'kyc_verifications' }, async (payload) => {
+        const { new: newData, old: oldData } = payload;
 
-client.on('auth_failure', msg => {
-    console.error('❌ Falha na autenticação do WhatsApp:', msg);
-});
+        // 1. Dispara o alerta PARA O ADMIN quando o estado passa a "pending" (Aguardando Aprovação)
+        if (newData.ocr_status === 'pending' && oldData.ocr_status !== 'pending') {
+            const alertMsg = `🚨 *Nova Verificação de Identidade (KYC)*\n\nUm cliente acabou de submeter o seu vídeo e documento.\n\n👉 Acede ao Painel de Administrador para analisar e dar o teu veredicto (Aprovar/Rejeitar).`;
+            sendWhatsappMessage(ADMIN_PHONE, alertMsg).catch(err => console.error('Erro ao enviar mensagem:', err));
+        }
 
-// Mostra o QR Code no terminal para emparelhar com o WhatsApp
-client.on('qr', (qr) => {
-    latestQR = qr; // Guarda o QR code para ser mostrado na página web
-    qrcode.generate(qr, { small: true }); // Tenta desenhar no terminal na mesma
-    console.log('================================================================================');
-    console.log('    ⚠️ NOVO QR CODE GERADO! ⚠️                                                    ');
-    console.log('    Se o código acima estiver quebrado/distorcido, acede a:                     ');
-    console.log('    👉 https://<O-TEU-DOMINIO-NO-RAILWAY>.up.railway.app/qr                     ');
-    console.log('================================================================================');
-});
+        // 2. Dispara o alerta PARA O CLIENTE quando o Admin Aprova ou Rejeita
+        if (
+            (newData.ocr_status === 'passed' && oldData.ocr_status !== 'passed') ||
+            (newData.ocr_status === 'rejected' && oldData.ocr_status !== 'rejected')
+        ) {
+            try {
+                const { data: profile } = await supabase.from('profiles').select('phone, full_name').eq('id', newData.user_id).maybeSingle();
+                if (profile && profile.phone) {
+                    let phone = profile.phone.replace(/\D/g, ''); // Limpa a formatação
+                    if (phone.length === 9) phone = '244' + phone; // Adiciona indicativo se não tiver
+                    const clientName = profile.full_name ? profile.full_name.split(' ')[0] : 'Cliente';
 
-client.on('ready', () => {
-    latestQR = ""; // Limpa o QR da memória após conectar
-    botReady = true; // Sinaliza que o bot está pronto
-    console.log('🟢 Bot "Responda" da Pixel Flex está online e pronto para receber mensagens!');
+                    if (newData.ocr_status === 'passed') {
+                        const msg = `🎉 *CONTA APROVADA*\n\nOlá ${clientName},\nA tua identidade foi verificada com sucesso! Já podes começar a fazer transações no Bridge Marketplace.\n\nAcede à plataforma para simular e criar o teu pedido.`;
+                        sendWhatsappMessage(phone, msg).catch(err => console.error('Erro ao enviar aprovação:', err));
+                    } else if (newData.ocr_status === 'rejected') {
+                        const reason = newData.rejection_reason || "Documentos ilegíveis ou inválidos.";
+                        const msg = `❌ *VERIFICAÇÃO RECUSADA*\n\nOlá ${clientName},\nInfelizmente, não foi possível validar a tua identidade.\n\n*Motivo:* ${reason}\n\nPor favor, acede à plataforma para tentares novamente submeter fotos mais nítidas.`;
+                        sendWhatsappMessage(phone, msg).catch(err => console.error('Erro ao enviar rejeição:', err));
+                    }
+                }
+            } catch (error) {
+                console.error('Erro ao alertar cliente sobre KYC:', error);
+            }
+        }
+    })
+    .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'orders' }, (payload) => {
+        const newOrder = payload.new;
+        const orderRef = newOrder.order_ref || '#' + newOrder.id.slice(0, 8).toUpperCase();
+        const alertMsg = `🛒 *NOVO PEDIDO (Bridge)*\n\nUm cliente acabou de criar um novo pedido!\n\n💵 Valor: *$${parseFloat(newOrder.amount_usd).toFixed(2)}*\n🇦🇴 Total a Pagar: *${parseFloat(newOrder.amount_aoa).toLocaleString('pt-AO')} Kz*\n📄 Referência: ${orderRef}\n🏦 Destino: ${newOrder.destination_account}\n\n👉 Acede ao Painel de Administrador para gerir.`;
 
-    // Vai buscar a taxa de câmbio inicial da plataforma
-    supabase.from('exchange_rates').select('applied_rate').order('fetched_at', { ascending: false }).limit(1).maybeSingle().then(({ data }) => {
-        if (data) currentRateStr = parseFloat(data.applied_rate).toLocaleString('pt-AO');
+        sendWhatsappMessage(ADMIN_PHONE, alertMsg).catch(err => console.error('Erro ao enviar alerta de novo pedido:', err));
+    })
+    .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'payment_proofs' }, (payload) => {
+        const alertMsg = `💰 *PAGAMENTO RECEBIDO (Bridge)*\n\nUm cliente acabou de enviar um comprovante de pagamento!\n\n👉 Acede ao teu Painel de Administrador para validar a transferência e confirmar o envio dos dólares.`;
+
+        sendWhatsappMessage(ADMIN_PHONE, alertMsg).catch(err => console.error('Erro ao enviar alerta de pagamento:', err));
+    })
+    .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'orders' }, async (payload) => {
+        const { new: newData, old: oldData } = payload;
+
+        // Dispara quando clicas em "Confirmar envio do dólar" no painel
+        if (newData.status === 'completed' && oldData.status !== 'completed') {
+            try {
+                const { data: profile } = await supabase.from('profiles').select('phone, full_name').eq('id', newData.user_id).maybeSingle();
+
+                if (profile && profile.phone) {
+                    let phone = profile.phone.replace(/\D/g, ''); // Limpa caracteres como + ou espaços
+                    if (phone.length === 9) phone = '244' + phone; // Adiciona indicativo se faltar
+
+                    const orderRef = newData.order_ref || '#' + newData.id.slice(0, 8).toUpperCase();
+                    const clientName = profile.full_name ? profile.full_name.split(' ')[0] : 'Cliente';
+
+                    const msg = `✅ *PEDIDO ENVIADO*\n\nOlá ${clientName},\nO teu pedido ${orderRef} foi processado e os dólares já foram enviados para a tua conta!\n\n💵 Valor: *$${parseFloat(newData.amount_usd).toFixed(2)}*\n🏦 Destino: ${newData.destination_account}\n\nObrigado pela preferência! 🚀`;
+                    sendWhatsappMessage(phone, msg).catch(err => console.error('Erro ao enviar mensagem ao cliente:', err));
+                }
+            } catch (error) {
+                console.error('Erro ao alertar o cliente sobre pedido concluído:', error);
+            }
+        }
+    })
+    .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'exchange_rates' }, (payload) => {
+        // Atualiza a taxa de câmbio na memória do bot sempre que tu a publicares no Painel de Admin
+        currentRateStr = parseFloat(payload.new.applied_rate).toLocaleString('pt-AO');
+    })
+    .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'whatsapp_checks' }, async (payload) => {
+        const check = payload.new;
+        console.log(`🔍 A verificar conta de WhatsApp do número: ${check.phone}`);
+        if (check.status === 'pending') {
+            try {
+                let phone = check.phone.replace(/\D/g, '');
+                if (!phone.startsWith('244')) phone = '244' + phone;
+
+                // Usa a API de contactos da Meta para verificar o número
+                const response = await fetch(`https://graph.facebook.com/v20.0/${WHATSAPP_PHONE_NUMBER_ID}/contacts`, {
+                    method: 'POST',
+                    headers: { 'Authorization': `Bearer ${WHATSAPP_TOKEN}`, 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ "blocking": "wait", "contacts": [`+${phone}`] })
+                });
+                if (!response.ok) throw new Error(`A API de contactos falhou com o status: ${response.status}`);
+                const data = await response.json();
+                const contact = data.contacts[0];
+                const isRegistered = contact.status === 'valid';
+
+                await supabase.from('whatsapp_checks')
+                    .update({ status: isRegistered ? 'valid' : 'invalid' }).eq('id', check.id);
+            } catch (err) {
+                console.error('Erro na verificação do WhatsApp:', err);
+                // Em caso de erro com a API da Meta, marca como inválido para não bloquear o utilizador
+                await supabase.from('whatsapp_checks').update({ status: 'invalid' }).eq('id', check.id);
+            }
+        }
+    })
+    .subscribe((status) => {
+        if (status === 'SUBSCRIBED') {
+            console.log('📡 Bot configurado para alertas e validação nativa de números de WhatsApp.');
+        } else {
+            console.log('⚠️ Estado da subscrição Supabase:', status);
+        }
     });
 
-    // O teu número de administrador para receber alertas (Formato: indicativo + número + @c.us)
-    // Usa a variável de ambiente, ou o número de suporte por defeito
-    const ADMIN_PHONE = process.env.ADMIN_PHONE_NUMBER || '244976344207@c.us';
 
-    // Escutar eventos de submissão de KYC no banco de dados em tempo real
-    supabase.channel('bot_admin_alerts')
-        .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'kyc_verifications' }, async (payload) => {
-            const { new: newData, old: oldData } = payload;
 
-            // 1. Dispara o alerta PARA O ADMIN quando o estado passa a "pending" (Aguardando Aprovação)
-            if (newData.ocr_status === 'pending' && oldData.ocr_status !== 'pending') {
-                const alertMsg = `🚨 *Nova Verificação de Identidade (KYC)*\n\nUm cliente acabou de submeter o seu vídeo e documento.\n\n👉 Acede ao Painel de Administrador para analisar e dar o teu veredicto (Aprovar/Rejeitar).`;
-                client.sendMessage(ADMIN_PHONE, alertMsg).catch(err => console.error('Erro ao enviar mensagem:', err));
-            }
 
-            // 2. Dispara o alerta PARA O CLIENTE quando o Admin Aprova ou Rejeita
-            if (
-                (newData.ocr_status === 'passed' && oldData.ocr_status !== 'passed') ||
-                (newData.ocr_status === 'rejected' && oldData.ocr_status !== 'rejected')
-            ) {
-                try {
-                    const { data: profile } = await supabase.from('profiles').select('phone, full_name').eq('id', newData.user_id).maybeSingle();
-                    if (profile && profile.phone) {
-                        let phone = profile.phone.replace(/\D/g, ''); // Limpa a formatação
-                        if (phone.length === 9) phone = '244' + phone; // Adiciona indicativo se não tiver
-                        const clientPhone = `${phone}@c.us`;
-                        const clientName = profile.full_name ? profile.full_name.split(' ')[0] : 'Cliente';
 
-                        const isRegistered = await client.isRegisteredUser(clientPhone);
-                        if (isRegistered) {
-                            if (newData.ocr_status === 'passed') {
-                                const msg = `🎉 *CONTA APROVADA*\n\nOlá ${clientName},\nA tua identidade foi verificada com sucesso! Já podes começar a fazer transações no Bridge Marketplace.\n\nAcede à plataforma para simular e criar o teu pedido.`;
-                                client.sendMessage(clientPhone, msg).catch(err => console.error('Erro ao enviar aprovação:', err));
-                            } else if (newData.ocr_status === 'rejected') {
-                                const reason = newData.rejection_reason || "Documentos ilegíveis ou inválidos.";
-                                const msg = `❌ *VERIFICAÇÃO RECUSADA*\n\nOlá ${clientName},\nInfelizmente, não foi possível validar a tua identidade.\n\n*Motivo:* ${reason}\n\nPor favor, acede à plataforma para tentares novamente submeter fotos mais nítidas.`;
-                                client.sendMessage(clientPhone, msg).catch(err => console.error('Erro ao enviar rejeição:', err));
-                            }
-                        }
-                    }
-                } catch (error) {
-                    console.error('Erro ao alertar cliente sobre KYC:', error);
-                }
-            }
-        })
-        .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'orders' }, (payload) => {
-            const newOrder = payload.new;
-            const orderRef = newOrder.order_ref || '#' + newOrder.id.slice(0, 8).toUpperCase();
-            const alertMsg = `🛒 *NOVO PEDIDO (Bridge)*\n\nUm cliente acabou de criar um novo pedido!\n\n💵 Valor: *$${parseFloat(newOrder.amount_usd).toFixed(2)}*\n🇦🇴 Total a Pagar: *${parseFloat(newOrder.amount_aoa).toLocaleString('pt-AO')} Kz*\n📄 Referência: ${orderRef}\n🏦 Destino: ${newOrder.destination_account}\n\n👉 Acede ao Painel de Administrador para gerir.`;
 
-            client.sendMessage(ADMIN_PHONE, alertMsg).catch(err => console.error('Erro ao enviar alerta de novo pedido:', err));
-        })
-        .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'payment_proofs' }, (payload) => {
-            const alertMsg = `💰 *PAGAMENTO RECEBIDO (Bridge)*\n\nUm cliente acabou de enviar um comprovante de pagamento!\n\n👉 Acede ao teu Painel de Administrador para validar a transferência e confirmar o envio dos dólares.`;
 
-            client.sendMessage(ADMIN_PHONE, alertMsg).catch(err => console.error('Erro ao enviar alerta de pagamento:', err));
-        })
-        .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'orders' }, async (payload) => {
-            const { new: newData, old: oldData } = payload;
 
-            // Dispara quando clicas em "Confirmar envio do dólar" no painel
-            if (newData.status === 'completed' && oldData.status !== 'completed') {
-                try {
-                    const { data: profile } = await supabase.from('profiles').select('phone, full_name').eq('id', newData.user_id).maybeSingle();
 
-                    if (profile && profile.phone) {
-                        let phone = profile.phone.replace(/\D/g, ''); // Limpa caracteres como + ou espaços
-                        if (phone.length === 9) phone = '244' + phone; // Adiciona indicativo se faltar
 
-                        const clientPhone = `${phone}@c.us`;
-                        const orderRef = newData.order_ref || '#' + newData.id.slice(0, 8).toUpperCase();
-                        const clientName = profile.full_name ? profile.full_name.split(' ')[0] : 'Cliente';
 
-                        const isRegistered = await client.isRegisteredUser(clientPhone);
-                        if (isRegistered) {
-                            const msg = `✅ *PEDIDO ENVIADO*\n\nOlá ${clientName},\nO teu pedido ${orderRef} foi processado e os dólares já foram enviados para a tua conta!\n\n💵 Valor: *$${parseFloat(newData.amount_usd).toFixed(2)}*\n🏦 Destino: ${newData.destination_account}\n\nObrigado pela preferência! 🚀`;
-                            client.sendMessage(clientPhone, msg).catch(err => console.error('Erro ao enviar mensagem ao cliente:', err));
-                        }
-                    }
-                } catch (error) {
-                    console.error('Erro ao alertar o cliente sobre pedido concluído:', error);
-                }
-            }
-        })
-        .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'exchange_rates' }, (payload) => {
-            // Atualiza a taxa de câmbio na memória do bot sempre que tu a publicares no Painel de Admin
-            currentRateStr = parseFloat(payload.new.applied_rate).toLocaleString('pt-AO');
-        })
-        .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'whatsapp_checks' }, async (payload) => {
-            const check = payload.new;
-            console.log(`🔍 A verificar conta de WhatsApp do número: ${check.phone}`);
-            if (check.status === 'pending') {
-                try {
-                    let phone = check.phone.replace(/\D/g, '');
-                    if (phone.length === 9) phone = '244' + phone;
 
-                    const isRegistered = await client.isRegisteredUser(`${phone}@c.us`);
-                    await supabase.from('whatsapp_checks')
-                        .update({ status: isRegistered ? 'valid' : 'invalid' }).eq('id', check.id);
-                } catch (err) {
-                    console.error('Erro na verificação do WhatsApp:', err);
-                    await supabase.from('whatsapp_checks').update({ status: 'invalid' }).eq('id', check.id);
-                }
-            }
-        })
-        .subscribe((status) => {
-            if (status === 'SUBSCRIBED') {
-                console.log('📡 Bot configurado para alertas e validação nativa de números de WhatsApp.');
-            }
-        });
-});
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 // 4. Configuração do modelo e estrutura de memória
 const model = genAI.getGenerativeModel({
@@ -370,22 +591,35 @@ setInterval(() => {
 }, 24 * 60 * 60 * 1000);
 
 // 4.5. Função para converter imagens/ficheiros do WhatsApp para a IA (Gemini Vision)
-async function prepareMediaForGemini(msg) {
-    const media = await msg.downloadMedia();
-    return {
-        inlineData: {
-            data: media.data,
-            mimeType: media.mimetype
-        }
-    };
+async function prepareMediaForGemini(mediaId) {
+    try {
+        // 1. Obter o URL do ficheiro a partir do ID
+        const urlRes = await fetch(`https://graph.facebook.com/v20.0/${mediaId}`, {
+            headers: { 'Authorization': `Bearer ${WHATSAPP_TOKEN}` }
+        });
+        const urlData = await urlRes.json();
+        if (!urlData.url) throw new Error("Não foi possível obter o URL do ficheiro.");
+
+        // 2. Descarregar o ficheiro
+        const fileRes = await fetch(urlData.url, {
+            headers: { 'Authorization': `Bearer ${WHATSAPP_TOKEN}` }
+        });
+        const arrayBuffer = await fileRes.arrayBuffer();
+        const buffer = Buffer.from(arrayBuffer);
+        const base64Data = buffer.toString('base64');
+
+        return {
+            inlineData: { data: base64Data, mimeType: fileRes.headers.get('content-type') }
+        };
+    } catch (error) {
+        console.error("❌ Erro ao processar multimédia do WhatsApp:", error);
+        return null;
+    }
 }
 
 // 5. Lógica de resposta a mensagens
-client.on('message', async (msg) => {
-    // Ignorar status e mensagens de grupos
-    if (msg.from === 'status@broadcast' || msg.from.includes('@g.us')) return;
-
-    console.log(`Mensagem recebida de ${msg.from}: ${msg.body}`);
+async function handleIncomingMessage(msg) {
+    console.log(`Mensagem recebida de ${msg.from}: ${msg.body || '(Multimédia)'}`);
 
     try {
         // Verifica se já existe um chat ativo para este número
@@ -394,7 +628,7 @@ client.on('message', async (msg) => {
             // Tenta recuperar o histórico do banco de dados (Supabase)
             const { data, error } = await supabase
                 .from('bot_history')
-                .select('history')
+                .select('history') // O RLS garante que só podemos ler o nosso próprio histórico
                 .eq('phone', msg.from)
                 .maybeSingle();
 
@@ -407,13 +641,17 @@ client.on('message', async (msg) => {
         let promptPayload = [];
 
         // Tratar Imagem ou Ficheiro
-        if (msg.hasMedia) {
-            const mediaPart = await prepareMediaForGemini(msg);
-            promptPayload.push(mediaPart);
-            promptPayload.push(msg.body || "Analisa esta imagem/documento e responde de acordo com as tuas instruções.");
+        if (msg.hasMedia && msg.mediaId) {
+            const mediaPart = await prepareMediaForGemini(msg.mediaId);
+            if (mediaPart) {
+                promptPayload.push(mediaPart);
+                promptPayload.push(msg.body || "Analisa esta imagem/documento e responde de acordo com as tuas instruções.");
+            } else {
+                promptPayload.push("Ocorreu um erro ao tentar ler a imagem que enviaste. Podes tentar enviar novamente?");
+            }
         } else {
             // Tratar Texto com contexto de taxa
-            let text = msg.body;
+            let text = msg.body || "";
             if (/(taxa|câmbio|cambio|kwanza|kz|dólar|dolar|usd|aoa|preço|valor|custa|pagar)/i.test(text)) {
                 text = `[INSTRUÇÃO DO SISTEMA (Apenas para tua referência, usa para responder ao cliente): A taxa de câmbio de hoje na Bridge é de ${currentRateStr} Kwanzas por cada 1 Dólar USD.]\n\nMensagem do cliente: ${text}`;
             }
@@ -422,7 +660,7 @@ client.on('message', async (msg) => {
 
         // Envia a mensagem dentro da sessão (que retém o contexto)
         const result = await chat.sendMessage(promptPayload);
-        msg.reply(result.response.text());
+        await sendWhatsappMessage(msg.from, result.response.text());
 
         // Guarda o histórico atualizado no Supabase (faz Update ou Insert)
         const updatedHistory = await chat.getHistory();
@@ -435,15 +673,10 @@ client.on('message', async (msg) => {
         }
     } catch (error) {
         console.error('Erro na integração com a IA:', error);
-        msg.reply('🔒 Ocorreu uma interrupção inesperada nos nossos sistemas. Por favor, tente novamente em instantes ou contacte a linha de suporte direto no número 976-344-207.');
+        await sendWhatsappMessage(msg.from, '🔒 Ocorreu uma interrupção inesperada nos nossos sistemas. Por favor, tente novamente em instantes ou contacte a linha de suporte direto no número 976-344-207.');
     }
-});
+}
 
 // 🚨 Proteção contra crashes silenciosos do Node.js
 process.on('uncaughtException', err => console.error('🚨 [CRASH FATAL DO NODE]:', err));
 process.on('unhandledRejection', err => console.error('🚨 [PROMESSA REJEITADA]:', err));
-
-console.log('🚀 A inicializar o navegador do WhatsApp. Por favor, aguarde...');
-client.initialize().catch(err => {
-    console.error('❌ Erro crítico ao inicializar o bot:', err);
-});

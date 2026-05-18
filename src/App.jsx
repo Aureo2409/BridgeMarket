@@ -80,28 +80,28 @@ function AuthScreen() {
       setErr("⏳ A verificar o teu número de WhatsApp...");
       try {
         const { data: checkData, error: checkErr } = await sb.from("whatsapp_checks").insert({ phone: formattedPhone }).select().single();
-        if (!checkErr) {
-          const isValid = await new Promise((resolve, reject) => {
-            let handled = false;
-            const ch = sb.channel(`check_${checkData.id}`)
-              .on("postgres_changes", { event: "UPDATE", schema: "public", table: "whatsapp_checks", filter: `id=eq.${checkData.id}` }, (p) => {
-                handled = true;
-                sb.removeChannel(ch);
-                resolve(p.new.status === "valid");
-              }).subscribe();
+        if (checkErr) throw new Error(checkErr.message);
 
-            setTimeout(() => {
-              if (!handled) { sb.removeChannel(ch); reject(new Error("timeout")); }
-            }, 12000); // Dá 12 segundos ao bot para processar
-          });
+        const isValid = await new Promise((resolve, reject) => {
+          let handled = false;
+          const ch = sb.channel(`check_${checkData.id}`)
+            .on("postgres_changes", { event: "UPDATE", schema: "public", table: "whatsapp_checks", filter: `id=eq.${checkData.id}` }, (p) => {
+              handled = true;
+              sb.removeChannel(ch);
+              resolve(p.new.status === "valid");
+            }).subscribe();
 
-          if (!isValid) {
-            setErr("err:O número inserido não possui conta de WhatsApp activa.");
-            setLoad(false); return;
-          }
+          setTimeout(() => {
+            if (!handled) { sb.removeChannel(ch); reject(new Error("O bot demorou muito a responder.")); }
+          }, 12000); // Dá 12 segundos ao bot para processar
+        });
+
+        if (!isValid) {
+          setErr("err:O número inserido não possui conta de WhatsApp activa.");
+          setLoad(false); return;
         }
       } catch (e) {
-        setErr("warn:O serviço de verificação está offline. Tenta novamente mais tarde.");
+        setErr("warn:Falha na verificação: " + e.message);
         setLoad(false); return;
       }
 
