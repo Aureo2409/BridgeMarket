@@ -125,7 +125,10 @@ Se o utilizador solicitar uma compra de dólares, pedir o link da plataforma, ou
 // 3. Inicializa o cliente do WhatsApp
 const client = new Client({
     authStrategy: new LocalAuth(), // Salva a sessão localmente para não precisares de ler o QR sempre
-    webVersionCache: { type: 'local' }, // 🚨 LOCAL: Evita que o bot congele ao tentar baixar do Github
+    webVersionCache: {
+        type: 'remote',
+        remotePath: 'https://raw.githubusercontent.com/wppconnect-team/wa-version/main/html/2.2412.54.html'
+    },
     puppeteer: {
         headless: true, // Força o modo invisível para poupar recursos
         dumpio: false, // 🚨 DESLIGADO: Remove os erros "falsos" do Chromium (D-Bus, GCM) que poluem o terminal
@@ -137,14 +140,7 @@ const client = new Client({
             '--disable-accelerated-2d-canvas',
             '--no-first-run',
             '--no-zygote',
-            '--single-process', // 🚨 MAGIA AQUI: Impede que o Chromium congele sem dar erro ao tentar criar sub-processos no Linux!
-            '--disable-gpu',
-            '--disable-software-rasterizer',
-            '--disable-site-isolation-trials', // 🚨 Poupa MUITA memória RAM para evitar Congelamentos
-            '--disable-background-networking',
-            '--disable-extensions',
-            '--disable-features=Vulkan', // 🚨 Impede que o Chromium tente usar o motor 3D e sofra crashes
-            '--js-flags=--max-old-space-size=256' // 🚨 Força o motor de JS a usar o mínimo de memória possível
+            '--disable-gpu'
         ]
     }
 });
@@ -163,16 +159,13 @@ client.on('auth_failure', msg => {
 
 // Mostra o QR Code no terminal para emparelhar com o WhatsApp
 client.on('qr', (qr) => {
-    latestQR = qr; // Guarda o QR code na variável
+    qrcode.generate(qr, { small: true }); // 🚨 AGORA SIM: Manda a biblioteca desenhar o QR no terminal!
     console.log('================================================================================');
-    console.log('    ⚠️ NOVO QR CODE GERADO! ⚠️                                                    ');
-    console.log('    Abre o link da tua aplicação no navegador e adiciona /qr no final.          ');
-    console.log('    Exemplo: https://<o-teu-app-no-railway>.up.railway.app/qr                   ');
+    console.log('    ⚠️ NOVO QR CODE GERADO! APONTA O TELEMÓVEL PARA LER ⚠️                        ');
     console.log('================================================================================');
 });
 
 client.on('ready', () => {
-    latestQR = ""; // Limpa da memória após conectar
     console.log('🟢 Bot "Responda" da Pixel Flex está online e pronto para receber mensagens!');
 
     // Vai buscar a taxa de câmbio inicial da plataforma
