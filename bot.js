@@ -160,7 +160,7 @@ Diretrizes de Resposta:
 Contexto Operacional e Contactos da Empresa (Apenas fornecer se for contextualmente relevante para a pergunta do utilizador):
 - Plataforma Oficial: https://bridge-market-delta.vercel.app (Orienta o cliente a aceder ao site para criar pedidos de dólares, simular taxas ou concluir o KYC).
 - Escritório: Localizado em Luanda, junto ao Estádio 11 de Novembro, Bairro Sapo 2.
-- Atendimento Direto / Suporte: Linha 52 340023.
+- Atendimento Direto / Suporte: Linha 976-344-207.
 - Contacto Rápido WhatsApp: 976-34-42-07.
 - Missão Principal: Segurança digital e transformação no ecossistema Google.
 
@@ -338,7 +338,7 @@ client.on('ready', () => {
 
 // 4. Configuração do modelo e estrutura de memória
 const model = genAI.getGenerativeModel({
-    model: "gemini-2.0-flash", // Usar um modelo mais estável para evitar erros 503 de sobrecarga
+    model: "gemini-1.5-flash", // 🚨 MUDANÇA AQUI: O 1.5-flash tem limites gratuitos muito maiores e não bloqueia!
     systemInstruction: systemInstruction,
 });
 
@@ -417,7 +417,7 @@ client.on('message', async (msg) => {
         }
     } catch (error) {
         console.error('Erro na integração com a IA:', error);
-        msg.reply('🔒 Ocorreu uma interrupção inesperada nos nossos sistemas. Por favor, tente novamente em instantes ou contacte a linha de suporte direto no número 52 340023.');
+        msg.reply('🔒 Ocorreu uma interrupção inesperada nos nossos sistemas. Por favor, tente novamente em instantes ou contacte a linha de suporte direto no número 976-344-207.');
     }
 });
 
