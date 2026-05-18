@@ -6,6 +6,7 @@ import { createClient } from '@supabase/supabase-js';
 import WebSocket from 'ws';
 import dotenv from 'dotenv';
 dotenv.config();
+import fs from 'fs';
 
 // 0. Servidor Web (Obrigatório para o Railway manter o Bot ligado)
 import express from 'express';
@@ -50,6 +51,17 @@ app.get('/qr', (req, res) => {
             </body>
         </html>
     `);
+});
+
+// 0.6. Rota para FORÇAR a limpeza da sessão (Gera um novo QR Code)
+app.get('/reset', (req, res) => {
+    try {
+        fs.rmSync('.wwebjs_auth', { recursive: true, force: true });
+        res.send('<h2 style="font-family:sans-serif;text-align:center;margin-top:50px;">🔄 Sessão apagada com sucesso!</h2><p style="font-family:sans-serif;text-align:center;">O bot vai reiniciar agora. Aguarda 1 minuto e clica <a href="/qr">aqui para ver o novo QR Code</a>.</p>');
+        setTimeout(() => process.exit(1), 2000); // O Railway reinicia automaticamente o bot
+    } catch (e) {
+        res.send('<h2 style="font-family:sans-serif;text-align:center;margin-top:50px;">Erro ao apagar sessão: ' + e.message + '</h2>');
+    }
 });
 
 // ── INTEGRAÇÃO DIDIT.ME ──────────────────────────────────────────────────────
