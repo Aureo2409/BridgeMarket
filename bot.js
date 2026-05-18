@@ -338,7 +338,7 @@ client.on('ready', () => {
 
 // 4. Configuração do modelo e estrutura de memória
 const model = genAI.getGenerativeModel({
-    model: "gemini-1.5-flash", // 🚨 MUDANÇA AQUI: O 1.5-flash tem limites gratuitos muito maiores e não bloqueia!
+    model: "gemini-pro-vision", // 🚨 MUDANÇA AQUI: O '1.5-flash' não foi encontrado na API. O 'gemini-pro-vision' é mais estável.
     systemInstruction: systemInstruction,
 });
 
