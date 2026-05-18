@@ -7,6 +7,7 @@ import WebSocket from 'ws';
 import dotenv from 'dotenv';
 dotenv.config();
 import fs from 'fs';
+import path from 'path';
 
 // 0. Servidor Web (Obrigatório para o Railway manter o Bot ligado)
 import express from 'express';
@@ -167,6 +168,18 @@ Contexto Operacional e Contactos da Empresa (Apenas fornecer se for contextualme
 Comportamento em Situações de Dúvida:
 Se o utilizador solicitar uma compra de dólares, pedir o link da plataforma, ou tentar enviar documentos pelo WhatsApp, informa de forma educada que todo o processo é feito de forma automática e segura na nossa plataforma web (https://bridge-market-delta.vercel.app).
 `;
+
+// Limpa o ficheiro de bloqueio de uma sessão anterior para evitar crashes no Railway
+try {
+    const lockFilePath = path.join('.wwebjs_auth', 'session', 'SingletonLock');
+    if (fs.existsSync(lockFilePath)) {
+        console.log('🔑 A remover ficheiro de bloqueio (SingletonLock) de uma sessão anterior...');
+        fs.unlinkSync(lockFilePath);
+        console.log('✅ Ficheiro de bloqueio removido. A iniciar o bot...');
+    }
+} catch (err) {
+    console.error('⚠️ Erro ao remover o ficheiro de bloqueio:', err.message);
+}
 
 // 3. Inicializa o cliente do WhatsApp
 const client = new Client({
