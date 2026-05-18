@@ -18,6 +18,36 @@ app.use(express.json()); // Permite ler JSON no corpo dos pedidos (necessário p
 
 app.get('/', (req, res) => res.send('🤖 Bot do WhatsApp está online e a funcionar!'));
 
+// 0.5. Rota para mostrar o QR Code na Web (Caso quebre no terminal)
+let latestQR = "";
+app.get('/qr', (req, res) => {
+    if (!latestQR) {
+        return res.send('<h2 style="font-family:sans-serif;text-align:center;margin-top:50px;">Nenhum QR Code disponível. O bot já está conectado ou ainda a iniciar!</h2>');
+    }
+    res.send(`
+        <html>
+            <head><title>Bridge - WhatsApp QR</title></head>
+            <body style="display:flex; flex-direction:column; justify-content:center; align-items:center; height:100vh; background-color:#0f172a; color:white; font-family:sans-serif;">
+                <h2>Abre o WhatsApp e faz a leitura:</h2>
+                <div id="qrcode" style="background:white; padding:20px; border-radius:10px;"></div>
+                <p style="color:#9ca3af; margin-top:20px;">A página atualiza sozinha a cada 15 segundos.</p>
+                <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+                <script>
+                    new QRCode(document.getElementById("qrcode"), {
+                        text: "${latestQR}",
+                        width: 300,
+                        height: 300,
+                        colorDark : "#000000",
+                        colorLight : "#ffffff",
+                        correctLevel : QRCode.CorrectLevel.L
+                    });
+                    setTimeout(() => location.reload(), 15000);
+                </script>
+            </body>
+        </html>
+    `);
+});
+
 // ── INTEGRAÇÃO DIDIT.ME ──────────────────────────────────────────────────────
 const DIDIT_API_KEY = process.env.DIDIT_API_KEY || 'JGASXPZM3NXefP3h6qDrtveLCLnOM-VKGC9tSkmRbpw.';
 
@@ -159,13 +189,17 @@ client.on('auth_failure', msg => {
 
 // Mostra o QR Code no terminal para emparelhar com o WhatsApp
 client.on('qr', (qr) => {
-    qrcode.generate(qr, { small: true }); // 🚨 AGORA SIM: Manda a biblioteca desenhar o QR no terminal!
+    latestQR = qr; // Guarda o QR code para ser mostrado na página web
+    qrcode.generate(qr, { small: true }); // Tenta desenhar no terminal na mesma
     console.log('================================================================================');
-    console.log('    ⚠️ NOVO QR CODE GERADO! APONTA O TELEMÓVEL PARA LER ⚠️                        ');
+    console.log('    ⚠️ NOVO QR CODE GERADO! ⚠️                                                    ');
+    console.log('    Se o código acima estiver quebrado/distorcido, acede a:                     ');
+    console.log('    👉 https://<O-TEU-DOMINIO-NO-RAILWAY>.up.railway.app/qr                     ');
     console.log('================================================================================');
 });
 
 client.on('ready', () => {
+    latestQR = ""; // Limpa o QR da memória após conectar
     console.log('🟢 Bot "Responda" da Pixel Flex está online e pronto para receber mensagens!');
 
     // Vai buscar a taxa de câmbio inicial da plataforma
