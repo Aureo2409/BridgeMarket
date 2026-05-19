@@ -1,32 +1,8 @@
 import { useState, useEffect } from "react";
 import { sb } from "../../lib/supabase.js";
 import { DESTS, STATUS_META } from "../../lib/constants.js";
-import { Toast } from "../shared/UI.jsx";
+import { Toast, StatusPill, Icon } from "../shared/UI.jsx";
 
-const Icon = ({ name, size = 16, color = "currentColor", className, style }) => {
-  const paths = {
-    bell: <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9 M13.73 21a2 2 0 0 1-3.46 0" />,
-    bellOff: <><path d="M13.73 21a2 2 0 0 1-3.46 0" /><path d="M18.63 13A17.89 17.89 0 0 1 18 8" /><path d="M6.26 6.26A5.86 5.86 0 0 0 6 8c0 7-3 9-3 9h14" /><path d="M18 8a6 6 0 0 0-9.33-5" /><line x1="1" y1="1" x2="23" y2="23" /></>,
-    clipboard: <><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2" /><rect x="8" y="2" width="8" height="4" rx="1" ry="1" /></>,
-    ban: <><circle cx="12" cy="12" r="10" /><line x1="4.93" y1="4.93" x2="19.07" y2="19.07" /></>,
-    chart: <><line x1="12" y1="20" x2="12" y2="10" /><line x1="18" y1="20" x2="18" y2="4" /><line x1="6" y1="20" x2="6" y2="16" /></>,
-    user: <><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" /><circle cx="12" cy="7" r="4" /></>,
-    settings: <><circle cx="12" cy="12" r="3" /><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z" /></>,
-    cart: <><circle cx="9" cy="21" r="1" /><circle cx="20" cy="21" r="1" /><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6" /></>,
-    money: <><line x1="12" y1="1" x2="12" y2="23" /><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" /></>,
-    check: <polyline points="20 6 9 17 4 12" />,
-    mail: <><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" /><polyline points="22,6 12,13 2,6" /></>,
-    edit: <><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" /><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" /></>,
-    save: <><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z" /><polyline points="17 21 17 13 7 13 7 21" /><polyline points="7 3 7 8 15 8" /></>,
-    download: <><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="7 10 12 15 17 10" /><line x1="12" y1="15" x2="12" y2="3" /></>,
-    file: <><path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z" /><polyline points="13 2 13 9 20 9" /></>
-  };
-  return (
-    <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className} style={style}>
-      {paths[name]}
-    </svg>
-  );
-};
 
 // ── ConfigField — each field needs its own component so hooks work correctly ──
 function ConfigField({ field, initialValue, onSave }) {
@@ -190,7 +166,7 @@ export function AdminPanel({ user, onLogout }) {
       .update({ status: "completed", sent_at: new Date().toISOString() })
       .eq("id", orderId);
     if (error) toast_(error.message, "err");
-    else { toast_("✅ Marcado como enviado!"); fetchOrders(); fetchStats(); }
+    else { toast_("Marcado como enviado!"); fetchOrders(); fetchStats(); }
   }
   async function updateRate() {
     const base = parseFloat(newBase);
@@ -205,7 +181,7 @@ export function AdminPanel({ user, onLogout }) {
   async function updateConfig(key, value) {
     await sb.from("admin_config").upsert({ key, value, updated_at: new Date().toISOString() });
     setConfig(prev => ({ ...prev, [key]: value }));
-    toast_("✅ Configuração guardada!");
+    toast_("Configuração guardada!");
   }
 
   async function updateKyc(k, status) {
@@ -249,7 +225,7 @@ export function AdminPanel({ user, onLogout }) {
     toast_("A enviar lembrete...");
     const { error } = await sb.functions.invoke("remind-kyc", { body: { userId } });
     if (error) toast_("Erro ao enviar: " + error.message, "err");
-    else toast_("✅ Lembrete enviado com sucesso!");
+    else toast_("Lembrete enviado com sucesso!");
   }
 
   function startEdit(o) { setEditingOrder(o.id); setEditForm({ ...o }); }
@@ -264,7 +240,7 @@ export function AdminPanel({ user, onLogout }) {
       status: editForm.status
     }).eq("id", editingOrder);
     if (error) toast_(error.message, "err");
-    else { toast_("✅ Atualizado!"); setEditingOrder(null); fetchOrders(); fetchStats(); }
+    else { toast_("Atualizado!"); setEditingOrder(null); fetchOrders(); fetchStats(); }
   }
 
   function exportToCSV() {
@@ -285,12 +261,12 @@ export function AdminPanel({ user, onLogout }) {
   }
 
   const TABS = [
-    ["alerts", `🔔${unread > 0 ? ` (${unread})` : ""}`],
-    ["orders", "📋"],
-    ["cancelled", "🚫"],
-    ["rate", "📊"],
-    ["kyc", "👤"],
-    ["config", "⚙️"],
+    { id: "alerts", icon: "bell", label: unread > 0 ? ` (${unread})` : "" },
+    { id: "orders", icon: "list" },
+    { id: "cancelled", icon: "ban" },
+    { id: "rate", icon: "chart" },
+    { id: "kyc", icon: "user" },
+    { id: "config", icon: "settings" },
   ];
 
   return (
@@ -309,8 +285,11 @@ export function AdminPanel({ user, onLogout }) {
       </div>
 
       <div className="adm-tabs">
-        {TABS.map(([id, lbl]) => (
-          <button key={id} className={`adm-tab${tab === id ? " on" : ""}`} onClick={() => setTab(id)}>{lbl}</button>
+        {TABS.map(t => (
+          <button key={t.id} className={`adm-tab${tab === t.id ? " on" : ""}`} onClick={() => setTab(t.id)}>
+            <Icon name={t.icon} size={16} />
+            {t.label && <span style={{ marginLeft: 4 }}>{t.label}</span>}
+          </button>
         ))}
       </div>
 
@@ -400,8 +379,11 @@ export function AdminPanel({ user, onLogout }) {
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 7 }}>
                     <div>
                       <div style={{ fontSize: 9, fontFamily: "monospace", color: "#334155", fontWeight: 700 }}>{o.order_ref ?? "#" + o.id.slice(0, 8).toUpperCase()}</div>
-                      <div style={{ fontSize: 12, fontWeight: 700, color: "#e2e8f0", marginTop: 2 }}>
-                        {d?.icon} {d?.label} · {o.destination_account}
+                      <div style={{ fontSize: 12, fontWeight: 700, color: "#e2e8f0", marginTop: 2, display: "flex", alignItems: "center", gap: 6 }}>
+                        {d?.svg ? (
+                          <div style={{ display: "inline-block", width: 14, height: 14, flexShrink: 0 }} dangerouslySetInnerHTML={{ __html: d.svg }} />
+                        ) : null}
+                        <span>{d?.label} · {o.destination_account}</span>
                       </div>
                     </div>
                     <div style={{ textAlign: "right" }}>
@@ -410,9 +392,7 @@ export function AdminPanel({ user, onLogout }) {
                     </div>
                   </div>
 
-                  <span className="pill" style={{ background: "rgba(255,255,255,.05)", color: sm.color, border: `1px solid ${sm.color}44`, marginBottom: 5 }}>
-                    {sm.icon} {sm.label}
-                  </span>
+                  <StatusPill status={o.status} />
 
                   <div style={{ fontSize: 10, color: "#64748b", fontWeight: 500, marginTop: 4 }}>
                     Taxa {parseFloat(o.rate_applied).toLocaleString("pt-AO")} Kz/$ · {new Date(o.created_at).toLocaleString("pt-AO")}
@@ -424,8 +404,8 @@ export function AdminPanel({ user, onLogout }) {
                         <div style={{ display: "flex", alignItems: "center", gap: 4 }}><Icon name="file" size={12} /> Comprovante recebido</div>
                       </div>
                       {proof.file_url?.startsWith("https") ? (
-                        <a href={proof.file_url} target="_blank" rel="noopener noreferrer" className="proof-link" onClick={e => e.stopPropagation()}>
-                          🔗 Ver ficheiro →
+                        <a href={proof.file_url} target="_blank" rel="noopener noreferrer" className="proof-link" onClick={e => e.stopPropagation()} style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>
+                          <Icon name="arrowUpRight" size={11} /> Ver ficheiro
                         </a>
                       ) : (
                         <div style={{ fontSize: 11, color: "#94a3b8", fontWeight: 500 }}>
@@ -528,16 +508,19 @@ export function AdminPanel({ user, onLogout }) {
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 7 }}>
                     <div>
                       <div style={{ fontSize: 9, fontFamily: "monospace", color: "#334155", fontWeight: 700 }}>{o.order_ref ?? "#" + o.id.slice(0, 8).toUpperCase()}</div>
-                      <div style={{ fontSize: 12, fontWeight: 700, color: "#e2e8f0", marginTop: 2 }}>{d?.icon} {d?.label} · {o.destination_account}</div>
+                      <div style={{ fontSize: 12, fontWeight: 700, color: "#e2e8f0", marginTop: 2, display: "flex", alignItems: "center", gap: 6 }}>
+                        {d?.svg ? (
+                          <div style={{ display: "inline-block", width: 14, height: 14, flexShrink: 0 }} dangerouslySetInnerHTML={{ __html: d.svg }} />
+                        ) : null}
+                        <span>{d?.label} · {o.destination_account}</span>
+                      </div>
                     </div>
                     <div style={{ textAlign: "right" }}>
                       <div style={{ fontSize: 17, fontWeight: 900, color: "#a5b4fc" }}>${parseFloat(o.amount_usd).toFixed(2)}</div>
                       <div style={{ fontSize: 10, color: "#334155", fontFamily: "monospace" }}>{parseFloat(o.amount_aoa).toLocaleString("pt-AO")} Kz</div>
                     </div>
                   </div>
-                  <span className="pill" style={{ background: "rgba(255,255,255,.05)", color: sm.color, border: `1px solid ${sm.color}44`, marginBottom: 5 }}>
-                    {sm.icon} {sm.label}
-                  </span>
+                  <StatusPill status={o.status} />
                   <div style={{ fontSize: 10, color: "#64748b", fontWeight: 500, marginTop: 4 }}>
                     Taxa {parseFloat(o.rate_applied).toLocaleString("pt-AO")} Kz/$ · {new Date(o.created_at).toLocaleString("pt-AO")}
                   </div>

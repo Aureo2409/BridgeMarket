@@ -1,21 +1,7 @@
 import { useState } from "react";
 import { DESTS } from "../../lib/constants.js";
+import { Icon } from "../shared/UI.jsx";
 
-const Icon = ({ name, size = 16, color = "currentColor", style }) => {
-  const paths = {
-    globe: <><circle cx="12" cy="12" r="10" /><line x1="2" y1="12" x2="22" y2="12" /><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" /></>,
-    bank: <><rect x="3" y="21" width="18" height="2" rx="1" ry="1" /><rect x="5" y="11" width="3" height="8" rx="1" ry="1" /><rect x="11" y="11" width="3" height="8" rx="1" ry="1" /><rect x="17" y="11" width="3" height="8" rx="1" ry="1" /><path d="M12 2L2 9h20L12 2z" /></>,
-    arrowRight: <><line x1="5" y1="12" x2="19" y2="12" /><polyline points="12 5 19 12 12 19" /></>,
-    chart: <><line x1="12" y1="20" x2="12" y2="10" /><line x1="18" y1="20" x2="18" y2="4" /><line x1="6" y1="20" x2="6" y2="16" /></>,
-    user: <><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" /><circle cx="12" cy="7" r="4" /></>,
-    alertTriangle: <><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" /><line x1="12" y1="9" x2="12" y2="13" /><line x1="12" y1="17" x2="12.01" y2="17" /></>
-  };
-  return (
-    <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={style}>
-      {paths[name]}
-    </svg>
-  );
-};
 
 export function Calculator({ appliedRate, rate, onSubmit, loading, user, kycStep, config }) {
   const applied = parseFloat(appliedRate) || 1165;

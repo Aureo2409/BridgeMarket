@@ -1,17 +1,6 @@
 import { DESTS } from "../../lib/constants.js";
-import { StatusPill } from "../shared/UI.jsx";
+import { StatusPill, Icon } from "../shared/UI.jsx";
 
-const Icon = ({ name, size = 16, color = "currentColor", style }) => {
-  const paths = {
-    inbox: <><polyline points="22 12 16 12 14 15 10 15 8 12 2 12" /><path d="M5.45 5.11L2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z" /></>,
-    chart: <><line x1="12" y1="20" x2="12" y2="10" /><line x1="18" y1="20" x2="18" y2="4" /><line x1="6" y1="20" x2="6" y2="16" /></>
-  };
-  return (
-    <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={style}>
-      {paths[name]}
-    </svg>
-  );
-};
 
 export function OrderList({ orders }) {
   if (orders.length === 0) {
@@ -36,9 +25,13 @@ export function OrderList({ orders }) {
                 width: 40, height: 40, borderRadius: 13,
                 background: d?.bg ?? "#f3f4f6",
                 display: "flex", alignItems: "center", justifyContent: "center",
-                fontSize: 20, flexShrink: 0,
+                fontSize: 20, flexShrink: 0, overflow: "hidden"
               }}>
-                {d?.icon ?? <Icon name="chart" size={20} />}
+                {d?.svg ? (
+                  <div style={{ width: 40, height: 40, flexShrink: 0 }} dangerouslySetInnerHTML={{ __html: d.svg }} />
+                ) : (
+                  <Icon name="chart" size={20} />
+                )}
               </div>
               <div style={{ flex: 1 }}>
                 <div style={{ fontSize: 19, fontWeight: 900, color: "#1e1b4b", letterSpacing: -1 }}>

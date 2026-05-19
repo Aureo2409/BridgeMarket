@@ -1,21 +1,8 @@
 import { useState } from "react";
 import { sb, uploadProof } from "../../lib/supabase.js";
 import { DESTS } from "../../lib/constants.js";
+import { Icon } from "../shared/UI.jsx";
 
-const Icon = ({ name, size = 16, color = "currentColor", style }) => {
-  const paths = {
-    bank: <><rect x="3" y="21" width="18" height="2" rx="1" ry="1" /><rect x="5" y="11" width="3" height="8" rx="1" ry="1" /><rect x="11" y="11" width="3" height="8" rx="1" ry="1" /><rect x="17" y="11" width="3" height="8" rx="1" ry="1" /><path d="M12 2L2 9h20L12 2z" /></>,
-    file: <><path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z" /><polyline points="13 2 13 9 20 9" /></>,
-    upload: <><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="17 8 12 3 7 8" /><line x1="12" y1="3" x2="12" y2="15" /></>,
-    shield: <><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" /></>,
-    arrowLeft: <><line x1="19" y1="12" x2="5" y2="12" /><polyline points="12 19 5 12 12 5" /></>
-  };
-  return (
-    <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={style}>
-      {paths[name]}
-    </svg>
-  );
-};
 
 export function ProofUpload({ order, user, config, onSuccess, onBack }) {
   const [file, setFile] = useState(null);
@@ -85,7 +72,7 @@ export function ProofUpload({ order, user, config, onSuccess, onBack }) {
             </span>
           </div>
           <div style={{ fontSize: 11, color: "#9ca3af", fontWeight: 600, marginTop: 2 }}>
-            {parseFloat(order.amount_aoa).toLocaleString("pt-AO")} Kz → {destInfo?.label} {destInfo?.icon}
+            {parseFloat(order.amount_aoa).toLocaleString("pt-AO")} Kz → {destInfo?.label}
           </div>
         </div>
       )}
