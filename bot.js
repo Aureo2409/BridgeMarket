@@ -159,7 +159,8 @@ const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 // Deve usar a SERVICE ROLE KEY para ignorar as regras de segurança (RLS).
 // Forçamos o VITE_SUPABASE_URL para impedir que o bot leia um URL de Postgres (postgresql://) caso o Railway o injecte!
 const supabaseUrl = process.env.VITE_SUPABASE_URL || "https://gexlmuclvadddhlbmgkl.supabase.co";
-const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+// Usamos o .trim() para garantir que removemos espaços invisíveis ao colar a chave no Railway!
+const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY ? process.env.SUPABASE_SERVICE_ROLE_KEY.trim() : null;
 
 if (!supabaseKey) {
     console.error("🚨 ERRO FATAL: Falta a variável SUPABASE_SERVICE_ROLE_KEY! O bot vai falhar a inicialização sem ela.");
@@ -215,6 +216,21 @@ supabase.from('exchange_rates').select('applied_rate').order('fetched_at', { asc
 
 // O teu número de administrador para receber alertas (Formato: indicativo + número)
 const ADMIN_PHONE = process.env.ADMIN_PHONE_NUMBER || '244976344207';
+
+// ─── SCRIPT DE DIAGNÓSTICO DE REALTIME ──────────────────────────────────────
+// Como ouvimos 5 tabelas de uma vez, se 1 falhar, todas falham. Isto descobre a culpada!
+const tabelas = ['kyc_verifications', 'orders', 'payment_proofs', 'exchange_rates', 'whatsapp_checks'];
+tabelas.forEach(tabela => {
+    supabase.channel(`diag_${tabela}`)
+        .on('postgres_changes', { event: '*', schema: 'public', table: tabela }, () => { })
+        .subscribe(status => {
+            if (status === 'CHANNEL_ERROR') {
+                console.error(`🚨 CULPADO ENCONTRADO: A tabela '${tabela}' não existe na base de dados ou não está no Realtime!`);
+            } else if (status === 'SUBSCRIBED') {
+                console.log(`✅ Tabela '${tabela}' testada com sucesso.`);
+            }
+        });
+});
 
 // Escutar eventos de submissão de KYC no banco de dados em tempo real
 supabase.channel('bot_admin_alerts')
