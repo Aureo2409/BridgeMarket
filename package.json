@@ -10,7 +10,7 @@
         "start": "node bot.js"
     },
     "dependencies": {
-git        "@google/generative-ai": "latest",
+        "@google/generative-ai": "latest",
         "@supabase/supabase-js": "^2.45.0",
         "dotenv": "^16.4.5",
         "express": "^4.19.2",
