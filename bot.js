@@ -337,8 +337,8 @@ supabase.channel('bot_admin_alerts')
                     .update({ status: isRegistered ? 'valid' : 'invalid' }).eq('id', check.id);
             } catch (err) {
                 console.error('Erro na verificação do WhatsApp:', err);
-                // Em caso de erro com a API da Meta, marca como inválido para não bloquear o utilizador
-                await supabase.from('whatsapp_checks').update({ status: 'invalid' }).eq('id', check.id);
+                // Em caso de erro com a API da Meta, marca como válido para não bloquear o utilizador
+                await supabase.from('whatsapp_checks').update({ status: 'valid' }).eq('id', check.id);
             }
         }
     })
