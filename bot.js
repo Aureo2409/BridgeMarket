@@ -15,6 +15,56 @@ app.use(express.json()); // Permite ler JSON no corpo dos pedidos (necessário p
 
 app.get('/', (req, res) => res.send('🤖 Bot do WhatsApp está online e a funcionar!'));
 
+// --- WHATSAPP WEB CONTROLLER (CHROMIUM / HEADLESS BROWSER) ────────────────────
+import pkg from 'whatsapp-web.js';
+const { Client, LocalAuth } = pkg;
+import qrcode from 'qrcode-terminal';
+
+let clientReady = false;
+
+const whatsappClient = new Client({
+    authStrategy: new LocalAuth({
+        dataPath: './.wwebjs_auth'
+    }),
+    puppeteer: {
+        headless: true,
+        args: [
+            '--no-sandbox',
+            '--disable-setuid-sandbox',
+            '--disable-dev-shm-usage',
+            '--disable-accelerated-2d-canvas',
+            '--no-first-run',
+            '--no-zygote',
+            '--single-process',
+            '--disable-gpu'
+        ]
+    }
+});
+
+whatsappClient.on('qr', (qr) => {
+    console.log('📌 [WHATSAPP WEB] Escaneia o código QR abaixo com o teu telemóvel para ligar o Bot:');
+    qrcode.generate(qr, { small: true });
+});
+
+whatsappClient.on('ready', () => {
+    console.log('✅ [WHATSAPP WEB] Bot está totalmente conectado e pronto a enviar mensagens!');
+    clientReady = true;
+});
+
+whatsappClient.on('auth_failure', (msg) => {
+    console.error('❌ [WHATSAPP WEB] Falha na autenticação do WhatsApp Web:', msg);
+});
+
+whatsappClient.on('disconnected', (reason) => {
+    console.log('⚠️ [WHATSAPP WEB] O Bot foi desligado/desconectado:', reason);
+    clientReady = false;
+});
+
+// Ligar o Bot do WhatsApp Web
+whatsappClient.initialize().catch(err => {
+    console.error('❌ Erro ao inicializar o WhatsApp Web Client:', err);
+});
+
 // --- WHATSAPP CLOUD API ──────────────────────────────────────────────────────
 const WHATSAPP_TOKEN = process.env.WHATSAPP_TOKEN;
 const WHATSAPP_PHONE_NUMBER_ID = process.env.WHATSAPP_PHONE_NUMBER_ID;
@@ -69,10 +119,23 @@ app.post('/api/whatsapp/webhook', async (req, res) => {
     }
 });
 
-// 3. Função para enviar mensagens via Cloud API
+// 3. Função para enviar mensagens (Usa whatsapp-web.js se pronto, senão tenta Cloud API de fallback)
 async function sendWhatsappMessage(to, text) {
+    const cleanTo = to.replace(/\D/g, '');
+    
+    if (clientReady) {
+        try {
+            const chatId = `${cleanTo}@c.us`;
+            await whatsappClient.sendMessage(chatId, text);
+            console.log(`✅ [whatsapp-web.js] Mensagem enviada para ${cleanTo}`);
+            return;
+        } catch (error) {
+            console.error('❌ [whatsapp-web.js] Erro ao enviar mensagem, tentando Cloud API de fallback...', error);
+        }
+    }
+
     if (!WHATSAPP_TOKEN || !WHATSAPP_PHONE_NUMBER_ID) {
-        console.error('❌ Variáveis de ambiente do WhatsApp (TOKEN, PHONE_NUMBER_ID) em falta!');
+        console.log(`⚠️ [SIMULADO WHATSAPP] Para: ${cleanTo} | Mensagem: ${text}`);
         return;
     }
     try {
@@ -81,10 +144,11 @@ async function sendWhatsappMessage(to, text) {
             headers: { 'Authorization': `Bearer ${WHATSAPP_TOKEN}`, 'Content-Type': 'application/json' },
             body: JSON.stringify({
                 messaging_product: 'whatsapp',
-                to: to,
+                to: cleanTo,
                 text: { body: text }
             })
         });
+        console.log(`✅ [Cloud API] Mensagem enviada para ${cleanTo}`);
     } catch (error) {
         console.error('❌ Erro ao enviar mensagem pelo Cloud API:', error);
     }
@@ -671,8 +735,23 @@ async function handleIncomingMessage(msg) {
         let promptPayload = [];
 
         // Tratar Imagem ou Ficheiro
-        if (msg.hasMedia && msg.mediaId) {
-            const mediaPart = await prepareMediaForGemini(msg.mediaId);
+        if (msg.hasMedia && (msg.mediaId || msg.messageObj)) {
+            let mediaPart = null;
+            if (msg.messageObj) {
+                try {
+                    const media = await msg.messageObj.downloadMedia();
+                    if (media) {
+                        mediaPart = {
+                            inlineData: { data: media.data, mimeType: media.mimetype }
+                        };
+                    }
+                } catch (err) {
+                    console.error("❌ [whatsapp-web.js] Erro ao descarregar media:", err);
+                }
+            } else if (msg.mediaId) {
+                mediaPart = await prepareMediaForGemini(msg.mediaId);
+            }
+
             if (mediaPart) {
                 promptPayload.push(mediaPart);
                 promptPayload.push(msg.body || "Analisa esta imagem/documento e responde de acordo com as tuas instruções.");
@@ -706,6 +785,18 @@ async function handleIncomingMessage(msg) {
         await sendWhatsappMessage(msg.from, '🔒 Ocorreu uma interrupção inesperada nos nossos sistemas. Por favor, tente novamente em instantes ou contacte a linha de suporte direto no número 976-344-207.');
     }
 }
+
+// 6. Conectar o Listener de Mensagens Recebidas do whatsapp-web.js
+whatsappClient.on('message', async (message) => {
+    // Ignorar mensagens de grupos ou transmissões
+    if (message.from.endsWith('@g.us') || message.from.endsWith('@broadcast')) return;
+
+    const from = message.from.replace('@c.us', '');
+    const body = message.body;
+    const hasMedia = message.hasMedia;
+
+    await handleIncomingMessage({ from, body, hasMedia, messageObj: message });
+});
 
 // 🚨 Proteção contra crashes silenciosos do Node.js
 process.on('uncaughtException', err => console.error('🚨 [CRASH FATAL DO NODE]:', err));
