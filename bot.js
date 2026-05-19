@@ -157,7 +157,8 @@ const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 // 1.5. Inicializa o Supabase (usa as mesmas variáveis do teu projeto Frontend)
 // 🚨 O Bot precisa de ler os dados de TODOS os clientes para alertar o Admin.
 // Deve usar a SERVICE ROLE KEY para ignorar as regras de segurança (RLS).
-const supabaseUrl = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL || "https://gexlmuclvadddhlbmgkl.supabase.co";
+// Forçamos o VITE_SUPABASE_URL para impedir que o bot leia um URL de Postgres (postgresql://) caso o Railway o injecte!
+const supabaseUrl = process.env.VITE_SUPABASE_URL || "https://gexlmuclvadddhlbmgkl.supabase.co";
 const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
 if (!supabaseKey) {
