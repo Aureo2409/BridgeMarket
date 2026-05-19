@@ -155,8 +155,8 @@ app.listen(port, '0.0.0.0', () => console.log(`🌐 Servidor web ativo na porta 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
 // 1.5. Inicializa o Supabase (usa as mesmas variáveis do teu projeto Frontend)
-const supabaseUrl = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
-const supabaseKey = process.env.VITE_SUPABASE_ANON_KEY || process.env.SUPABASE_KEY;
+const supabaseUrl = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL || "https://gexlmuclvadddhlbmgkl.supabase.co";
+const supabaseKey = process.env.VITE_SUPABASE_ANON_KEY || process.env.SUPABASE_KEY || "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdleGxtdWNsdmFkZGRobGJtZ2tsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzgwOTM2NjksImV4cCI6MjA5MzY2OTY2OX0.c4Bgf2C-QcTSsl_CzCvyBHzpFDmKVXVdQ0x34LywFTk";
 const supabase = createClient(supabaseUrl, supabaseKey, {
     realtime: {
         transport: WebSocket
@@ -213,6 +213,9 @@ supabase.channel('bot_admin_alerts')
     .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'kyc_verifications' }, async (payload) => {
         const { new: newData, old: oldData } = payload;
 
+        // Protecção: Evita bugs se o Supabase não enviar o estado antigo
+        if (!oldData || Object.keys(oldData).length === 0 || oldData.ocr_status === undefined) return;
+
         // 1. Dispara o alerta PARA O ADMIN quando o estado passa a "pending" (Aguardando Aprovação)
         if (newData.ocr_status === 'pending' && oldData.ocr_status !== 'pending') {
             const alertMsg = `🚨 *Nova Verificação de Identidade (KYC)*\n\nUm cliente acabou de submeter o seu vídeo e documento.\n\n👉 Acede ao Painel de Administrador para analisar e dar o teu veredicto (Aprovar/Rejeitar).`;
@@ -259,6 +262,9 @@ supabase.channel('bot_admin_alerts')
     })
     .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'orders' }, async (payload) => {
         const { new: newData, old: oldData } = payload;
+
+        // Protecção: Evita disparos múltiplos e crash
+        if (!oldData || Object.keys(oldData).length === 0 || oldData.status === undefined) return;
 
         // Dispara quando clicas em "Confirmar envio do dólar" no painel
         if (newData.status === 'completed' && oldData.status !== 'completed') {

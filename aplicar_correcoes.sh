@@ -51,6 +51,9 @@ LANGUAGE plpgsql
 SECURITY DEFINER SET search_path = public
 AS $$
 BEGIN
+  -- Apaga os ficheiros/comprovativos para o Postgres não dar erro de foreign key
+  DELETE FROM storage.objects WHERE owner = auth.uid();
+
   DELETE FROM public.admin_alerts WHERE order_id IN (SELECT id FROM public.orders WHERE user_id = auth.uid());
   DELETE FROM public.payment_proofs WHERE user_id = auth.uid();
   DELETE FROM public.orders WHERE user_id = auth.uid();
@@ -62,6 +65,13 @@ END;
 $$;
 SQLEOF
 echo "✅ Ficheiro setup_delete_user.sql gerado"
+
+# ── 8. Gerar ficheiro para Realtime do Bot ────────────────────
+cat > "$ROOT/setup_realtime_bot.sql" << 'SQLEOF'
+ALTER TABLE public.kyc_verifications REPLICA IDENTITY FULL;
+ALTER TABLE public.orders REPLICA IDENTITY FULL;
+SQLEOF
+echo "✅ Ficheiro setup_realtime_bot.sql gerado"
 
 # Os ficheiros React agora são geridos diretamente no código-fonte para não sobrescrever a versão moderna do painel.
 echo "✅ Ficheiros React mantidos intactos."
