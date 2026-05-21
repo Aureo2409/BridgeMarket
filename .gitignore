@@ -2,3 +2,10 @@ node_modules
 dist
 .env
 .env.local
+
+# Cache do Puppeteer/Chrome (instalado localmente para dev, não vai para o servidor)
+.cache
+
+# Sessão do WhatsApp (gerada em runtime, não versionar)
+.wwebjs_auth
+.wwebjs_cache
