@@ -1,0 +1,24 @@
+# Ignora o node_modules local — o Docker instala as suas próprias dependências
+node_modules
+
+# Ignora ficheiros de build do frontend
+dist
+
+# Ignora ficheiros de ambiente com segredos
+.env
+.env.local
+.env.bot
+
+# Ignora o cache do Puppeteer local (Windows) — no Docker usa o Chromium do sistema
+.cache
+
+# Ignora a sessão do WhatsApp local — no Docker usa o volume
+.wwebjs_auth
+.wwebjs_cache
+
+# Ignora ficheiros do Git
+.git
+.gitignore
+
+# Ignora logs
+*.log
