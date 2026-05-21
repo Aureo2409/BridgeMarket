@@ -173,7 +173,7 @@ function KycOnboarding({ user, currentStep, kycRecord, onLogout }) {
   async function handleStartVerification() {
     setLoading(true);
     try {
-      // Marca o KYC como "pending" para a equipa da Bridge analisar manualmente
+      // 1. Marca como pending no Supabase
       const { error } = await sb.from("kyc_verifications").upsert({
         user_id: user.id,
         ocr_status: "pending",
@@ -182,10 +182,26 @@ function KycOnboarding({ user, currentStep, kycRecord, onLogout }) {
       });
       if (error) throw error;
 
-      // O ecrã muda automaticamente para "Em análise" graças ao Realtime do Supabase.
-      // O Admin receberá um alerta no WhatsApp e irá aprovar/rejeitar no painel.
+      // 2. Pede ao bot a sessão segura DIDIt
+      const botApiUrl = import.meta.env.VITE_BOT_API_URL;
+      if (!botApiUrl) {
+        // Sem bot URL configurada, fica apenas em 'pending' para aprovação manual
+        return;
+      }
+
+      const res = await fetch(`${botApiUrl}/api/didit/session`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ user_id: user.id })
+      });
+      const data = await res.json();
+      if (data.session_url) {
+        window.location.href = data.session_url;
+      }
+      // Se não houver URL, fica em pending para análise manual
     } catch (e) {
-      alert("Erro ao submeter pedido de verificação: " + e.message);
+      console.error("Erro na verificação:", e);
+      alert("Pedido de verificação submetido. A nossa equipa irá análisar em breve.");
     }
     setLoading(false);
   }
@@ -330,6 +346,7 @@ function ClientApp({ user, onLogout }) {
     const { data } = await sb.from("orders").select("*").order("created_at", { ascending: false }).limit(20);
     if (data) setOrders(data);
   }
+
 
   async function handleCalcSubmit({ usd, aoa, dest, account, appliedRate }) {
     const minUsd = parseFloat(config?.min_amount_usd) || 10;
@@ -564,6 +581,12 @@ export default function App() {
   }, [darkMode]);
 
   useEffect(() => {
+    // Timeout de segurança: se a sessão não resolver em 8s, mostra a app na mesma
+    const safetyTimeout = setTimeout(() => {
+      console.warn("[Auth] Timeout — a forçar ready=true");
+      setReady(true);
+    }, 8000);
+
     sb.auth.getSession()
       .then(async ({ data }) => {
         try {
@@ -571,12 +594,14 @@ export default function App() {
           setUser(u);
           if (u) setAdmin(await checkIsAdmin());
         } finally {
+          clearTimeout(safetyTimeout);
           setReady(true);
         }
       })
       .catch((err) => {
         console.error("Erro de sessão:", err);
-        setReady(true); // Garante que a página abre mesmo se houver erro!
+        clearTimeout(safetyTimeout);
+        setReady(true);
       });
 
     const { data: { subscription } } = sb.auth.onAuthStateChange(async (_e, s) => {
