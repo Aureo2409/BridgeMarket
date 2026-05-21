@@ -537,7 +537,15 @@ async function handleIncomingMessage(msg) {
         }
 
         const result = await chat.sendMessage(promptPayload);
-        await sendWhatsappMessage(msg.from, result.response.text());
+        const replyText = result.response.text();
+
+        // Usa message.reply() diretamente — evita o problema @lid/@c.us
+        // O whatsapp-web.js sabe exatamente para onde enviar sem conversão de ID
+        if (msg.messageObj) {
+            await msg.messageObj.reply(replyText);
+        } else {
+            await sendWhatsappMessage(msg.from, replyText);
+        }
 
         // Guarda histórico no Supabase (últimas 16 interações)
         const updatedHistory = await chat.getHistory();
@@ -550,7 +558,16 @@ async function handleIncomingMessage(msg) {
         }
     } catch (error) {
         console.error('Erro na integração com a IA:', error);
-        await sendWhatsappMessage(msg.from, '🔒 Ocorreu uma interrupção inesperada nos nossos sistemas. Por favor, tente novamente em instantes ou contacte a linha de suporte direto no número 976-344-207.');
+        // Tenta responder via reply() em caso de erro também
+        if (msg.messageObj) {
+            try {
+                await msg.messageObj.reply('🔒 Ocorreu uma interrupção inesperada. Por favor, tente novamente em instantes ou contacte o suporte no número 976-344-207.');
+            } catch (replyErr) {
+                console.error('Erro ao enviar mensagem de erro:', replyErr);
+            }
+        } else {
+            await sendWhatsappMessage(msg.from, '🔒 Ocorreu uma interrupção inesperada. Por favor, tente novamente em instantes ou contacte o suporte no número 976-344-207.');
+        }
     }
 }
 
@@ -559,7 +576,25 @@ whatsappClient.on('message', async (message) => {
     // Ignorar grupos e transmissões
     if (message.from.endsWith('@g.us') || message.from.endsWith('@broadcast')) return;
 
-    const from = message.from.replace('@c.us', '');
+    let from;
+
+    // Novo protocolo WhatsApp usa @lid (Linked Device ID) em vez de @c.us
+    // Precisamos de obter o número real via getContact()
+    if (message.from.endsWith('@lid')) {
+        try {
+            const contact = await message.getContact();
+            // contact.number devolve o número sem indicativo ou com, depende da versão
+            from = contact.number || message.from.replace('@lid', '');
+            console.log(`🔄 [LID] Número real resolvido: ${from}`);
+        } catch (e) {
+            // Fallback: usa o número do LID diretamente
+            from = message.from.replace('@lid', '');
+            console.warn(`⚠️ [LID] Não foi possível resolver contacto, usando fallback: ${from}`);
+        }
+    } else {
+        from = message.from.replace('@c.us', '');
+    }
+
     const body = message.body;
     const hasMedia = message.hasMedia;
 
