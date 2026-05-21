@@ -2,6 +2,8 @@ import { GoogleGenerativeAI } from '@google/generative-ai';
 import { createClient } from '@supabase/supabase-js';
 import WebSocket from 'ws';
 import dotenv from 'dotenv';
+import { existsSync, rmSync, readdirSync, statSync } from 'fs';
+import { join } from 'path';
 dotenv.config();
 
 // ── SERVIDOR WEB ──────────────────────────────────────────────────────────────
@@ -72,6 +74,37 @@ whatsappClient.on('disconnected', (reason) => {
     console.log('⚠️ [WHATSAPP-WEB] Bot desconectado:', reason);
     clientReady = false;
 });
+
+// ── LIMPEZA DE LOCKS DO CHROMIUM ─────────────────────────────────────────────
+// Quando o container reinicia com volume montado, o Chromium deixa ficheiros de
+// bloqueio (SingletonLock, SingletonCookie, SingletonSocket) da sessão anterior.
+// Sem limpeza, o novo processo falha com "profile is being used by another process".
+function cleanChromiumLocks() {
+    const authDir = './.wwebjs_auth';
+    if (!existsSync(authDir)) return;
+
+    try {
+        const entries = readdirSync(authDir);
+        for (const entry of entries) {
+            const entryPath = join(authDir, entry);
+            if (!statSync(entryPath).isDirectory()) continue;
+
+            // Apaga os 3 ficheiros de lock que o Chromium cria
+            for (const lockFile of ['SingletonLock', 'SingletonCookie', 'SingletonSocket']) {
+                const lockPath = join(entryPath, lockFile);
+                if (existsSync(lockPath)) {
+                    rmSync(lockPath, { force: true });
+                    console.log(`🔓 Lock removido: ${lockPath}`);
+                }
+            }
+        }
+    } catch (err) {
+        console.warn('⚠️ Erro ao limpar locks do Chromium:', err.message);
+    }
+}
+
+// Limpa locks ANTES de inicializar o cliente
+cleanChromiumLocks();
 
 // Arranca o cliente WhatsApp
 whatsappClient.initialize().catch(err => {
