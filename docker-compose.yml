@@ -1,0 +1,15 @@
+services:
+  bridge-bot:
+    build: .
+    container_name: bridge-bot
+    restart: unless-stopped          # Reinicia automaticamente se crashar
+    ports:
+      - "8080:8080"                  # Acede ao /qr em http://localhost:8080/qr
+    env_file:
+      - .env.bot                     # Lê as variáveis do ficheiro .env.bot
+    volumes:
+      - wwebjs_session:/app/.wwebjs_auth   # Persiste a sessão do WhatsApp
+
+volumes:
+  wwebjs_session:
+    driver: local

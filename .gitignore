@@ -2,6 +2,7 @@ node_modules
 dist
 .env
 .env.local
+.env.bot
 
 # Cache do Puppeteer/Chrome (instalado localmente para dev, não vai para o servidor)
 .cache
