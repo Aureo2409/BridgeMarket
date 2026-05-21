@@ -540,6 +540,30 @@ setInterval(() => {
     console.log('🧹 Cache de chats locais limpo para libertar memória do servidor.');
 }, 24 * 60 * 60 * 1000);
 
+// ── RETRY COM BACKOFF EXPONENCIAL PARA O GEMINI ───────────────────────────────
+// O Gemini retorna 503 em picos de procura. Em vez de desistir, tenta até 3x
+// com espera crescente: 2s → 4s → 8s.
+async function geminiWithRetry(chat, promptPayload, maxRetries = 3) {
+    let lastError;
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+        try {
+            return await chat.sendMessage(promptPayload);
+        } catch (err) {
+            lastError = err;
+            const isRetryable = err.status === 503 || err.status === 429 ||
+                (err.message && (err.message.includes('503') || err.message.includes('overload') ||
+                err.message.includes('high demand') || err.message.includes('Service Unavailable')));
+
+            if (!isRetryable || attempt === maxRetries) throw err;
+
+            const waitMs = Math.pow(2, attempt) * 1000; // 2s, 4s, 8s
+            console.warn(`⚠️ [Gemini] Tentativa ${attempt}/${maxRetries} falhou (${err.status || 'erro'}). A aguardar ${waitMs / 1000}s...`);
+            await new Promise(resolve => setTimeout(resolve, waitMs));
+        }
+    }
+    throw lastError;
+}
+
 // ── PROCESSAR MENSAGENS RECEBIDAS ─────────────────────────────────────────────
 async function handleIncomingMessage(msg) {
     console.log(`💬 Mensagem recebida de ${msg.from}: ${msg.body || '(Multimédia)'}`);
@@ -585,7 +609,7 @@ async function handleIncomingMessage(msg) {
             promptPayload.push(text);
         }
 
-        const result = await chat.sendMessage(promptPayload);
+        const result = await geminiWithRetry(chat, promptPayload);
         const replyText = result.response.text();
 
         // Usa message.reply() diretamente — evita o problema @lid/@c.us
