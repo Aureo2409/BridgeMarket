@@ -173,32 +173,19 @@ function KycOnboarding({ user, currentStep, kycRecord, onLogout }) {
   async function handleStartVerification() {
     setLoading(true);
     try {
-      const updates = { user_id: user.id, updated_at: new Date().toISOString() };
-
-      // Coloca como 'pending' para mostrar o ecrã de análise em tempo real
-      updates.ocr_status = "pending";
-      updates.liveness_status = "pending";
-
-      const { error } = await sb.from("kyc_verifications").upsert(updates);
+      // Marca o KYC como "pending" para a equipa da Bridge analisar manualmente
+      const { error } = await sb.from("kyc_verifications").upsert({
+        user_id: user.id,
+        ocr_status: "pending",
+        liveness_status: "pending",
+        updated_at: new Date().toISOString()
+      });
       if (error) throw error;
 
-      // 1. Pede ao Bot/Backend para gerar a sessão segura usando a tua chave DIDIt
-      const botApiUrl = import.meta.env.VITE_BOT_API_URL || "http://localhost:3000";
-      const res = await fetch(`${botApiUrl}/api/didit/session`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ user_id: user.id })
-      });
-
-      const data = await res.json();
-      if (data.session_url) {
-        // 2. Transfere o cliente de forma fluída para a IA analisar o rosto dele
-        window.location.href = data.session_url;
-      } else {
-        throw new Error(data.error || "Não foi possível conectar ao sistema DIDIt.");
-      }
+      // O ecrã muda automaticamente para "Em análise" graças ao Realtime do Supabase.
+      // O Admin receberá um alerta no WhatsApp e irá aprovar/rejeitar no painel.
     } catch (e) {
-      alert("Erro ao iniciar a verificação: " + e.message);
+      alert("Erro ao submeter pedido de verificação: " + e.message);
     }
     setLoading(false);
   }

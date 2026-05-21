@@ -302,10 +302,73 @@ app.get('/qr', (req, res) => {
     `);
 });
 
+// ── DIDIT.ME — KYC SEGURO ───────────────────────────────────────────────────
+const DIDIT_API_KEY = process.env.DIDIT_API_KEY || 'JGASXPZM3NXefP3h6qDrtveLCLnOM-VKGC9tSkmRbpw.';
+
+// 1. Gera sessão segura de KYC (chamada pelo frontend)
+app.post('/api/didit/session', async (req, res) => {
+    const { user_id } = req.body;
+    try {
+        const response = await fetch('https://apx.didit.me/v2/session/', {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${DIDIT_API_KEY}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                vendor_data: user_id,
+                callback: 'https://bridge-market-delta.vercel.app'
+            })
+        });
+
+        const text = await response.text();
+        let data;
+        try { data = JSON.parse(text); } catch { data = {}; }
+
+        if (!response.ok) {
+            console.error('❌ DIDIt session error:', response.status, text);
+            return res.status(502).json({ error: 'Falha ao criar sessão DIDIt: ' + (data.message || text) });
+        }
+
+        // DIDIt devolve o link de verificação em url ou session_url
+        const session_url = data.url || data.session_url || data.verification_url;
+        if (!session_url) {
+            console.error('❌ DIDIt sem URL na resposta:', data);
+            return res.status(502).json({ error: 'DIDIt não devolveu URL de verificação.' });
+        }
+
+        res.json({ session_url });
+    } catch (error) {
+        console.error('Erro na sessão DIDIt:', error);
+        res.status(500).json({ error: 'Falha ao conectar com DIDIt.' });
+    }
+});
+
+// 2. Webhook DIDIt — recebe decisão de aprovação/rejeição em background
+app.post('/api/didit/webhook', async (req, res) => {
+    const payload = req.body;
+    console.log('🔔 Webhook DIDIt recebido:', JSON.stringify(payload).slice(0, 200));
+    try {
+        const userId = payload.vendor_data || payload.client_reference_id;
+        const status = payload.status;
+        if (userId) {
+            const isApproved = ['Approved', 'passed', 'completed', 'approved'].includes(status);
+            await supabase.from('kyc_verifications').update({
+                ocr_status: isApproved ? 'passed' : 'rejected',
+                liveness_status: isApproved ? 'passed' : 'rejected',
+                rejection_reason: isApproved ? null : (payload.reason || 'Verificação por IA não aprovada.')
+            }).eq('user_id', userId);
+        }
+        res.status(200).send('OK');
+    } catch (error) {
+        console.error('Erro ao processar Webhook DIDIt:', error);
+        res.status(500).send('Erro interno');
+    }
+});
+
 app.listen(port, '0.0.0.0', () => console.log(`🌐 Servidor web ativo na porta ${port}`));
 
 // ── SUPABASE ──────────────────────────────────────────────────────────────────
-import { GoogleGenerativeAI as _unused } from '@google/generative-ai'; // já importado acima
 
 const supabaseUrl = process.env.VITE_SUPABASE_URL || "https://gexlmuclvadddhlbmgkl.supabase.co";
 const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY
