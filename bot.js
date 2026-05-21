@@ -2,7 +2,7 @@ import { GoogleGenerativeAI } from '@google/generative-ai';
 import { createClient } from '@supabase/supabase-js';
 import WebSocket from 'ws';
 import dotenv from 'dotenv';
-import { existsSync, rmSync, readdirSync, statSync } from 'fs';
+import { existsSync, unlinkSync, readdirSync, statSync } from 'fs';
 import { join } from 'path';
 dotenv.config();
 
@@ -76,26 +76,42 @@ whatsappClient.on('disconnected', (reason) => {
 });
 
 // ── LIMPEZA DE LOCKS DO CHROMIUM ─────────────────────────────────────────────
-// Quando o container reinicia com volume montado, o Chromium deixa ficheiros de
-// bloqueio (SingletonLock, SingletonCookie, SingletonSocket) da sessão anterior.
-// Sem limpeza, o novo processo falha com "profile is being used by another process".
-function cleanChromiumLocks() {
-    const authDir = './.wwebjs_auth';
-    if (!existsSync(authDir)) return;
+// PROBLEMA: No Linux, o Chromium cria o SingletonLock como um SYMLINK que aponta
+// para um socket Unix. Quando o container morre, o socket desaparece mas o symlink
+// fica. existsSync() retorna FALSE para symlinks quebrados — por isso a versão
+// anterior não os apagava!
+// SOLUÇÃO: readdirSync lista TUDO (incluindo symlinks quebrados), e unlinkSync
+// consegue apagar tanto ficheiros normais como symlinks.
+function cleanChromiumLocks(dir) {
+    dir = dir || './.wwebjs_auth';
+    if (!existsSync(dir)) return;
 
     try {
-        const entries = readdirSync(authDir);
-        for (const entry of entries) {
-            const entryPath = join(authDir, entry);
-            if (!statSync(entryPath).isDirectory()) continue;
+        // readdirSync lista TODOS os ficheiros incluindo symlinks quebrados
+        const entries = readdirSync(dir);
 
-            // Apaga os 3 ficheiros de lock que o Chromium cria
-            for (const lockFile of ['SingletonLock', 'SingletonCookie', 'SingletonSocket']) {
-                const lockPath = join(entryPath, lockFile);
-                if (existsSync(lockPath)) {
-                    rmSync(lockPath, { force: true });
-                    console.log(`🔓 Lock removido: ${lockPath}`);
+        for (const entry of entries) {
+            const fullPath = join(dir, entry);
+
+            // Apaga qualquer ficheiro que comece com "Singleton" (Lock, Cookie, Socket)
+            if (entry.startsWith('Singleton')) {
+                try {
+                    unlinkSync(fullPath);
+                    console.log(`🔓 Chromium lock apagado: ${fullPath}`);
+                } catch (e) {
+                    console.warn(`⚠️ Não foi possível apagar ${fullPath}: ${e.code}`);
                 }
+                continue;
+            }
+
+            // Se for uma diretoria, entra recursivamente
+            try {
+                const stat = statSync(fullPath);
+                if (stat.isDirectory()) {
+                    cleanChromiumLocks(fullPath);
+                }
+            } catch (_) {
+                // statSync falha em symlinks quebrados — ignorar
             }
         }
     } catch (err) {
