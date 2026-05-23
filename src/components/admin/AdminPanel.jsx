@@ -587,6 +587,9 @@ export function AdminPanel({ user, onLogout }) {
                   <span style={{ display: "block", fontSize: 9, textTransform: "uppercase", color: "#ef4444", marginBottom: 2 }}>Motivo da recusa:</span>
                   {k.rejection_reason || "Documentos inválidos."}
                 </div>
+                <div style={{ display: "flex", gap: 8, marginTop: 10 }}>
+                  <button className="adm-btn" style={{ background: "#10b981", flex: 1, color: "#fff", border: "none", padding: "8px", fontSize: 11, cursor: "pointer", fontWeight: 700 }} onClick={() => updateKyc(k, "passed")}>Aprovar KYC Manualmente</button>
+                </div>
               </div>
             ))}
           </>

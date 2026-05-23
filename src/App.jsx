@@ -476,6 +476,18 @@ function ClientApp({ user, onLogout }) {
                   {profileLoad ? "A guardar..." : "Guardar Dados"}
                 </button>
               </div>
+              <div className="card" style={{ marginBottom: 14 }}>
+                <div style={{ fontSize: 14, fontWeight: 800, color: "#1e1b4b", marginBottom: 10 }}>Verificação de Identidade</div>
+                <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "12px 14px", background: "#f0fdf4", border: "1px solid #bbf7d0", borderRadius: 12 }}>
+                  <div style={{ width: 30, height: 30, borderRadius: "50%", background: "#10b981", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                    <Icon name="check" size={16} />
+                  </div>
+                  <div>
+                    <div style={{ fontSize: 13, fontWeight: 800, color: "#16a34a" }}>Identidade Verificada (DIDIT)</div>
+                    <div style={{ fontSize: 11, color: "#15803d", fontWeight: 600, marginTop: 2 }}>A tua conta está totalmente validada e segura para transações.</div>
+                  </div>
+                </div>
+              </div>
               <div className="card">
                 <div style={{ fontSize: 14, fontWeight: 800, color: "#1e1b4b", marginBottom: 10 }}>Segurança da Conta</div>
                 <div style={{ fontSize: 12, color: "#6b7280", marginBottom: 14, fontWeight: 500 }}>Define uma nova palavra-passe para a tua conta ({user.email}).</div>
