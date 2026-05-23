@@ -166,17 +166,40 @@ function AuthScreen() {
 // ── KYC ONBOARDING ─────────────────────────────────────────────────────────────
 function KycOnboarding({ user, currentStep, kycRecord, onLogout }) {
   const [loading, setLoading] = useState(false);
+  const [sessionUrl, setSessionUrl] = useState(null);
+  const [preFetchError, setPreFetchError] = useState(null);
+
+  // Pré-carrega a sessão do DIDIT em background para zero latência!
+  useEffect(() => {
+    const botApiUrl = import.meta.env.VITE_BOT_API_URL;
+    if (!botApiUrl) return;
+
+    fetch(`${botApiUrl}/api/didit/session`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ user_id: user.id })
+    })
+      .then(res => res.json())
+      .then(data => {
+        if (data.session_url) {
+          setSessionUrl(data.session_url);
+        } else {
+          setPreFetchError(data.error || "DIDIt não devolveu URL de verificação.");
+        }
+      })
+      .catch(err => {
+        setPreFetchError(err.message || "Erro de ligação ao servidor.");
+      });
+  }, [user.id]);
 
   const isPending = kycRecord?.ocr_status === "pending" || kycRecord?.liveness_status === "pending";
   const isRejected = kycRecord?.ocr_status === "rejected" || kycRecord?.liveness_status === "rejected";
 
   async function handleStartVerification() {
     setLoading(true);
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 8000);
 
+    // 1. Marca como pending no Supabase para inicializar
     try {
-      // 1. Marca como pending no Supabase para inicializar
       const { error } = await sb.from("kyc_verifications").upsert({
         user_id: user.id,
         ocr_status: "pending",
@@ -184,8 +207,24 @@ function KycOnboarding({ user, currentStep, kycRecord, onLogout }) {
         updated_at: new Date().toISOString()
       });
       if (error) throw error;
+    } catch (err) {
+      console.error("Erro ao iniciar verificação no Supabase:", err);
+      alert("Erro ao registar a verificação na base de dados. Por favor tente novamente.");
+      setLoading(false);
+      return;
+    }
 
-      // 2. Pede ao bot a sessão segura DIDIt v3
+    // 2. Se a URL já foi pré-carregada com sucesso em background, redireciona IMEDIATAMENTE!
+    if (sessionUrl) {
+      window.location.href = sessionUrl;
+      return;
+    }
+
+    // Se o utilizador clicou muito rápido antes de terminar a chamada de background, faz a chamada direta com timeout
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 8000);
+
+    try {
       const botApiUrl = import.meta.env.VITE_BOT_API_URL;
       if (!botApiUrl) {
         alert("Configuração do servidor de autenticação em falta. Por favor contacte o suporte.");
@@ -206,11 +245,11 @@ function KycOnboarding({ user, currentStep, kycRecord, onLogout }) {
       if (data.session_url) {
         window.location.href = data.session_url;
       } else {
-        throw new Error(data.error || "DIDIt não devolveu URL de verificação.");
+        throw new Error(data.error || preFetchError || "DIDIt não devolveu URL de verificação.");
       }
     } catch (e) {
       clearTimeout(timeoutId);
-      console.error("Erro na verificação:", e);
+      console.error("Erro na verificação direta:", e);
       if (e.name === "AbortError") {
         alert("O servidor do DIDIt está a demorar muito a responder. Por favor, tente novamente ou fale com o nosso suporte técnico para efetuar a verificação manual.");
       } else {
