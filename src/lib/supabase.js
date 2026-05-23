@@ -47,3 +47,17 @@ export async function uploadProof(userId, orderId, file) {
 
   return { path, signedUrl: data?.signedUrl ?? null };
 }
+
+export async function uploadKycDocument(userId, file, type) {
+  const ext = file.name.split(".").pop().toLowerCase();
+  const path = `${userId}/${type}_${Date.now()}.${ext}`;
+
+  const { error } = await sb.storage
+    .from("kyc-documents")
+    .upload(path, file, { cacheControl: "3600", contentType: file.type });
+
+  if (error) throw error;
+
+  return { path };
+}
+

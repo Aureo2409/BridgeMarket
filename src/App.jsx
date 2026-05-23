@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import { sb, checkIsAdmin, fetchLatestRate, fetchAdminConfig } from "./lib/supabase.js";
+import { sb, checkIsAdmin, fetchLatestRate, fetchAdminConfig, uploadKycDocument } from "./lib/supabase.js";
 import { CSS, DESTS } from "./lib/constants.js";
 import { Toast, StepBar, Header, Icon } from "./components/shared/UI.jsx";
 import { Calculator } from "./components/client/Calculator.jsx";
@@ -173,7 +173,7 @@ function KycOnboarding({ user, currentStep, kycRecord, onLogout }) {
   async function handleStartVerification() {
     setLoading(true);
     try {
-      // 1. Marca como pending no Supabase
+      // 1. Marca como pending no Supabase para inicializar
       const { error } = await sb.from("kyc_verifications").upsert({
         user_id: user.id,
         ocr_status: "pending",
@@ -182,10 +182,11 @@ function KycOnboarding({ user, currentStep, kycRecord, onLogout }) {
       });
       if (error) throw error;
 
-      // 2. Pede ao bot a sessão segura DIDIt
+      // 2. Pede ao bot a sessão segura DIDIt v3
       const botApiUrl = import.meta.env.VITE_BOT_API_URL;
       if (!botApiUrl) {
-        // Sem bot URL configurada, fica apenas em 'pending' para aprovação manual
+        alert("Configuração do servidor de autenticação em falta. Por favor contacte o suporte.");
+        setLoading(false);
         return;
       }
 
@@ -194,14 +195,16 @@ function KycOnboarding({ user, currentStep, kycRecord, onLogout }) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ user_id: user.id })
       });
+      
       const data = await res.json();
       if (data.session_url) {
         window.location.href = data.session_url;
+      } else {
+        throw new Error(data.error || "DIDIt não devolveu URL de verificação.");
       }
-      // Se não houver URL, fica em pending para análise manual
     } catch (e) {
       console.error("Erro na verificação:", e);
-      alert("Pedido de verificação submetido. A nossa equipa irá análisar em breve.");
+      alert("Erro ao conectar ao DIDIt. Por favor, tente novamente em instantes ou contacte o suporte.");
     }
     setLoading(false);
   }
@@ -251,20 +254,24 @@ function KycOnboarding({ user, currentStep, kycRecord, onLogout }) {
         </div>
 
         <div className="card" style={{ background: "rgba(255,255,255,.96)" }}>
-          <div style={{ display: "flex", flexDirection: "column", gap: 14, marginBottom: 16 }}>
+          <div style={{ display: "flex", flexDirection: "column", gap: 14, marginBottom: 22 }}>
             <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-              <div style={{ width: 30, height: 30, borderRadius: 15, background: "#6366f1", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 700 }}>
-                <Icon name="lock" size={16} />
+              <div style={{ width: 34, height: 34, borderRadius: 12, background: "linear-gradient(135deg,#6366f1,#8b5cf6)", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 700, boxShadow: "0 4px 12px rgba(99,102,241,0.2)" }}>
+                <Icon name="lock" size={16} color="#fff" />
               </div>
-              <div style={{ fontWeight: 600, color: "#1e1b4b", fontSize: 15 }}>Verificação Automática</div>
+              <div style={{ fontWeight: 800, color: "#1e1b4b", fontSize: 15 }}>Verificação Segura Integrada</div>
             </div>
-            <div style={{ fontSize: 13, color: "#475569", lineHeight: 1.5 }}>
-              A plataforma utiliza tecnologia baseada em IA para proteger a comunidade. O processo é rápido, simples e demora apenas 30 segundos.
+            <div style={{ fontSize: 13, color: "#475569", lineHeight: 1.6 }}>
+              A plataforma utiliza a tecnologia oficial e certificada do **DIDIT** para validar a sua identidade. O processo é rápido, simples e completamente protegido por criptografia avançada.
+            </div>
+            <div className="info" style={{ display: "flex", gap: 8, background: "#f8fafc", border: "1px solid #e2e8f0", padding: "10px 12px", borderRadius: 10, fontSize: 11, color: "#475569", lineHeight: 1.5 }}>
+              <Icon name="shield" size={15} style={{ flexShrink: 0, marginTop: 1, color: "#10b981" }} />
+              <span>O DIDIt recolherá com segurança a fotografia do seu documento (BI/Passaporte) e fará um teste de Prova de Vida facial rápida de 30 segundos.</span>
             </div>
           </div>
 
           <button className="btn btn-p" onClick={handleStartVerification} disabled={loading}>
-            {loading ? "A processar..." : <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>Iniciar Verificação Segura <Icon name="arrowRight" size={16} /></div>}
+            {loading ? <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}><Icon name="loader" size={16} className="spin" /> A conectar...</div> : <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>Iniciar Verificação com DIDIT <Icon name="arrowRight" size={16} /></div>}
           </button>
           <button className="btn btn-o" onClick={onLogout} style={{ marginTop: 10 }}>Sair</button>
         </div>
@@ -272,6 +279,7 @@ function KycOnboarding({ user, currentStep, kycRecord, onLogout }) {
     </div>
   );
 }
+
 
 // ── CLIENT ────────────────────────────────────────────────────────────────────
 function ClientApp({ user, onLogout }) {

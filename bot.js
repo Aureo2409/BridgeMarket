@@ -303,16 +303,47 @@ app.get('/qr', (req, res) => {
 });
 
 // ── DIDIT.ME — KYC SEGURO ───────────────────────────────────────────────────
-const DIDIT_API_KEY = process.env.DIDIT_API_KEY || 'JGASXPZM3NXefP3h6qDrtveLCLnOM-VKGC9tSkmRbpw.';
+const DIDIT_API_KEY = 'OFb8lJF-ShhMs-Gg28d5AZqQF2Dqt6uNDNtnPIR5z14';
 
-// 1. Gera sessão segura de KYC (chamada pelo frontend)
+// Helper para descarregar um ficheiro do DIDIt e enviar para o nosso Supabase Storage
+async function downloadAndUploadToSupabase(url, userId, type) {
+    if (!url) return null;
+    try {
+        const res = await fetch(url);
+        if (!res.ok) throw new Error(`Erro HTTP ${res.status}`);
+        const contentType = res.headers.get('content-type') || 'image/jpeg';
+        const buffer = await res.arrayBuffer();
+
+        let ext = 'jpg';
+        if (contentType.includes('png')) ext = 'png';
+        if (contentType.includes('pdf')) ext = 'pdf';
+        if (contentType.includes('mp4')) ext = 'mp4';
+        if (contentType.includes('webm')) ext = 'webm';
+
+        const path = `${userId}/${type}_${Date.now()}.${ext}`;
+        const { data, error } = await supabase.storage
+            .from('kyc-documents')
+            .upload(path, Buffer.from(buffer), {
+                contentType,
+                upsert: true
+            });
+
+        if (error) throw error;
+        return path;
+    } catch (e) {
+        console.error(`❌ Erro ao guardar ficheiro do DIDIt para o Supabase (${type}):`, e.message);
+        return null;
+    }
+}
+
+// 1. Gera sessão segura de KYC v3 (chamada pelo frontend)
 app.post('/api/didit/session', async (req, res) => {
     const { user_id } = req.body;
     try {
-        const response = await fetch('https://apx.didit.me/v2/session/', {
+        const response = await fetch('https://verification.didit.me/v3/session/', {
             method: 'POST',
             headers: {
-                'Authorization': `Bearer ${DIDIT_API_KEY}`,
+                'x-api-key': DIDIT_API_KEY,
                 'Content-Type': 'application/json'
             },
             body: JSON.stringify({
@@ -330,7 +361,6 @@ app.post('/api/didit/session', async (req, res) => {
             return res.status(502).json({ error: 'Falha ao criar sessão DIDIt: ' + (data.message || text) });
         }
 
-        // DIDIt devolve o link de verificação em url ou session_url
         const session_url = data.url || data.session_url || data.verification_url;
         if (!session_url) {
             console.error('❌ DIDIt sem URL na resposta:', data);
@@ -344,21 +374,90 @@ app.post('/api/didit/session', async (req, res) => {
     }
 });
 
-// 2. Webhook DIDIt — recebe decisão de aprovação/rejeição em background
+// 2. Webhook DIDIt — recebe decisão, descarrega ficheiros e coloca em pendente para revisão do Admin
 app.post('/api/didit/webhook', async (req, res) => {
     const payload = req.body;
     console.log('🔔 Webhook DIDIt recebido:', JSON.stringify(payload).slice(0, 200));
     try {
+        const sessionId = payload.session_id || payload.id;
         const userId = payload.vendor_data || payload.client_reference_id;
-        const status = payload.status;
-        if (userId) {
-            const isApproved = ['Approved', 'passed', 'completed', 'approved'].includes(status);
-            await supabase.from('kyc_verifications').update({
-                ocr_status: isApproved ? 'passed' : 'rejected',
-                liveness_status: isApproved ? 'passed' : 'rejected',
-                rejection_reason: isApproved ? null : (payload.reason || 'Verificação por IA não aprovada.')
-            }).eq('user_id', userId);
+        const status = payload.status || (payload.decision && payload.decision.status);
+
+        if (!userId) {
+            console.warn('⚠️ Webhook do DIDIt sem vendor_data / userId');
+            return res.status(200).send('Ignorado (sem userId)');
         }
+
+        // 1. Proteger contra sobrescrita de aprovação manual do administrador
+        const { data: existing } = await supabase
+            .from('kyc_verifications')
+            .select('ocr_status, document_url, selfie_url')
+            .eq('user_id', userId)
+            .maybeSingle();
+
+        if (existing && existing.ocr_status === 'passed') {
+            console.log(`✅ KYC do utilizador ${userId} já foi aprovado pelo Admin. Ignorando webhook.`);
+            return res.status(200).send('OK');
+        }
+
+        let documentPath = existing?.document_url || null;
+        let selfiePath = existing?.selfie_url || null;
+
+        // 2. Obter decisão detalhada e descarregar as imagens do DIDIt
+        if (sessionId) {
+            try {
+                const decisionResponse = await fetch(`https://verification.didit.me/v3/session/${sessionId}/decision/`, {
+                    headers: { 'x-api-key': DIDIT_API_KEY }
+                });
+
+                if (decisionResponse.ok) {
+                    const decision = await decisionResponse.json();
+                    
+                    const idVerification = decision.id_verification || {};
+                    const liveness = decision.liveness || {};
+
+                    const docUrl = idVerification.full_front_image || idVerification.front_image || idVerification.full_back_image || idVerification.back_image;
+                    const selfieUrl = liveness.reference_image || liveness.front_image || (decision.face_match && decision.face_match.reference_image);
+
+                    if (docUrl) {
+                        console.log(`📥 A descarregar documento do DIDIt para o Supabase...`);
+                        const uploadedDoc = await downloadAndUploadToSupabase(docUrl, userId, 'doc');
+                        if (uploadedDoc) documentPath = uploadedDoc;
+                    }
+
+                    if (selfieUrl) {
+                        console.log(`📥 A descarregar selfie de liveness do DIDIt...`);
+                        const uploadedSelfie = await downloadAndUploadToSupabase(selfieUrl, userId, 'selfie');
+                        if (uploadedSelfie) selfiePath = uploadedSelfie;
+                    }
+                } else {
+                    console.error('❌ Falha ao obter decisão do DIDIt:', decisionResponse.status);
+                }
+            } catch (apiErr) {
+                console.error('❌ Erro na API do DIDIt ao descarregar imagens:', apiErr);
+            }
+        }
+
+        // 3. Atualizar base de dados
+        const isApproved = ['Approved', 'passed', 'completed', 'approved'].includes(status);
+        
+        // Marcamos como "pending" para que o administrador possa fazer a validação manual final 
+        // tendo os documentos e as faces em tempo real salvos no nosso sistema.
+        const ocrStatus = isApproved ? 'pending' : 'rejected';
+        const livenessStatus = isApproved ? 'pending' : 'rejected';
+
+        await supabase.from('kyc_verifications').upsert({
+            user_id: userId,
+            document_url: documentPath,
+            selfie_url: selfiePath,
+            ocr_status: ocrStatus,
+            liveness_status: livenessStatus,
+            step_personal_done: true,
+            rejection_reason: isApproved ? null : (payload.reason || 'Verificação automática recusada pelo DIDIt.'),
+            updated_at: new Date().toISOString()
+        }, { onConflict: 'user_id' });
+
+        console.log(`✅ Webhook processado. KYC do utilizador ${userId} guardado no Supabase com imagens.`);
         res.status(200).send('OK');
     } catch (error) {
         console.error('Erro ao processar Webhook DIDIt:', error);

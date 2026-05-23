@@ -545,7 +545,14 @@ export function AdminPanel({ user, onLogout }) {
                     {k.docSigned && (
                       <div style={{ flex: 1 }}>
                         <div style={{ fontSize: 9, color: "#64748b", marginBottom: 4, fontWeight: 700, textTransform: "uppercase" }}>Documento (BI)</div>
-                        <a href={k.docSigned} target="_blank" rel="noreferrer"><img src={k.docSigned} alt="BI" style={{ width: "100%", height: 80, objectFit: "cover", borderRadius: 6, border: "1px solid #cbd5e1" }} /></a>
+                        {k.document_url?.match(/\.pdf$/i) ? (
+                          <a href={k.docSigned} target="_blank" rel="noreferrer" style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", height: 80, borderRadius: 6, border: "1px solid #cbd5e1", background: "rgba(0,0,0,0.15)", textDecoration: "none", color: "#6366f1" }}>
+                            <Icon name="file" size={24} />
+                            <span style={{ fontSize: 9, fontWeight: 800, marginTop: 4, color: "#e2e8f0" }}>Ver PDF</span>
+                          </a>
+                        ) : (
+                          <a href={k.docSigned} target="_blank" rel="noreferrer"><img src={k.docSigned} alt="BI" style={{ width: "100%", height: 80, objectFit: "cover", borderRadius: 6, border: "1px solid #cbd5e1" }} /></a>
+                        )}
                       </div>
                     )}
                     {k.selfieSigned && (
