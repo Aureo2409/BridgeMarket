@@ -172,6 +172,9 @@ function KycOnboarding({ user, currentStep, kycRecord, onLogout }) {
 
   async function handleStartVerification() {
     setLoading(true);
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 8000);
+
     try {
       // 1. Marca como pending no Supabase para inicializar
       const { error } = await sb.from("kyc_verifications").upsert({
@@ -186,6 +189,7 @@ function KycOnboarding({ user, currentStep, kycRecord, onLogout }) {
       const botApiUrl = import.meta.env.VITE_BOT_API_URL;
       if (!botApiUrl) {
         alert("Configuração do servidor de autenticação em falta. Por favor contacte o suporte.");
+        clearTimeout(timeoutId);
         setLoading(false);
         return;
       }
@@ -193,9 +197,11 @@ function KycOnboarding({ user, currentStep, kycRecord, onLogout }) {
       const res = await fetch(`${botApiUrl}/api/didit/session`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ user_id: user.id })
+        body: JSON.stringify({ user_id: user.id }),
+        signal: controller.signal
       });
       
+      clearTimeout(timeoutId);
       const data = await res.json();
       if (data.session_url) {
         window.location.href = data.session_url;
@@ -203,8 +209,13 @@ function KycOnboarding({ user, currentStep, kycRecord, onLogout }) {
         throw new Error(data.error || "DIDIt não devolveu URL de verificação.");
       }
     } catch (e) {
+      clearTimeout(timeoutId);
       console.error("Erro na verificação:", e);
-      alert("Erro ao conectar ao DIDIt. Por favor, tente novamente em instantes ou contacte o suporte.");
+      if (e.name === "AbortError") {
+        alert("O servidor do DIDIt está a demorar muito a responder. Por favor, tente novamente ou fale com o nosso suporte técnico para efetuar a verificação manual.");
+      } else {
+        alert(e.message || "Erro ao conectar ao DIDIt. Por favor, tente novamente em instantes ou contacte o suporte.");
+      }
     }
     setLoading(false);
   }
@@ -274,6 +285,16 @@ function KycOnboarding({ user, currentStep, kycRecord, onLogout }) {
             {loading ? <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}><Icon name="loader" size={16} className="spin" /> A conectar...</div> : <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>Iniciar Verificação com DIDIT <Icon name="arrowRight" size={16} /></div>}
           </button>
           <button className="btn btn-o" onClick={onLogout} style={{ marginTop: 10 }}>Sair</button>
+
+          <div style={{ marginTop: 18, textAlign: "center" }}>
+            <a href={`https://wa.me/244976344207?text=Olá!%20Estou%20com%20dificuldades%20na%20verificação%20automática%20do%20DIDIT%20na%20plataforma%20Bridge%20(ID:%20${user.id}).%20Gostaria%20de%20fazer%20a%20minha%20verificação%20de%20conta%20manualmente.`}
+               target="_blank" rel="noopener noreferrer"
+               style={{ color: "#6366f1", fontSize: 12, fontWeight: 700, textDecoration: "none", display: "inline-flex", alignItems: "center", gap: 6, transition: "color 0.2s" }}
+               onMouseEnter={e => e.currentTarget.style.color = "#4f46e5"}
+               onMouseLeave={e => e.currentTarget.style.color = "#6366f1"}>
+              <Icon name="messageSquare" size={14} /> Problemas com o DIDIT? Verificação Manual 💬
+            </a>
+          </div>
         </div>
       </div>
     </div>

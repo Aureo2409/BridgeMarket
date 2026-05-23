@@ -339,6 +339,9 @@ async function downloadAndUploadToSupabase(url, userId, type) {
 // 1. Gera sessão segura de KYC v3 (chamada pelo frontend)
 app.post('/api/didit/session', async (req, res) => {
     const { user_id } = req.body;
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 6000);
+
     try {
         const response = await fetch('https://verification.didit.me/v3/session/', {
             method: 'POST',
@@ -349,9 +352,11 @@ app.post('/api/didit/session', async (req, res) => {
             body: JSON.stringify({
                 vendor_data: user_id,
                 callback: 'https://bridge-market-delta.vercel.app'
-            })
+            }),
+            signal: controller.signal
         });
 
+        clearTimeout(timeoutId);
         const text = await response.text();
         let data;
         try { data = JSON.parse(text); } catch { data = {}; }
@@ -369,6 +374,11 @@ app.post('/api/didit/session', async (req, res) => {
 
         res.json({ session_url });
     } catch (error) {
+        clearTimeout(timeoutId);
+        if (error.name === 'AbortError') {
+            console.error('❌ Timeout na sessão DIDIt (servidor DIDIt não respondeu a tempo)');
+            return res.status(504).json({ error: 'O servidor do DIDIt demorou muito a responder. Por favor, contacte o suporte ou use a verificação manual.' });
+        }
         console.error('Erro na sessão DIDIt:', error);
         res.status(500).json({ error: 'Falha ao conectar com DIDIt.' });
     }
