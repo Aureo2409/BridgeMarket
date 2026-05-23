@@ -284,22 +284,71 @@ function KycOnboarding({ user, currentStep, kycRecord, onLogout }) {
 // ── CLIENT ────────────────────────────────────────────────────────────────────
 function ClientApp({ user, onLogout }) {
   const [step, setStep] = useState(0);
-  const [rate, setRate] = useState({ base_rate: 1150, margin: 15, applied_rate: 1165 });
+  const [rate, setRate] = useState(() => {
+    try {
+      const cached = localStorage.getItem("bridge_rate");
+      return cached ? JSON.parse(cached) : { base_rate: 1150, margin: 15, applied_rate: 1165 };
+    } catch {
+      return { base_rate: 1150, margin: 15, applied_rate: 1165 };
+    }
+  });
   const [rateAnim, setRateAnim] = useState(false);
-  const [config, setConfig] = useState({});
+  const [config, setConfig] = useState(() => {
+    try {
+      const cached = localStorage.getItem("bridge_config");
+      return cached ? JSON.parse(cached) : {};
+    } catch {
+      return {};
+    }
+  });
   const [currentOrder, setOrder] = useState(null);
   const [orders, setOrders] = useState([]);
   const [showOrders, setShowO] = useState(false);
-  const [kycStep, setKycStep] = useState(0);
+  const [kycStep, setKycStep] = useState(() => {
+    try {
+      const k = JSON.parse(localStorage.getItem("bridge_kyc"));
+      let s = 0;
+      if (k) {
+        if (k.step_personal_done) s = 1;
+        if (k.liveness_status && k.liveness_status !== "rejected") s = 2;
+        if (k.ocr_status && k.ocr_status !== "rejected") s = 3;
+      }
+      return s;
+    } catch {
+      return 0;
+    }
+  });
   const [orderLoad, setOrdLoad] = useState(false);
   const [toast, setToast] = useState(null);
-  const [kycLoading, setKycLoading] = useState(true);
-  const [kycRecord, setKycRecord] = useState(null);
+  const [kycLoading, setKycLoading] = useState(() => {
+    try {
+      const k = JSON.parse(localStorage.getItem("bridge_kyc"));
+      const isComplete = k && k.ocr_status === "passed" && k.liveness_status === "passed";
+      return !isComplete;
+    } catch {
+      return true;
+    }
+  });
+  const [kycRecord, setKycRecord] = useState(() => {
+    try {
+      const cached = localStorage.getItem("bridge_kyc");
+      return cached ? JSON.parse(cached) : null;
+    } catch {
+      return null;
+    }
+  });
 
   const [showProfile, setShowProfile] = useState(false);
   const [newPwd, setNewPwd] = useState("");
   const [pwdLoad, setPwdLoad] = useState(false);
-  const [profile, setProfile] = useState({ full_name: "", phone: "" });
+  const [profile, setProfile] = useState(() => {
+    try {
+      const cached = localStorage.getItem("bridge_profile");
+      return cached ? JSON.parse(cached) : { full_name: "", phone: "" };
+    } catch {
+      return { full_name: "", phone: "" };
+    }
+  });
   const [profileLoad, setProfileLoad] = useState(false);
 
   const toast_ = useCallback((msg, type = "ok") => {
@@ -307,31 +356,55 @@ function ClientApp({ user, onLogout }) {
   }, []);
 
   useEffect(() => {
-    fetchLatestRate().then(r => setRate(r)).catch(() => { });
-    fetchAdminConfig().then(c => setConfig(c)).catch(() => { });
-    sb.from("profiles").select("full_name, phone").eq("id", user.id).maybeSingle().then(({ data }) => {
-      if (data) setProfile({ full_name: data.full_name || "", phone: data.phone || "" });
+    fetchLatestRate().then(r => {
+      setRate(r);
+      localStorage.setItem("bridge_rate", JSON.stringify(r));
     }).catch(() => { });
+
+    fetchAdminConfig().then(c => {
+      setConfig(c);
+      localStorage.setItem("bridge_config", JSON.stringify(c));
+    }).catch(() => { });
+
+    sb.from("profiles").select("full_name, phone").eq("id", user.id).maybeSingle().then(({ data }) => {
+      if (data) {
+        const p = { full_name: data.full_name || "", phone: data.phone || "" };
+        setProfile(p);
+        localStorage.setItem("bridge_profile", JSON.stringify(p));
+      }
+    }).catch(() => { });
+
+    const kycTimeout = setTimeout(() => {
+      console.warn("[KYC] Timeout na verificação — a forçar kycLoading=false");
+      setKycLoading(false);
+    }, 2500);
+
     sb.from("kyc_verifications").select("*").eq("user_id", user.id)
       .order("created_at", { ascending: false }).limit(1).maybeSingle()
       .then(({ data: k }) => {
+        clearTimeout(kycTimeout);
         let s = 0;
         if (k) {
           setKycRecord(k);
+          localStorage.setItem("bridge_kyc", JSON.stringify(k));
           if (k.step_personal_done) s = 1;
           if (k.liveness_status && k.liveness_status !== "rejected") s = 2;
           if (k.ocr_status && k.ocr_status !== "rejected") s = 3;
+        } else {
+          localStorage.removeItem("bridge_kyc");
         }
         setKycStep(s);
         setKycLoading(false);
-      }).catch(() => {
-        setKycStep(0);
+      }).catch((err) => {
+        console.error("Erro ao carregar KYC:", err);
+        clearTimeout(kycTimeout);
         setKycLoading(false);
       });
 
     const ch = sb.channel("client_ch")
       .on("postgres_changes", { event: "INSERT", schema: "public", table: "exchange_rates" }, p => {
         setRate(p.new); setRateAnim(true); setTimeout(() => setRateAnim(false), 900);
+        localStorage.setItem("bridge_rate", JSON.stringify(p.new));
         toast_("Novo câmbio: " + parseFloat(p.new.applied_rate).toLocaleString("pt-AO") + " Kz/$");
       })
       .on("postgres_changes", { event: "UPDATE", schema: "public", table: "orders", filter: `user_id=eq.${user.id}` },
@@ -340,6 +413,7 @@ function ClientApp({ user, onLogout }) {
         (p) => {
           const k = p.new;
           setKycRecord(k);
+          localStorage.setItem("bridge_kyc", JSON.stringify(k));
           let s = 0;
           if (k.step_personal_done) s = 1;
           if (k.liveness_status && k.liveness_status !== "rejected") s = 2;
@@ -418,7 +492,12 @@ function ClientApp({ user, onLogout }) {
     const { error } = await sb.from("profiles").update({ full_name: profile.full_name, phone: formattedPhone }).eq("id", user.id);
     setProfileLoad(false);
     if (error) toast_("Erro ao atualizar: " + error.message, "err");
-    else { toast_("Perfil atualizado com sucesso!"); setProfile({ ...profile, phone: formattedPhone }); }
+    else {
+      toast_("Perfil atualizado com sucesso!");
+      const p = { ...profile, phone: formattedPhone };
+      setProfile(p);
+      localStorage.setItem("bridge_profile", JSON.stringify(p));
+    }
   }
 
   async function handleDeleteAccount() {
@@ -601,18 +680,18 @@ export default function App() {
   }, [darkMode]);
 
   useEffect(() => {
-    // Timeout de segurança: se a sessão não resolver em 8s, mostra a app na mesma
+    // Timeout de segurança: se a sessão não resolver em 2.5s, mostra a app na mesma
     const safetyTimeout = setTimeout(() => {
       console.warn("[Auth] Timeout — a forçar ready=true");
       setReady(true);
-    }, 8000);
+    }, 2500);
 
     sb.auth.getSession()
       .then(async ({ data }) => {
         try {
           const u = data?.session?.user ?? null;
           setUser(u);
-          if (u) setAdmin(await checkIsAdmin());
+          if (u) setAdmin(await checkIsAdmin(u.id));
         } finally {
           clearTimeout(safetyTimeout);
           setReady(true);
@@ -627,7 +706,7 @@ export default function App() {
     const { data: { subscription } } = sb.auth.onAuthStateChange(async (_e, s) => {
       const u = s?.user ?? null;
       setUser(u);
-      setAdmin(u ? await checkIsAdmin() : false);
+      setAdmin(u ? await checkIsAdmin(u.id) : false);
 
       // Se o cliente clicar no link do email para recuperar senha, ele cai aqui!
       if (_e === "PASSWORD_RECOVERY") {
@@ -645,8 +724,17 @@ export default function App() {
   }, []);
 
   async function handleLogout() {
+    try {
+      localStorage.removeItem("bridge_rate");
+      localStorage.removeItem("bridge_config");
+      localStorage.removeItem("bridge_profile");
+      localStorage.removeItem("bridge_kyc");
+    } catch (e) {
+      console.error(e);
+    }
     await sb.auth.signOut();
     setUser(null); setAdmin(false);
+    window.location.reload();
   }
 
   if (!ready) return (

@@ -7,11 +7,15 @@ const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY || "eyJhbGciOiJ
 
 export const sb = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-export async function checkIsAdmin() {
-  // Verifica se o utilizador ACTUAL está na tabela admin_roles
-  const { data: { user } } = await sb.auth.getUser();
-  if (!user) return false;
-  const { data } = await sb.from("admin_roles").select("user_id").eq("user_id", user.id).maybeSingle();
+export async function checkIsAdmin(userId) {
+  // Verifica se o utilizador está na tabela admin_roles
+  let id = userId;
+  if (!id) {
+    const { data: { session } } = await sb.auth.getSession();
+    id = session?.user?.id;
+  }
+  if (!id) return false;
+  const { data } = await sb.from("admin_roles").select("user_id").eq("user_id", id).maybeSingle();
   return !!data;
 }
 
