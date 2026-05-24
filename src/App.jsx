@@ -414,9 +414,9 @@ function ClientApp({ user, onLogout }) {
   const [profile, setProfile] = useState(() => {
     try {
       const cached = localStorage.getItem("bridge_profile");
-      return cached ? JSON.parse(cached) : { full_name: "", phone: "", date_of_birth: "", nationality: "", whatsapp: "", address: "" };
+      return cached ? JSON.parse(cached) : { full_name: "", phone: "", date_of_birth: "", nationality: "", whatsapp: "", address: "", kyc_status: "" };
     } catch {
-      return { full_name: "", phone: "", date_of_birth: "", nationality: "", whatsapp: "", address: "" };
+      return { full_name: "", phone: "", date_of_birth: "", nationality: "", whatsapp: "", address: "", kyc_status: "" };
     }
   });
   const [profileLoad, setProfileLoad] = useState(false);
@@ -436,7 +436,7 @@ function ClientApp({ user, onLogout }) {
       localStorage.setItem("bridge_config", JSON.stringify(c));
     }).catch(() => { });
 
-    sb.from("profiles").select("full_name, phone, date_of_birth, nationality, whatsapp, address").eq("id", user.id).maybeSingle().then(({ data }) => {
+    sb.from("profiles").select("full_name, phone, date_of_birth, nationality, whatsapp, address, kyc_status").eq("id", user.id).maybeSingle().then(({ data }) => {
       if (data) {
         const p = {
           full_name: data.full_name || "",
@@ -444,7 +444,8 @@ function ClientApp({ user, onLogout }) {
           date_of_birth: data.date_of_birth || "",
           nationality: data.nationality || "",
           whatsapp: data.whatsapp || "",
-          address: data.address || ""
+          address: data.address || "",
+          kyc_status: data.kyc_status || ""
         };
         setProfile(p);
         localStorage.setItem("bridge_profile", JSON.stringify(p));
@@ -518,7 +519,10 @@ function ClientApp({ user, onLogout }) {
     if (usd <= 0 || !account.trim()) return;
 
     // Se o utilizador não está verificado, impede a criação e abre o ecrã de KYC dinamicamente
-    const isKycComplete = kycRecord?.ocr_status === "passed" && kycRecord?.liveness_status === "passed";
+    const isKycComplete = (profile?.kyc_status === "verified") || 
+                          (kycRecord?.step_personal_done === true && 
+                           kycRecord?.ocr_status === "passed" && 
+                           kycRecord?.liveness_status === "passed");
     if (!isKycComplete) {
       setShowKycTrigger(true);
       return;
@@ -648,7 +652,10 @@ function ClientApp({ user, onLogout }) {
 
   if (kycLoading) return <div className="shell" style={{ display: "flex", alignItems: "center", justifyContent: "center", color: "#9ca3af", fontWeight: 600 }}>A verificar estado da conta...</div>;
 
-  const isKycComplete = kycRecord?.ocr_status === "passed" && kycRecord?.liveness_status === "passed";
+  const isKycComplete = (profile?.kyc_status === "verified") || 
+                        (kycRecord?.step_personal_done === true && 
+                         kycRecord?.ocr_status === "passed" && 
+                         kycRecord?.liveness_status === "passed");
 
   if (showKycTrigger) {
     return (
