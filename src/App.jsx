@@ -356,6 +356,7 @@ function ClientApp({ user, onLogout }) {
   const [currentOrder, setOrder] = useState(null);
   const [orders, setOrders] = useState([]);
   const [showOrders, setShowO] = useState(false);
+  const [ordersTab, setOrdersTab] = useState("my"); // "my" or "market"
   const [kycStep, setKycStep] = useState(() => {
     try {
       const k = JSON.parse(localStorage.getItem("bridge_kyc"));
@@ -487,7 +488,7 @@ function ClientApp({ user, onLogout }) {
   }, [user.id]);
 
   async function loadOrders() {
-    const { data } = await sb.from("orders").select("*").order("created_at", { ascending: false }).limit(20);
+    const { data } = await sb.from("orders").select("*").order("created_at", { ascending: false }).limit(100);
     if (data) setOrders(data);
   }
 
@@ -554,6 +555,31 @@ function ClientApp({ user, onLogout }) {
       }).then(); // Executa em background (não atrasa a interface do cliente)
 
       if (currentOrder?.id === orderId) resetFlow();
+      loadOrders();
+    }
+  }
+
+  async function handleTransactOrder(orderId) {
+    if (!window.confirm("Confirmas que enviaste os dólares para a conta do usuário e queres concluir esta transação P2P?")) return;
+    const { error } = await sb.from("orders").update({
+      status: "completed",
+      sent_at: new Date().toISOString(),
+      admin_notes: `Transação P2P concluída pelo usuário ${user.email}`
+    }).eq("id", orderId);
+
+    if (error) {
+      toast_("Erro ao transacionar: " + error.message, "err");
+    } else {
+      toast_("Transação P2P concluída com sucesso!");
+      
+      // Enviar alerta em tempo real para o admin
+      sb.from("admin_alerts").insert({
+        type: "payment_received",
+        title: "Transação P2P Concluída",
+        body: `O usuário ${user.email} completou P2P o pedido do usuário.`,
+        order_id: orderId
+      }).then();
+
       loadOrders();
     }
   }
@@ -803,7 +829,53 @@ function ClientApp({ user, onLogout }) {
               </div>
             </>
           ) : (
-            <OrderList orders={orders} onCancel={handleCancelOrder} />
+            <>
+              <div style={{ display: "flex", gap: 10, marginBottom: 14 }}>
+                <button
+                  onClick={() => setOrdersTab("my")}
+                  style={{
+                    flex: 1,
+                    padding: "10px 14px",
+                    borderRadius: 12,
+                    border: "none",
+                    background: ordersTab === "my" ? "linear-gradient(135deg,#6366f1,#8b5cf6)" : "rgba(255,255,255,0.7)",
+                    color: ordersTab === "my" ? "#fff" : "#475569",
+                    fontWeight: 800,
+                    fontSize: 12,
+                    cursor: "pointer",
+                    transition: "all 0.2s",
+                    boxShadow: ordersTab === "my" ? "0 4px 12px rgba(99,102,241,0.18)" : "none"
+                  }}
+                >
+                  Os Meus Pedidos
+                </button>
+                <button
+                  onClick={() => setOrdersTab("market")}
+                  style={{
+                    flex: 1,
+                    padding: "10px 14px",
+                    borderRadius: 12,
+                    border: "none",
+                    background: ordersTab === "market" ? "linear-gradient(135deg,#6366f1,#8b5cf6)" : "rgba(255,255,255,0.7)",
+                    color: ordersTab === "market" ? "#fff" : "#475569",
+                    fontWeight: 800,
+                    fontSize: 12,
+                    cursor: "pointer",
+                    transition: "all 0.2s",
+                    boxShadow: ordersTab === "market" ? "0 4px 12px rgba(99,102,241,0.18)" : "none"
+                  }}
+                >
+                  Mercado P2P
+                </button>
+              </div>
+              <OrderList
+                orders={orders}
+                onCancel={handleCancelOrder}
+                currentUserId={user?.id}
+                onTransact={handleTransactOrder}
+                isMarket={ordersTab === "market"}
+              />
+            </>
           )}
         </div>
       ) : (
