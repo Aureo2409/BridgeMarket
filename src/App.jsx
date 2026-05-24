@@ -195,23 +195,7 @@ function KycOnboarding({ user, currentStep, kycRecord, onLogout, onBack }) {
   async function handleStartVerification() {
     setLoading(true);
 
-    // 1. Marca como pending no Supabase para inicializar
-    try {
-      const { error } = await sb.from("kyc_verifications").upsert({
-        user_id: user.id,
-        ocr_status: "pending",
-        liveness_status: "pending",
-        updated_at: new Date().toISOString()
-      });
-      if (error) throw error;
-    } catch (err) {
-      console.error("Erro ao iniciar verificação no Supabase:", err);
-      alert("Erro ao registar a verificação na base de dados. Por favor tente novamente.");
-      setLoading(false);
-      return;
-    }
-
-    // 2. Se a URL já foi pré-carregada com sucesso em background, redireciona IMEDIATAMENTE!
+    // Se a URL já foi pré-carregada com sucesso em background, redireciona IMEDIATAMENTE!
     if (sessionUrl) {
       window.location.href = sessionUrl;
       return;
