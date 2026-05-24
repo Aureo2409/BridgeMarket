@@ -923,8 +923,14 @@ export default function App() {
 
     const { data: { subscription } } = sb.auth.onAuthStateChange(async (_e, s) => {
       const u = s?.user ?? null;
-      setUser(u);
-      setAdmin(u ? await checkIsAdmin(u.id) : false);
+      if (u) {
+        const isAdm = await checkIsAdmin(u.id);
+        setAdmin(isAdm);
+        setUser(u);
+      } else {
+        setAdmin(false);
+        setUser(null);
+      }
 
       // Se o cliente clicar no link do email para recuperar senha, ele cai aqui!
       if (_e === "PASSWORD_RECOVERY") {
