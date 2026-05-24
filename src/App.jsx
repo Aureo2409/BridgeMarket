@@ -164,17 +164,14 @@ function AuthScreen() {
 }
 
 // ── KYC ONBOARDING ─────────────────────────────────────────────────────────────
-function KycOnboarding({ user, currentStep, kycRecord, onLogout }) {
+function KycOnboarding({ user, currentStep, kycRecord, onLogout, onBack }) {
   const [loading, setLoading] = useState(false);
   const [sessionUrl, setSessionUrl] = useState(null);
   const [preFetchError, setPreFetchError] = useState(null);
 
   // Pré-carrega a sessão do DIDIT em background para zero latência!
   useEffect(() => {
-    const botApiUrl = import.meta.env.VITE_BOT_API_URL;
-    if (!botApiUrl) return;
-
-    fetch(`${botApiUrl}/api/didit/session`, {
+    fetch("/api/didit-session", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ user_id: user.id })
@@ -225,15 +222,7 @@ function KycOnboarding({ user, currentStep, kycRecord, onLogout }) {
     const timeoutId = setTimeout(() => controller.abort(), 8000);
 
     try {
-      const botApiUrl = import.meta.env.VITE_BOT_API_URL;
-      if (!botApiUrl) {
-        alert("Configuração do servidor de autenticação em falta. Por favor contacte o suporte.");
-        clearTimeout(timeoutId);
-        setLoading(false);
-        return;
-      }
-
-      const res = await fetch(`${botApiUrl}/api/didit/session`, {
+      const res = await fetch("/api/didit-session", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ user_id: user.id }),
@@ -270,7 +259,12 @@ function KycOnboarding({ user, currentStep, kycRecord, onLogout }) {
         <div style={{ marginBottom: 16 }}><Icon name="loader" size={50} color="#6366f1" className="spin" /></div>
         <div style={{ fontSize: 24, fontWeight: 900, color: "#1e1b4b", letterSpacing: -1 }}>Em análise</div>
         <div style={{ fontSize: 13, color: "#6b7280", fontWeight: 600, marginTop: 10, maxWidth: 300, lineHeight: 1.5 }}>A tua identidade está a ser verificada pela nossa equipa. Por favor, aguarda a aprovação.</div>
-        <button className="btn btn-o" onClick={onLogout} style={{ marginTop: 24 }}>Sair</button>
+        {onBack && (
+          <button className="btn btn-p" onClick={onBack} style={{ marginTop: 24, width: "100%", maxWidth: 200 }}>
+            Voltar para a Calculadora
+          </button>
+        )}
+        <button className="btn btn-o" onClick={onLogout} style={{ marginTop: onBack ? 10 : 24, width: "100%", maxWidth: 200 }}>Sair</button>
       </div>
     );
   }
@@ -287,8 +281,13 @@ function KycOnboarding({ user, currentStep, kycRecord, onLogout }) {
             {kycRecord.rejection_reason}
           </div>
         )}
-        <button className="btn btn-p" onClick={handleRetry} style={{ marginTop: 24 }}>Tentar Novamente</button>
-        <button className="btn btn-o" onClick={onLogout} style={{ marginTop: 10 }}>Sair</button>
+        <button className="btn btn-p" onClick={handleRetry} style={{ marginTop: 24, width: "100%", maxWidth: 200 }}>Tentar Novamente</button>
+        {onBack && (
+          <button className="btn btn-p" onClick={onBack} style={{ marginTop: 10, width: "100%", maxWidth: 200, background: "#475569" }}>
+            Voltar para a Calculadora
+          </button>
+        )}
+        <button className="btn btn-o" onClick={onLogout} style={{ marginTop: 10, width: "100%", maxWidth: 200 }}>Sair</button>
       </div>
     );
   }
@@ -323,6 +322,15 @@ function KycOnboarding({ user, currentStep, kycRecord, onLogout }) {
           <button className="btn btn-p" onClick={handleStartVerification} disabled={loading}>
             {loading ? <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}><Icon name="loader" size={16} className="spin" /> A conectar...</div> : <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>Iniciar Verificação com DIDIT <Icon name="arrowRight" size={16} /></div>}
           </button>
+          
+          {onBack && (
+            <button className="btn btn-p" onClick={onBack} style={{ marginTop: 10, background: "#475569" }}>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
+                <Icon name="arrowLeft" size={16} /> Voltar para a Calculadora
+              </div>
+            </button>
+          )}
+
           <button className="btn btn-o" onClick={onLogout} style={{ marginTop: 10 }}>Sair</button>
 
           <div style={{ marginTop: 18, textAlign: "center" }}>
@@ -399,14 +407,16 @@ function ClientApp({ user, onLogout }) {
   });
 
   const [showProfile, setShowProfile] = useState(false);
+  const [isEditingProfile, setIsEditingProfile] = useState(false);
+  const [showKycTrigger, setShowKycTrigger] = useState(false);
   const [newPwd, setNewPwd] = useState("");
   const [pwdLoad, setPwdLoad] = useState(false);
   const [profile, setProfile] = useState(() => {
     try {
       const cached = localStorage.getItem("bridge_profile");
-      return cached ? JSON.parse(cached) : { full_name: "", phone: "" };
+      return cached ? JSON.parse(cached) : { full_name: "", phone: "", date_of_birth: "", nationality: "", whatsapp: "", address: "" };
     } catch {
-      return { full_name: "", phone: "" };
+      return { full_name: "", phone: "", date_of_birth: "", nationality: "", whatsapp: "", address: "" };
     }
   });
   const [profileLoad, setProfileLoad] = useState(false);
@@ -426,9 +436,16 @@ function ClientApp({ user, onLogout }) {
       localStorage.setItem("bridge_config", JSON.stringify(c));
     }).catch(() => { });
 
-    sb.from("profiles").select("full_name, phone").eq("id", user.id).maybeSingle().then(({ data }) => {
+    sb.from("profiles").select("full_name, phone, date_of_birth, nationality, whatsapp, address").eq("id", user.id).maybeSingle().then(({ data }) => {
       if (data) {
-        const p = { full_name: data.full_name || "", phone: data.phone || "" };
+        const p = {
+          full_name: data.full_name || "",
+          phone: data.phone || "",
+          date_of_birth: data.date_of_birth || "",
+          nationality: data.nationality || "",
+          whatsapp: data.whatsapp || "",
+          address: data.address || ""
+        };
         setProfile(p);
         localStorage.setItem("bridge_profile", JSON.stringify(p));
       }
@@ -499,17 +516,35 @@ function ClientApp({ user, onLogout }) {
       return;
     }
     if (usd <= 0 || !account.trim()) return;
+
+    // Se o utilizador não está verificado, impede a criação e abre o ecrã de KYC dinamicamente
+    const isKycComplete = kycRecord?.ocr_status === "passed" && kycRecord?.liveness_status === "passed";
+    if (!isKycComplete) {
+      setShowKycTrigger(true);
+      return;
+    }
+
     setOrdLoad(true);
-    const { data, error } = await sb.from("orders").insert({
-      user_id: user.id, amount_usd: usd, amount_aoa: aoa,
-      rate_applied: appliedRate, destination: dest,
-      destination_account: account,
-      status: kycStep >= 3 ? "awaiting_payment" : "awaiting_kyc",
-    }).select().single();
-    setOrdLoad(false);
-    if (error) { toast_(error.message, "err"); return; }
-    setOrder(data); setStep(1);
-    toast_("Pedido criado! Admin notificado.");
+    try {
+      const { data, error } = await sb.from("orders").insert({
+        user_id: user.id, amount_usd: usd, amount_aoa: aoa,
+        rate_applied: appliedRate, destination: dest,
+        destination_account: account,
+        status: "awaiting_payment", // Como o KYC está completo, passa logo a aguardar pagamento!
+      }).select().single();
+
+      if (error) {
+        toast_(error.message, "err");
+      } else {
+        setOrder(data); setStep(1);
+        toast_("Pedido criado! Admin notificado.");
+      }
+    } catch (e) {
+      console.error("Erro ao criar pedido:", e);
+      toast_(e.message || "Erro de ligação ao criar pedido. Tente novamente.", "err");
+    } finally {
+      setOrdLoad(false);
+    }
   }
 
   function resetFlow() { setStep(0); setOrder(null); }
@@ -545,18 +580,33 @@ function ClientApp({ user, onLogout }) {
   }
 
   async function handleUpdateProfile() {
-    if (!profile.full_name?.trim() || !profile.phone?.trim()) { toast_("Preenche todos os campos.", "err"); return; }
+    if (!profile.full_name?.trim() || !profile.phone?.trim()) { toast_("Preenche todos os campos obrigatórios.", "err"); return; }
     const cleanPhone = profile.phone.replace(/\D/g, "");
     const formattedPhone = cleanPhone.length === 9 ? `+244${cleanPhone}` : `+${cleanPhone}`;
     setProfileLoad(true);
-    const { error } = await sb.from("profiles").update({ full_name: profile.full_name, phone: formattedPhone }).eq("id", user.id);
+    const { error } = await sb.from("profiles").update({
+      full_name: profile.full_name,
+      phone: formattedPhone,
+      date_of_birth: profile.date_of_birth || null,
+      nationality: profile.nationality || null,
+      whatsapp: profile.whatsapp || null,
+      address: profile.address || null
+    }).eq("id", user.id);
     setProfileLoad(false);
     if (error) toast_("Erro ao atualizar: " + error.message, "err");
     else {
       toast_("Perfil atualizado com sucesso!");
-      const p = { ...profile, phone: formattedPhone };
+      const p = {
+        ...profile,
+        phone: formattedPhone,
+        date_of_birth: profile.date_of_birth,
+        nationality: profile.nationality,
+        whatsapp: profile.whatsapp,
+        address: profile.address
+      };
       setProfile(p);
       localStorage.setItem("bridge_profile", JSON.stringify(p));
+      setIsEditingProfile(false);
     }
   }
 
@@ -573,6 +623,26 @@ function ClientApp({ user, onLogout }) {
     }
   }
 
+  const handleProfileClick = () => {
+    if (showProfile) {
+      setShowProfile(false);
+      setShowO(false);
+    } else {
+      setShowProfile(true);
+      setShowO(true);
+    }
+  };
+
+  const handleOrdersClick = () => {
+    if (showOrders && !showProfile) {
+      setShowO(false);
+    } else {
+      setShowO(true);
+      setShowProfile(false);
+      loadOrders();
+    }
+  };
+
   const destInfo = DESTS.find(d => d.id === currentOrder?.destination);
   const applied = parseFloat(rate.applied_rate) || 1165;
 
@@ -580,8 +650,18 @@ function ClientApp({ user, onLogout }) {
 
   const isKycComplete = kycRecord?.ocr_status === "passed" && kycRecord?.liveness_status === "passed";
 
-  if (!isKycComplete) {
-    return <KycOnboarding user={user} currentStep={kycStep} kycRecord={kycRecord} onLogout={onLogout} />;
+  if (showKycTrigger) {
+    return (
+      <div className="shell">
+        <div className="blob b1" /><div className="blob b2" />
+        <Toast toast={toast} />
+        <Header appliedRate={applied} rateAnim={rateAnim} user={user} onLogout={onLogout}
+          showOrders={showOrders} showProfile={showProfile}
+          onOrdersClick={handleOrdersClick}
+          onProfileClick={handleProfileClick} />
+        <KycOnboarding user={user} currentStep={kycStep} kycRecord={kycRecord} onLogout={onLogout} onBack={() => setShowKycTrigger(false)} />
+      </div>
+    );
   }
 
   return (
@@ -589,8 +669,9 @@ function ClientApp({ user, onLogout }) {
       <div className="blob b1" /><div className="blob b2" />
       <Toast toast={toast} />
       <Header appliedRate={applied} rateAnim={rateAnim} user={user} onLogout={onLogout}
-        showOrders={showOrders}
-        onOrdersClick={() => { setShowO(!showOrders); setShowProfile(false); if (!showOrders) loadOrders(); }} />
+        showOrders={showOrders} showProfile={showProfile}
+        onOrdersClick={handleOrdersClick}
+        onProfileClick={handleProfileClick} />
 
       {showOrders ? (
         <div className="pg">
@@ -598,35 +679,121 @@ function ClientApp({ user, onLogout }) {
             <div style={{ fontWeight: 900, fontSize: 17, color: "#1e1b4b", letterSpacing: "-.4px" }}>
               {showProfile ? "O meu Perfil" : "Os meus pedidos"}
             </div>
-            <button onClick={() => setShowProfile(!showProfile)} style={{ background: "none", border: "none", color: "#6366f1", fontSize: 12, fontWeight: 700, cursor: "pointer" }}>
+            <button onClick={handleProfileClick} style={{ background: "none", border: "none", color: "#6366f1", fontSize: 12, fontWeight: 700, cursor: "pointer" }}>
               {showProfile ? <div style={{ display: "flex", alignItems: "center", gap: 6 }}><Icon name="arrowLeft" size={14} /> Ver pedidos</div> : <div style={{ display: "flex", alignItems: "center", gap: 6 }}><Icon name="user" size={14} /> O meu Perfil</div>}
             </button>
           </div>
 
           {showProfile ? (
             <>
-              <div className="card" style={{ marginBottom: 14 }}>
-                <div style={{ fontSize: 14, fontWeight: 800, color: "#1e1b4b", marginBottom: 10 }}>Dados Pessoais</div>
-                <label className="lbl">Nome Completo</label>
-                <input className="inp" style={{ marginBottom: 10 }} type="text" placeholder="O teu nome" value={profile.full_name} onChange={e => setProfile({ ...profile, full_name: e.target.value })} />
-                <label className="lbl">Número de Telefone</label>
-                <input className="inp" style={{ marginBottom: 14 }} type="tel" placeholder="+244 9XX XXX XXX" value={profile.phone} onChange={e => setProfile({ ...profile, phone: e.target.value })} />
-                <button className="btn btn-p" onClick={handleUpdateProfile} disabled={profileLoad}>
-                  {profileLoad ? "A guardar..." : "Guardar Dados"}
-                </button>
-              </div>
-              <div className="card" style={{ marginBottom: 14 }}>
-                <div style={{ fontSize: 14, fontWeight: 800, color: "#1e1b4b", marginBottom: 10 }}>Verificação de Identidade</div>
-                <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "12px 14px", background: "#f0fdf4", border: "1px solid #bbf7d0", borderRadius: 12 }}>
-                  <div style={{ width: 30, height: 30, borderRadius: "50%", background: "#10b981", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                    <Icon name="check" size={16} />
+              {/* Dados Pessoais Redesenhados e Premium */}
+              {!isEditingProfile ? (
+                <div className="card" style={{ padding: "20px 24px", marginBottom: 14, borderRadius: 16, background: "#fff", border: "1px solid #e2e8f0" }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 18 }}>
+                    <div style={{ fontSize: 15, fontWeight: 900, color: "#1e1b4b", letterSpacing: "-0.3px" }}>Dados Pessoais</div>
+                    <button onClick={() => setIsEditingProfile(true)} style={{ background: "rgba(99,102,241,0.08)", border: "none", color: "#6366f1", borderRadius: 8, padding: "6px 12px", fontSize: 12, fontWeight: 700, display: "flex", alignItems: "center", gap: 6, cursor: "pointer", transition: "all 0.2s" }} onMouseEnter={e => e.currentTarget.style.background = "rgba(99,102,241,0.15)"} onMouseLeave={e => e.currentTarget.style.background = "rgba(99,102,241,0.08)"}>
+                      <Icon name="edit" size={13} /> Editar
+                    </button>
                   </div>
-                  <div>
-                    <div style={{ fontSize: 13, fontWeight: 800, color: "#16a34a" }}>Identidade Verificada (DIDIT)</div>
-                    <div style={{ fontSize: 11, color: "#15803d", fontWeight: 600, marginTop: 2 }}>A tua conta está totalmente validada e segura para transações.</div>
+
+                  <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+                    {[
+                      { label: "Nome Completo", val: profile.full_name || "Não definido" },
+                      { label: "E-mail", val: user.email, isSecure: true },
+                      { label: "Endereço", val: profile.address || "Não definido" },
+                      { label: "Número de Telefone", val: profile.phone || "Não definido" },
+                      { label: "Data de Nascimento", val: profile.date_of_birth ? new Date(profile.date_of_birth).toLocaleDateString('pt-PT') : "Não definido" },
+                      { label: "Nacionalidade", val: profile.nationality || "Não definido" },
+                      { label: "WhatsApp", val: profile.whatsapp || "Não definido" },
+                    ].map((item, idx) => (
+                      <div key={idx} style={{ display: "flex", flexDirection: "column", paddingBottom: 10, borderBottom: idx < 6 ? "1px solid #f1f5f9" : "none" }}>
+                        <span style={{ fontSize: 11, color: "#94a3b8", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: 4 }}>{item.label}</span>
+                        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                          <span style={{ fontSize: 13, color: "#1e1b4b", fontWeight: 600 }}>{item.val}</span>
+                          {item.isSecure && <Icon name="lock" size={12} color="#94a3b8" title="Verificado e Protegido" />}
+                        </div>
+                      </div>
+                    ))}
                   </div>
                 </div>
+              ) : (
+                <div className="card" style={{ padding: "20px 24px", marginBottom: 14, borderRadius: 16, background: "#fff", border: "1px solid #e2e8f0" }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 18 }}>
+                    <div style={{ fontSize: 15, fontWeight: 900, color: "#1e1b4b", letterSpacing: "-0.3px" }}>Editar Dados Pessoais</div>
+                  </div>
+
+                  <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+                    <div>
+                      <label className="lbl">Nome Completo</label>
+                      <input className="inp" type="text" placeholder="Nome Completo" value={profile.full_name} onChange={e => setProfile({ ...profile, full_name: e.target.value })} />
+                    </div>
+                    <div>
+                      <label className="lbl">E-mail (Seguro)</label>
+                      <input className="inp" type="text" disabled value={user.email} style={{ background: "#f8fafc", color: "#64748b", cursor: "not-allowed" }} />
+                    </div>
+                    <div>
+                      <label className="lbl">Endereço</label>
+                      <input className="inp" type="text" placeholder="Endereço" value={profile.address || ""} onChange={e => setProfile({ ...profile, address: e.target.value })} />
+                    </div>
+                    <div>
+                      <label className="lbl">Número de Telefone</label>
+                      <input className="inp" type="tel" placeholder="+244 9XX XXX XXX" value={profile.phone} onChange={e => setProfile({ ...profile, phone: e.target.value })} />
+                    </div>
+                    <div>
+                      <label className="lbl">Data de Nascimento</label>
+                      <input className="inp" type="date" value={profile.date_of_birth || ""} onChange={e => setProfile({ ...profile, date_of_birth: e.target.value })} />
+                    </div>
+                    <div>
+                      <label className="lbl">Nacionalidade</label>
+                      <input className="inp" type="text" placeholder="Nacionalidade" value={profile.nationality || ""} onChange={e => setProfile({ ...profile, nationality: e.target.value })} />
+                    </div>
+                    <div>
+                      <label className="lbl">WhatsApp</label>
+                      <input className="inp" type="tel" placeholder="WhatsApp" value={profile.whatsapp || ""} onChange={e => setProfile({ ...profile, whatsapp: e.target.value })} />
+                    </div>
+
+                    <div style={{ display: "flex", gap: 10, marginTop: 10 }}>
+                      <button className="btn btn-p" onClick={handleUpdateProfile} disabled={profileLoad} style={{ flex: 1 }}>
+                        {profileLoad ? "A guardar..." : "Guardar Alterações"}
+                      </button>
+                      <button className="btn btn-o" onClick={() => setIsEditingProfile(false)} disabled={profileLoad} style={{ flex: 1, marginTop: 0 }}>
+                        Cancelar
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Verificação de Identidade */}
+              <div className="card" style={{ marginBottom: 14 }}>
+                <div style={{ fontSize: 14, fontWeight: 800, color: "#1e1b4b", marginBottom: 10 }}>Verificação de Identidade</div>
+                {isKycComplete ? (
+                  <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "12px 14px", background: "#f0fdf4", border: "1px solid #bbf7d0", borderRadius: 12 }}>
+                    <div style={{ width: 30, height: 30, borderRadius: "50%", background: "#10b981", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                      <Icon name="check" size={16} />
+                    </div>
+                    <div>
+                      <div style={{ fontSize: 13, fontWeight: 800, color: "#16a34a" }}>Identidade Verificada (DIDIT)</div>
+                      <div style={{ fontSize: 11, color: "#15803d", fontWeight: 600, marginTop: 2 }}>A tua conta está totalmente validada e segura para transações.</div>
+                    </div>
+                  </div>
+                ) : (
+                  <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "12px 14px", background: "#fffbeb", border: "1px solid #fef3c7", borderRadius: 12 }}>
+                    <div style={{ width: 30, height: 30, borderRadius: "50%", background: "#f59e0b", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                      <Icon name="alertTriangle" size={16} />
+                    </div>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontSize: 13, fontWeight: 800, color: "#d97706" }}>Identidade Não Verificada</div>
+                      <div style={{ fontSize: 11, color: "#b45309", fontWeight: 600, marginTop: 2 }}>Verifica a tua identidade para poderes criar pedidos e transacionar.</div>
+                    </div>
+                    <button className="btn btn-p" style={{ width: "auto", padding: "6px 12px", fontSize: 11, height: "auto" }} onClick={() => setShowKycTrigger(true)}>
+                      Verificar
+                    </button>
+                  </div>
+                )}
               </div>
+
+              {/* Segurança da Conta */}
               <div className="card">
                 <div style={{ fontSize: 14, fontWeight: 800, color: "#1e1b4b", marginBottom: 10 }}>Segurança da Conta</div>
                 <div style={{ fontSize: 12, color: "#6b7280", marginBottom: 14, fontWeight: 500 }}>Define uma nova palavra-passe para a tua conta ({user.email}).</div>
@@ -792,9 +959,15 @@ export default function App() {
     } catch (e) {
       console.error(e);
     }
-    await sb.auth.signOut();
-    setUser(null); setAdmin(false);
-    window.location.reload();
+    try {
+      setUser(null);
+      setAdmin(false);
+      await sb.auth.signOut();
+    } catch (e) {
+      console.error("Erro ao fazer signOut:", e);
+    } finally {
+      window.location.reload();
+    }
   }
 
   if (!ready) return (
