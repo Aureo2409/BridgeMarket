@@ -36,6 +36,7 @@ export default async function handler(req, res) {
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
+        workflow_id: '5b5b0273-9a79-4741-af8a-be62d770dc28',
         vendor_data: user_id,
         callback: 'https://bridge-market-delta.vercel.app'
       })
