@@ -924,9 +924,12 @@ export default function App() {
     const { data: { subscription } } = sb.auth.onAuthStateChange(async (_e, s) => {
       const u = s?.user ?? null;
       if (u) {
-        const isAdm = await checkIsAdmin(u.id);
-        setAdmin(isAdm);
         setUser(u);
+        checkIsAdmin(u.id).then(isAdm => {
+          setAdmin(isAdm);
+        }).catch(() => {
+          setAdmin(false);
+        });
       } else {
         setAdmin(false);
         setUser(null);
