@@ -564,26 +564,38 @@ function ClientApp({ user, onLogout }) {
   }
 
   async function handleTransactOrder(orderId) {
-    if (!window.confirm("Confirmas que enviaste os dólares para a conta do usuário e queres concluir esta transação P2P?")) return;
-    const { error } = await sb.from("orders").update({
-      status: "completed",
-      sent_at: new Date().toISOString(),
-      admin_notes: `Transação P2P concluída pelo usuário ${user.email}`
-    }).eq("id", orderId);
+    if (!window.confirm("Confirmas que queres aceitar este pedido P2P e iniciar a correspondência?")) return;
+    const { data: orderData, error } = await sb.from("orders").update({
+      status: "processing",
+      funder_id: user.id,
+      admin_notes: `Correspondência P2P iniciada pelo parceiro ${user.email}`
+    }).eq("id", orderId).select().maybeSingle();
 
     if (error) {
-      toast_("Erro ao transacionar: " + error.message, "err");
+      toast_("Erro ao iniciar correspondência: " + error.message, "err");
     } else {
-      toast_("Transação P2P concluída com sucesso!");
+      toast_("Correspondência iniciada com sucesso!");
       
+      // Enviar mensagem automática de boas-vindas no chat
+      if (orderData) {
+        await sb.from("chat_messages").insert({
+          order_id: orderId,
+          user_id: orderData.user_id,
+          sender_id: user.id,
+          sender_role: "partner",
+          body: `👋 Olá! Aceitei o teu pedido P2P. Vamos conversar por aqui para transacionar com segurança.`
+        });
+      }
+
       // Enviar alerta em tempo real para o admin
       sb.from("admin_alerts").insert({
         type: "payment_received",
-        title: "Transação P2P Concluída",
-        body: `O usuário ${user.email} completou P2P o pedido do usuário.`,
+        title: "Parceiro P2P Correspondido",
+        body: `O usuário ${user.email} aceitou parear o pedido do usuário.`,
         order_id: orderId
       }).then();
 
+      if (orderData) setSelectedOrder(orderData);
       loadOrders();
     }
   }
