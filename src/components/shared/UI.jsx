@@ -75,7 +75,7 @@ export function StatusPill({ status }) {
   );
 }
 
-export function Header({ appliedRate, rateAnim, onOrdersClick, showOrders, user, onLogout, onProfileClick, showProfile }) {
+export function Header({ appliedRate, rateAnim, onOrdersClick, showOrders, user, onLogout, onProfileClick, showProfile, avatarUrl }) {
   return (
     <div className="hdr">
       <div className="logo">
@@ -97,8 +97,12 @@ export function Header({ appliedRate, rateAnim, onOrdersClick, showOrders, user,
             <button className="btn-g" onClick={onOrdersClick} title="Os Meus Pedidos" style={{ display: "flex", alignItems: "center", justifyContent: "center", width: 30, height: 30, borderRadius: 8, background: showOrders && !showProfile ? "rgba(99,102,241,0.12)" : "rgba(99,102,241,0.06)", border: "none", color: "#6366f1", cursor: "pointer", transition: "all 0.2s" }}>
               <Icon name="list" size={14} />
             </button>
-            <button className="btn-g" onClick={onProfileClick} title="O Meu Perfil" style={{ display: "flex", alignItems: "center", justifyContent: "center", width: 30, height: 30, borderRadius: 8, background: showProfile ? "rgba(99,102,241,0.12)" : "rgba(99,102,241,0.06)", border: "none", color: "#6366f1", cursor: "pointer", transition: "all 0.2s" }}>
-              <Icon name="user" size={14} />
+            <button className="btn-g" onClick={onProfileClick} title="O Meu Perfil" style={{ display: "flex", alignItems: "center", justifyContent: "center", width: 30, height: 30, borderRadius: 8, background: showProfile ? "rgba(99,102,241,0.12)" : "rgba(99,102,241,0.06)", border: "none", color: "#6366f1", cursor: "pointer", transition: "all 0.2s", overflow: "hidden", padding: 0 }}>
+              {avatarUrl ? (
+                <img src={avatarUrl} alt="Avatar" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+              ) : (
+                <Icon name="user" size={14} />
+              )}
             </button>
             <button className="btn-g" onClick={onLogout} style={{ color: "#ef4444", fontSize: 12, fontWeight: 700, border: "none", background: "none", cursor: "pointer", marginLeft: 4 }}>Sair</button>
           </>

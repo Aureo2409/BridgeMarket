@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import { sb, checkIsAdmin, fetchLatestRate, fetchAdminConfig, uploadKycDocument } from "./lib/supabase.js";
+import { sb, checkIsAdmin, fetchLatestRate, fetchAdminConfig, uploadKycDocument, uploadAvatar } from "./lib/supabase.js";
 import { CSS, DESTS } from "./lib/constants.js";
 import { Toast, StepBar, Header, Icon } from "./components/shared/UI.jsx";
 import { Calculator } from "./components/client/Calculator.jsx";
@@ -401,12 +401,13 @@ function ClientApp({ user, onLogout }) {
   const [profile, setProfile] = useState(() => {
     try {
       const cached = localStorage.getItem("bridge_profile");
-      return cached ? JSON.parse(cached) : { full_name: "", phone: "", date_of_birth: "", nationality: "", whatsapp: "", address: "", kyc_status: "" };
+      return cached ? JSON.parse(cached) : { full_name: "", phone: "", date_of_birth: "", nationality: "", whatsapp: "", address: "", kyc_status: "", avatar_url: "" };
     } catch {
-      return { full_name: "", phone: "", date_of_birth: "", nationality: "", whatsapp: "", address: "", kyc_status: "" };
+      return { full_name: "", phone: "", date_of_birth: "", nationality: "", whatsapp: "", address: "", kyc_status: "", avatar_url: "" };
     }
   });
   const [profileLoad, setProfileLoad] = useState(false);
+  const [avatarUploading, setAvatarUploading] = useState(false);
 
   const toast_ = useCallback((msg, type = "ok") => {
     setToast({ msg, type }); setTimeout(() => setToast(null), 3000);
@@ -423,7 +424,7 @@ function ClientApp({ user, onLogout }) {
       localStorage.setItem("bridge_config", JSON.stringify(c));
     }).catch(() => { });
 
-    sb.from("profiles").select("full_name, phone, date_of_birth, nationality, whatsapp, address, kyc_status").eq("id", user.id).maybeSingle().then(({ data }) => {
+    sb.from("profiles").select("full_name, phone, date_of_birth, nationality, whatsapp, address, kyc_status, avatar_url").eq("id", user.id).maybeSingle().then(({ data }) => {
       if (data) {
         const p = {
           full_name: data.full_name || "",
@@ -432,7 +433,8 @@ function ClientApp({ user, onLogout }) {
           nationality: data.nationality || "",
           whatsapp: data.whatsapp || "",
           address: data.address || "",
-          kyc_status: data.kyc_status || ""
+          kyc_status: data.kyc_status || "",
+          avatar_url: data.avatar_url || ""
         };
         setProfile(p);
         localStorage.setItem("bridge_profile", JSON.stringify(p));
@@ -639,6 +641,28 @@ function ClientApp({ user, onLogout }) {
     }
   }
 
+  async function handleAvatarUpload(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+    setAvatarUploading(true);
+    try {
+      const { signedUrl } = await uploadAvatar(user.id, file);
+      if (signedUrl) {
+        const { error } = await sb.from("profiles").update({ avatar_url: signedUrl }).eq("id", user.id);
+        if (error) throw error;
+
+        const updatedProfile = { ...profile, avatar_url: signedUrl };
+        setProfile(updatedProfile);
+        localStorage.setItem("bridge_profile", JSON.stringify(updatedProfile));
+        toast_("Foto de perfil atualizada com sucesso!");
+      }
+    } catch (err) {
+      toast_("Erro ao enviar foto: " + err.message, "err");
+    } finally {
+      setAvatarUploading(false);
+    }
+  }
+
   const handleProfileClick = () => {
     setSelectedOrder(null);
     if (showProfile) {
@@ -679,7 +703,8 @@ function ClientApp({ user, onLogout }) {
         <Header appliedRate={applied} rateAnim={rateAnim} user={user} onLogout={onLogout}
           showOrders={showOrders} showProfile={showProfile}
           onOrdersClick={handleOrdersClick}
-          onProfileClick={handleProfileClick} />
+          onProfileClick={handleProfileClick}
+          avatarUrl={profile?.avatar_url} />
         <KycOnboarding user={user} currentStep={kycStep} kycRecord={kycRecord} onLogout={onLogout} onBack={() => setShowKycTrigger(false)} />
       </div>
     );
@@ -692,7 +717,8 @@ function ClientApp({ user, onLogout }) {
       <Header appliedRate={applied} rateAnim={rateAnim} user={user} onLogout={onLogout}
         showOrders={showOrders} showProfile={showProfile}
         onOrdersClick={handleOrdersClick}
-        onProfileClick={handleProfileClick} />
+        onProfileClick={handleProfileClick}
+        avatarUrl={profile?.avatar_url} />
 
       {showOrders ? (
         <div className="pg">
@@ -722,6 +748,93 @@ function ClientApp({ user, onLogout }) {
                     <button onClick={() => setIsEditingProfile(true)} style={{ background: "rgba(99,102,241,0.08)", border: "none", color: "#6366f1", borderRadius: 8, padding: "6px 12px", fontSize: 12, fontWeight: 700, display: "flex", alignItems: "center", gap: 6, cursor: "pointer", transition: "all 0.2s" }} onMouseEnter={e => e.currentTarget.style.background = "rgba(99,102,241,0.15)"} onMouseLeave={e => e.currentTarget.style.background = "rgba(99,102,241,0.08)"}>
                       <Icon name="edit" size={13} /> Editar
                     </button>
+                  </div>
+
+                  {/* Premium Profile Photo Frame Upload Box */}
+                  <div style={{ display: "flex", flexDirection: "column", alignItems: "center", marginBottom: 24, paddingBottom: 18, borderBottom: "1px solid #f1f5f9" }}>
+                    <div
+                      onClick={() => !avatarUploading && document.getElementById("avatar-upload-file").click()}
+                      style={{
+                        position: "relative",
+                        width: 80,
+                        height: 80,
+                        borderRadius: "50%",
+                        background: "linear-gradient(135deg,#6366f1,#8b5cf6)",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        cursor: "pointer",
+                        overflow: "hidden",
+                        boxShadow: "0 6px 16px rgba(99,102,241,0.18)",
+                        transition: "all 0.2s",
+                        border: "3px solid #fff"
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.transform = "scale(1.04)";
+                        const overlay = e.currentTarget.querySelector(".avatar-overlay");
+                        if (overlay) overlay.style.opacity = 1;
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.transform = "scale(1)";
+                        const overlay = e.currentTarget.querySelector(".avatar-overlay");
+                        if (overlay) overlay.style.opacity = 0;
+                      }}
+                    >
+                      {avatarUploading ? (
+                        <div style={{ color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", animation: "spin 1s linear infinite" }}>
+                          <Icon name="loader" size={24} />
+                        </div>
+                      ) : profile.avatar_url ? (
+                        <img
+                          src={profile.avatar_url}
+                          alt="Avatar"
+                          style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                        />
+                      ) : (
+                        <div style={{ color: "#fff", fontSize: 24, fontWeight: 900 }}>
+                          {profile.full_name?.split(" ").map(n => n[0]).slice(0, 2).join("").toUpperCase() || "B"}
+                        </div>
+                      )}
+                      
+                      {/* Interactive Camera Hover Overlay */}
+                      <div 
+                        style={{
+                          position: "absolute",
+                          bottom: 0,
+                          left: 0,
+                          right: 0,
+                          background: "rgba(0,0,0,0.5)",
+                          color: "#fff",
+                          fontSize: 9,
+                          fontWeight: 800,
+                          padding: "4px 0",
+                          textAlign: "center",
+                          opacity: 0,
+                          transition: "opacity 0.2s",
+                          display: "flex",
+                          justifyContent: "center",
+                          alignItems: "center"
+                        }}
+                        className="avatar-overlay"
+                      >
+                        ALTERAR
+                      </div>
+                    </div>
+                    
+                    <input
+                      id="avatar-upload-file"
+                      type="file"
+                      style={{ display: "none" }}
+                      accept="image/*"
+                      onChange={handleAvatarUpload}
+                    />
+                    
+                    <div style={{ fontSize: 13, fontWeight: 900, color: "#1e1b4b", marginTop: 8 }}>
+                      {profile.full_name || "Utilizador"}
+                    </div>
+                    <div style={{ fontSize: 10, color: "#94a3b8", fontWeight: 700, marginTop: 2 }}>
+                      Clica no círculo para alterar a foto
+                    </div>
                   </div>
 
                   <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>

@@ -65,3 +65,20 @@ export async function uploadKycDocument(userId, file, type) {
   return { path };
 }
 
+export async function uploadAvatar(userId, file) {
+  const ext = file.name.split(".").pop().toLowerCase();
+  const path = `avatars/${userId}.${ext}`;
+
+  const { error } = await sb.storage
+    .from("payment-proofs")
+    .upload(path, file, { cacheControl: "3600", contentType: file.type, upsert: true });
+
+  if (error) throw error;
+
+  const { data } = await sb.storage
+    .from("payment-proofs")
+    .createSignedUrl(path, 31536000); // 1 year signed url
+
+  return { path, signedUrl: data?.signedUrl ?? null };
+}
+
