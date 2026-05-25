@@ -3,7 +3,7 @@ import { DESTS } from "../../lib/constants.js";
 import { StatusPill, Icon } from "../shared/UI.jsx";
 
 
-export function OrderList({ orders, onCancel, currentUserId, onTransact, isMarket }) {
+export function OrderList({ orders, onCancel, currentUserId, onTransact, isMarket, onSelect }) {
   const [activeTxId, setActiveTxId] = useState(null);
 
   const filteredOrders = isMarket
@@ -32,7 +32,12 @@ export function OrderList({ orders, onCancel, currentUserId, onTransact, isMarke
         const showCancel = onCancel && !isMarket && isOwnOrder && (o.status === "awaiting_payment" || o.status === "pending");
 
         return (
-          <div key={o.id} className="o-card">
+          <div
+            key={o.id}
+            className="o-card"
+            onClick={() => onSelect && onSelect(o)}
+            style={{ cursor: onSelect ? "pointer" : "default" }}
+          >
             <div className="o-ref">{o.order_ref ?? "#" + o.id.slice(0, 8).toUpperCase()}</div>
             <div style={{ display: "flex", alignItems: "center", gap: 10, margin: "8px 0 9px" }}>
               <div style={{
@@ -66,7 +71,10 @@ export function OrderList({ orders, onCancel, currentUserId, onTransact, isMarke
             {showCancel && (
               <div style={{ display: "flex", justifyContent: "flex-end", paddingTop: 8, borderTop: "1px solid rgba(229, 231, 235, 0.4)", marginTop: 10 }}>
                 <button
-                  onClick={() => onCancel(o.id)}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onCancel(o.id);
+                  }}
                   style={{
                     display: "flex",
                     alignItems: "center",
@@ -93,13 +101,16 @@ export function OrderList({ orders, onCancel, currentUserId, onTransact, isMarke
             {/* P2P Marketplace Transaction Panel */}
             {isMarket && onTransact && (
               activeTxId === o.id ? (
-                <div style={{
-                  marginTop: 12,
-                  padding: "12px 14px",
-                  background: "#f5f6ff",
-                  border: "1.5px solid #e0e7ff",
-                  borderRadius: 14,
-                }}>
+                <div
+                  style={{
+                    marginTop: 12,
+                    padding: "12px 14px",
+                    background: "#f5f6ff",
+                    border: "1.5px solid #e0e7ff",
+                    borderRadius: 14,
+                  }}
+                  onClick={(e) => e.stopPropagation()}
+                >
                   <div style={{ fontSize: 11, fontWeight: 800, color: "#4f46e5", textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 8, display: "flex", alignItems: "center", gap: 5 }}>
                     <Icon name="info" size={13} /> Instruções de Transação P2P
                   </div>
@@ -121,7 +132,8 @@ export function OrderList({ orders, onCancel, currentUserId, onTransact, isMarke
                     }}>
                       <span>{o.destination_account}</span>
                       <button
-                        onClick={() => {
+                        onClick={(e) => {
+                          e.stopPropagation();
                           navigator.clipboard.writeText(o.destination_account);
                           alert("Conta copiada com sucesso!");
                         }}
@@ -142,7 +154,8 @@ export function OrderList({ orders, onCancel, currentUserId, onTransact, isMarke
                   </div>
                   <div style={{ display: "flex", gap: 8 }}>
                     <button
-                      onClick={() => {
+                      onClick={(e) => {
+                        e.stopPropagation();
                         onTransact(o.id);
                         setActiveTxId(null);
                       }}
@@ -167,7 +180,10 @@ export function OrderList({ orders, onCancel, currentUserId, onTransact, isMarke
                       Já Enviei os Dólares
                     </button>
                     <button
-                      onClick={() => setActiveTxId(null)}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setActiveTxId(null);
+                      }}
                       style={{
                         background: "#e2e8f0",
                         border: "none",
@@ -186,7 +202,10 @@ export function OrderList({ orders, onCancel, currentUserId, onTransact, isMarke
               ) : (
                 <div style={{ display: "flex", justifyContent: "flex-end", paddingTop: 8, borderTop: "1px solid rgba(229, 231, 235, 0.4)", marginTop: 10 }}>
                   <button
-                    onClick={() => setActiveTxId(o.id)}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setActiveTxId(o.id);
+                    }}
                     style={{
                       display: "flex",
                       alignItems: "center",

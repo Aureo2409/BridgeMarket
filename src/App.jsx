@@ -5,6 +5,7 @@ import { Toast, StepBar, Header, Icon } from "./components/shared/UI.jsx";
 import { Calculator } from "./components/client/Calculator.jsx";
 import { ProofUpload } from "./components/client/ProofUpload.jsx";
 import { OrderList } from "./components/client/OrderList.jsx";
+import { TransactionCenter } from "./components/client/TransactionCenter.jsx";
 import { AdminPanel } from "./components/admin/AdminPanel.jsx";
 
 
@@ -357,6 +358,7 @@ function ClientApp({ user, onLogout }) {
   const [orders, setOrders] = useState([]);
   const [showOrders, setShowO] = useState(false);
   const [ordersTab, setOrdersTab] = useState("my"); // "my" or "market"
+  const [selectedOrder, setSelectedOrder] = useState(null);
   const [kycStep, setKycStep] = useState(() => {
     try {
       const k = JSON.parse(localStorage.getItem("bridge_kyc"));
@@ -638,6 +640,7 @@ function ClientApp({ user, onLogout }) {
   }
 
   const handleProfileClick = () => {
+    setSelectedOrder(null);
     if (showProfile) {
       setShowProfile(false);
       setShowO(false);
@@ -648,6 +651,7 @@ function ClientApp({ user, onLogout }) {
   };
 
   const handleOrdersClick = () => {
+    setSelectedOrder(null);
     if (showOrders && !showProfile) {
       setShowO(false);
     } else {
@@ -701,7 +705,14 @@ function ClientApp({ user, onLogout }) {
             </button>
           </div>
 
-          {showProfile ? (
+          {selectedOrder ? (
+            <TransactionCenter
+              order={selectedOrder}
+              user={user}
+              onBack={() => { setSelectedOrder(null); loadOrders(); }}
+              onCancel={handleCancelOrder}
+            />
+          ) : showProfile ? (
             <>
               {/* Dados Pessoais Redesenhados e Premium */}
               {!isEditingProfile ? (
@@ -874,6 +885,7 @@ function ClientApp({ user, onLogout }) {
                 currentUserId={user?.id}
                 onTransact={handleTransactOrder}
                 isMarket={ordersTab === "market"}
+                onSelect={setSelectedOrder}
               />
             </>
           )}
@@ -942,7 +954,7 @@ function ClientApp({ user, onLogout }) {
                   </div>
                 )}
                 <button className="btn btn-p" style={{ marginTop: 16 }} onClick={resetFlow}>Nova transação</button>
-                <button className="btn btn-o" onClick={() => { setShowO(true); loadOrders(); }}><div style={{ display: "flex", alignItems: "center", gap: 6, justifyContent: "center" }}><Icon name="clipboard" size={14} /> Ver todos os pedidos</div></button>
+                <button className="btn btn-o" onClick={() => { setShowO(true); setSelectedOrder(currentOrder); loadOrders(); }}><div style={{ display: "flex", alignItems: "center", gap: 6, justifyContent: "center" }}><Icon name="clipboard" size={14} /> Ver todos os pedidos</div></button>
               </div>
             )}
           </div>
