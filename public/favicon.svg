@@ -1,0 +1,36 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="185 -45 500 500" width="100%" height="100%">
+  <defs>
+    <!-- Linear Gradient matching the image: Purple on the left, Indigo in the middle, Blue on the right -->
+    <linearGradient id="aka-bridge-grad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#9333ea" /> <!-- Purple -->
+      <stop offset="35%" stop-color="#7c3aed" /> <!-- Violet -->
+      <stop offset="70%" stop-color="#4f46e5" /> <!-- Indigo -->
+      <stop offset="100%" stop-color="#2563eb" /> <!-- Blue -->
+    </linearGradient>
+  </defs>
+
+  <!-- We want to render the icon 'AKA' in the center -->
+  <g fill="none" stroke="url(#aka-bridge-grad)" stroke-width="28" stroke-linecap="butt" stroke-linejoin="round">
+    <!-- Left 'A' Arch -->
+    <!-- Starts at bottom-left, curves up to peak, and goes down to meet the K/R -->
+    <path d="M 230,300 C 230,170 310,120 375,120 C 420,120 445,160 445,210" />
+
+    <!-- Right 'A' Arch -->
+    <!-- Starts in the middle, peaks at top-right, goes down to bottom-right -->
+    <path d="M 425,210 C 425,160 450,120 495,120 C 560,120 640,170 640,300" />
+
+    <!-- Stylized 'K' or 'R' middle elements -->
+    <!-- The stem of K: starts at the peak/center of left arch and curves down-left, curving slightly at the bottom -->
+    <path d="M 375,120 C 375,170 350,260 350,300" />
+
+    <!-- The diagonal arms of K:
+         Upper arm: curves up-right from the middle stem to the right arch
+         Lower arm: curves down-right from the middle stem to the baseline -->
+    <path d="M 362,210 C 390,190 410,165 445,150" />
+    <path d="M 362,210 C 390,230 435,260 490,300" stroke-linecap="round" />
+
+    <!-- The Horizontal Bridge Deck -->
+    <!-- Goes straight through the middle from far-left to far-right, crossing everything -->
+    <path d="M 200,210 L 670,210" />
+  </g>
+</svg>
