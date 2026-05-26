@@ -518,13 +518,62 @@ function ClientApp({ user, onLogout }) {
     }
 
     setOrdLoad(true);
+
+    const timeoutPromise = (promise, ms) => {
+      return new Promise((resolve, reject) => {
+        const timer = setTimeout(() => reject(new Error("TIMEOUT")), ms);
+        promise
+          .then((res) => {
+            clearTimeout(timer);
+            resolve(res);
+          })
+          .catch((err) => {
+            clearTimeout(timer);
+            reject(err);
+          });
+      });
+    };
+
     try {
-      const { data, error } = await sb.from("orders").insert({
+      const insertPromise = sb.from("orders").insert({
         user_id: user.id, amount_usd: usd, amount_aoa: aoa,
         rate_applied: appliedRate, destination: dest,
         destination_account: account,
         status: "awaiting_payment", // Como o KYC está completo, passa logo a aguardar pagamento!
       }).select().single();
+
+      let result;
+      try {
+        result = await timeoutPromise(insertPromise, 5500);
+      } catch (err) {
+        if (err.message === "TIMEOUT") {
+          console.warn("Criar pedido expirou. A tentar recuperar o pedido criado...");
+          // Fallback query: check if order was actually inserted despite the network timeout!
+          const nowStr = new Date(Date.now() - 30 * 1000).toISOString();
+          const { data: recoveryData, error: recoveryError } = await sb
+            .from("orders")
+            .select("*")
+            .eq("user_id", user.id)
+            .eq("amount_usd", usd)
+            .eq("destination", dest)
+            .eq("destination_account", account)
+            .gte("created_at", nowStr)
+            .order("created_at", { ascending: false })
+            .limit(1)
+            .maybeSingle();
+
+          if (!recoveryError && recoveryData) {
+            console.log("Pedido recuperado com sucesso!", recoveryData);
+            result = { data: recoveryData, error: null };
+          } else {
+            throw err;
+          }
+        } else {
+          throw err;
+        }
+      }
+
+      const { data, error } = result;
 
       if (error) {
         toast_(error.message, "err");
@@ -534,7 +583,11 @@ function ClientApp({ user, onLogout }) {
       }
     } catch (e) {
       console.error("Erro ao criar pedido:", e);
-      toast_(e.message || "Erro de ligação ao criar pedido. Tente novamente.", "err");
+      if (e.message === "TIMEOUT") {
+        toast_("A ligação falhou. A verificar se o pedido foi registado...", "err");
+      } else {
+        toast_(e.message || "Erro de ligação ao criar pedido. Tente novamente.", "err");
+      }
     } finally {
       setOrdLoad(false);
     }
