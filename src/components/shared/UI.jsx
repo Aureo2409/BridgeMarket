@@ -119,3 +119,90 @@ export function Header({ appliedRate, rateAnim, onOrdersClick, showOrders, user,
   );
 }
 
+export function ConfirmModal({ isOpen, title, message, confirmText = "Confirmar", cancelText = "Cancelar", onConfirm, onCancel }) {
+  if (!isOpen) return null;
+  return (
+    <div style={{
+      position: "fixed",
+      inset: 0,
+      background: "rgba(15, 23, 42, 0.75)",
+      backdropFilter: "blur(4px)",
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      zIndex: 9999,
+      padding: 16,
+      animation: "fadeIn 0.2s ease-out"
+    }}>
+      <div style={{
+        background: "#fff",
+        borderRadius: 20,
+        padding: "24px 20px",
+        width: "100%",
+        maxWidth: 400,
+        boxShadow: "0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)",
+        border: "1px solid rgba(229, 231, 235, 0.5)",
+        textAlign: "center",
+        animation: "scaleUp 0.25s cubic-bezier(0.34, 1.56, 0.64, 1)"
+      }}>
+        <div style={{
+          width: 50,
+          height: 50,
+          borderRadius: "50%",
+          background: "rgba(99, 102, 241, 0.1)",
+          color: "#6366f1",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          margin: "0 auto 16px",
+          fontSize: 24
+        }}>
+          ⚠️
+        </div>
+        <h3 style={{ fontSize: 17, fontWeight: 900, color: "#1e1b4b", marginBottom: 8, letterSpacing: "-0.3px" }}>
+          {title}
+        </h3>
+        <p style={{ fontSize: 12.5, color: "#64748b", lineHeight: 1.6, marginBottom: 24 }}>
+          {message}
+        </p>
+        <div style={{ display: "flex", gap: 10 }}>
+          <button
+            onClick={onConfirm}
+            style={{
+              flex: 1,
+              background: "linear-gradient(135deg,#6366f1,#8b5cf6)",
+              border: "none",
+              color: "#fff",
+              padding: "10px 14px",
+              borderRadius: 12,
+              fontSize: 12,
+              fontWeight: 800,
+              cursor: "pointer",
+              boxShadow: "0 4px 12px rgba(99,102,241,0.18)",
+              transition: "transform 0.15s ease"
+            }}
+          >
+            {confirmText}
+          </button>
+          <button
+            onClick={onCancel}
+            style={{
+              flex: 1,
+              background: "#f1f5f9",
+              border: "none",
+              color: "#475569",
+              padding: "10px 14px",
+              borderRadius: 12,
+              fontSize: 12,
+              fontWeight: 800,
+              cursor: "pointer"
+            }}
+          >
+            {cancelText}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+

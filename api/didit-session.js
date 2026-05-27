@@ -26,7 +26,7 @@ export default async function handler(req, res) {
     return res.status(400).json({ error: 'user_id é obrigatório.' });
   }
 
-  const DIDIT_API_KEY = 'OFb8lJF-ShhMs-Gg28d5AZqQF2Dqt6uNDNtnPIR5z14';
+  const DIDIT_API_KEY = process.env.DIDIT_API_KEY || 'OFb8lJF-ShhMs-Gg28d5AZqQF2Dqt6uNDNtnPIR5z14';
 
   try {
     const response = await fetch('https://verification.didit.me/v3/session/', {

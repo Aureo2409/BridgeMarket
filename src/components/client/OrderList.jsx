@@ -1,10 +1,179 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { DESTS } from "../../lib/constants.js";
 import { StatusPill, Icon } from "../shared/UI.jsx";
+import { uploadBiometricVideo } from "../../lib/supabase.js";
 
+function BiometricCapture({ orderId, orderRef, amountUsd, currentUserId, onCaptureDone, onCancel }) {
+  const [stream, setStream] = useState(null);
+  const [recording, setRecording] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [countdown, setCountdown] = useState(4);
+  const [error, setError] = useState(null);
+  const videoRef = useRef(null);
+  const mediaRecorderRef = useRef(null);
+  const chunksRef = useRef([]);
+
+  async function startCamera() {
+    try {
+      setError(null);
+      const mediaStream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: "user", width: 480, height: 480 },
+        audio: true
+      });
+      setStream(mediaStream);
+      if (videoRef.current) {
+        videoRef.current.srcObject = mediaStream;
+      }
+    } catch (err) {
+      console.error(err);
+      setError("Erro ao aceder à câmara e microfone. Verifica as permissões.");
+    }
+  }
+
+  function stopCamera() {
+    if (stream) {
+      stream.getTracks().forEach(t => t.stop());
+      setStream(null);
+    }
+  }
+
+  useState(() => {
+    startCamera();
+    return () => stopCamera();
+  }, []);
+
+  function startRecording() {
+    if (!stream) return;
+    chunksRef.current = [];
+    const mediaRecorder = new MediaRecorder(stream, { mimeType: "video/webm" });
+    mediaRecorderRef.current = mediaRecorder;
+
+    mediaRecorder.ondataavailable = (e) => {
+      if (e.data && e.data.size > 0) {
+        chunksRef.current.push(e.data);
+      }
+    };
+
+    mediaRecorder.onstop = async () => {
+      setLoading(true);
+      const videoBlob = new Blob(chunksRef.current, { type: "video/webm" });
+      try {
+        await uploadBiometricVideo(currentUserId, orderId, videoBlob);
+        stopCamera();
+        onCaptureDone();
+      } catch (err) {
+        alert("Erro ao enviar vídeo: " + err.message);
+        setLoading(false);
+        startCamera(); // Restart camera
+      }
+    };
+
+    mediaRecorder.start();
+    setRecording(true);
+
+    let count = 4;
+    setCountdown(count);
+    const interval = setInterval(() => {
+      count -= 1;
+      setCountdown(count);
+      if (count <= 0) {
+        clearInterval(interval);
+        if (mediaRecorderRef.current && mediaRecorderRef.current.state !== "inactive") {
+          mediaRecorderRef.current.stop();
+        }
+        setRecording(false);
+      }
+    }, 1000);
+  }
+
+  const cleanRef = orderRef || "#" + orderId.slice(0, 8).toUpperCase();
+
+  return (
+    <div style={{ textAlign: "center", padding: "16px 14px", background: "#f8fafc", borderRadius: 18, border: "1.5px solid #6366f1", animation: "fadeIn 0.2s" }} onClick={(e) => e.stopPropagation()}>
+      <div style={{ fontSize: 13, fontWeight: 900, color: "#6366f1", textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 8, display: "flex", alignItems: "center", justifyContent: "center", gap: 5 }}>
+        <span style={{ fontSize: 15 }}>👁</span> Verificação Biométrica Obrigatória
+      </div>
+      <div style={{ fontSize: 11, color: "#475569", lineHeight: 1.5, marginBottom: 12 }}>
+        Grava um vídeo rápido de 4 segundos dizendo a frase abaixo para autorizar esta transação P2P com segurança absoluta.
+      </div>
+
+      {error ? (
+        <div style={{ padding: 12, background: "#fef2f2", color: "#ef4444", borderRadius: 8, fontSize: 11, fontWeight: 700, marginBottom: 12 }}>
+          {error}
+        </div>
+      ) : (
+        <div style={{ position: "relative", width: 180, height: 180, borderRadius: "50%", overflow: "hidden", margin: "0 auto 16px", border: "4px solid #6366f1", background: "#000", boxShadow: "0 8px 24px rgba(99,102,241,0.25)" }}>
+          <video ref={videoRef} autoPlay playsInline muted style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+          {recording && (
+            <div style={{ position: "absolute", top: 12, right: 12, background: "#ef4444", color: "#fff", padding: "3px 8px", borderRadius: 12, fontSize: 9, fontWeight: 900, display: "flex", alignItems: "center", gap: 4 }}>
+              <div style={{ width: 6, height: 6, borderRadius: "50%", background: "#fff" }} />
+              GRAVAR {countdown}s
+            </div>
+          )}
+          {loading && (
+            <div style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.6)", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", color: "#fff", fontSize: 11, fontWeight: 700 }}>
+              <Icon name="loader" size={24} className="spin" style={{ marginBottom: 6 }} />
+              A processar biometria...
+            </div>
+          )}
+        </div>
+      )}
+
+      <div style={{ background: "#fff", border: "1px dashed #cbd5e1", borderRadius: 10, padding: 12, marginBottom: 16, fontSize: 11.5, fontWeight: 700, color: "#1e1b4b", lineHeight: 1.5 }}>
+        Frase a dizer em voz alta:<br />
+        <span style={{ fontSize: 12, color: "#6366f1", display: "block", marginTop: 4 }}>
+          "Eu, parceiro P2P da transação {cleanRef}, confirmo o envio de {parseFloat(amountUsd).toFixed(2)} USD."
+        </span>
+      </div>
+
+      <div style={{ display: "flex", gap: 8 }}>
+        {!recording && !loading && (
+          <button
+            onClick={startRecording}
+            disabled={!!error || !stream}
+            style={{
+              flex: 1,
+              background: "linear-gradient(135deg,#6366f1,#8b5cf6)",
+              border: "none",
+              color: "#fff",
+              padding: "10px 14px",
+              borderRadius: 10,
+              fontSize: 12,
+              fontWeight: 800,
+              cursor: "pointer",
+              boxShadow: "0 4px 12px rgba(99,102,241,0.2)"
+            }}
+          >
+            Iniciar Gravação (4s)
+          </button>
+        )}
+        <button
+          onClick={() => {
+            stopCamera();
+            onCancel();
+          }}
+          disabled={loading}
+          style={{
+            background: "#e2e8f0",
+            border: "none",
+            color: "#475569",
+            padding: "10px 14px",
+            borderRadius: 10,
+            fontSize: 12,
+            fontWeight: 800,
+            cursor: "pointer"
+          }}
+        >
+          Cancelar
+        </button>
+      </div>
+    </div>
+  );
+}
 
 export function OrderList({ orders, onCancel, currentUserId, onTransact, isMarket, onSelect }) {
   const [activeTxId, setActiveTxId] = useState(null);
+  const [showBiometric, setShowBiometric] = useState(false);
 
   const filteredOrders = isMarket
     ? orders.filter(o => o.user_id !== currentUserId && (o.status === "awaiting_payment" || o.status === "pending"))
@@ -101,104 +270,118 @@ export function OrderList({ orders, onCancel, currentUserId, onTransact, isMarke
             {/* P2P Marketplace Transaction Panel */}
             {isMarket && onTransact && (
               activeTxId === o.id ? (
-                <div
-                  style={{
-                    marginTop: 12,
-                    padding: "12px 14px",
-                    background: "#f5f6ff",
-                    border: "1.5px solid #e0e7ff",
-                    borderRadius: 14,
-                  }}
-                  onClick={(e) => e.stopPropagation()}
-                >
-                  <div style={{ fontSize: 11, fontWeight: 800, color: "#4f46e5", textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 8, display: "flex", alignItems: "center", gap: 5 }}>
-                    <Icon name="info" size={13} /> Instruções de Transação P2P
-                  </div>
-                  <div style={{ fontSize: 11, color: "#4b5563", lineHeight: 1.6, marginBottom: 12 }}>
-                    1. Envia exatamente <strong style={{ color: "#1e1b4b" }}>${parseFloat(o.amount_usd).toFixed(2)}</strong> via <strong style={{ color: "#1e1b4b" }}>{d?.label}</strong> para a conta:<br />
-                    <div style={{
-                      margin: "6px 0",
-                      padding: "8px 10px",
-                      background: "#fff",
-                      border: "1px dashed #cbd5e1",
-                      borderRadius: 8,
-                      fontWeight: 700,
-                      color: "#6366f1",
-                      fontSize: 12,
-                      fontFamily: "monospace",
-                      display: "flex",
-                      justifyContent: "space-between",
-                      alignItems: "center"
-                    }}>
-                      <span>{o.destination_account}</span>
+                showBiometric ? (
+                  <BiometricCapture
+                    orderId={o.id}
+                    orderRef={o.order_ref}
+                    amountUsd={o.amount_usd}
+                    currentUserId={currentUserId}
+                    onCaptureDone={() => {
+                      onTransact(o.id);
+                      setActiveTxId(null);
+                      setShowBiometric(false);
+                    }}
+                    onCancel={() => setShowBiometric(false)}
+                  />
+                ) : (
+                  <div
+                    style={{
+                      marginTop: 12,
+                      padding: "12px 14px",
+                      background: "#f5f6ff",
+                      border: "1.5px solid #e0e7ff",
+                      borderRadius: 14,
+                    }}
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <div style={{ fontSize: 11, fontWeight: 800, color: "#4f46e5", textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 8, display: "flex", alignItems: "center", gap: 5 }}>
+                      <Icon name="info" size={13} /> Instruções de Transação P2P
+                    </div>
+                    <div style={{ fontSize: 11, color: "#4b5563", lineHeight: 1.6, marginBottom: 12 }}>
+                      1. Envia exatamente <strong style={{ color: "#1e1b4b" }}>${parseFloat(o.amount_usd).toFixed(2)}</strong> via <strong style={{ color: "#1e1b4b" }}>{d?.label}</strong> para a conta:<br />
+                      <div style={{
+                        margin: "6px 0",
+                        padding: "8px 10px",
+                        background: "#fff",
+                        border: "1px dashed #cbd5e1",
+                        borderRadius: 8,
+                        fontWeight: 700,
+                        color: "#6366f1",
+                        fontSize: 12,
+                        fontFamily: "monospace",
+                        display: "flex",
+                        justifyContent: "space-between",
+                        alignItems: "center"
+                      }}>
+                        <span>{o.destination_account}</span>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            navigator.clipboard.writeText(o.destination_account);
+                            alert("Conta copiada com sucesso!");
+                          }}
+                          style={{
+                            background: "none",
+                            border: "none",
+                            color: "#6366f1",
+                            cursor: "pointer",
+                            fontSize: 10,
+                            fontWeight: 700
+                          }}
+                        >
+                          Copiar
+                        </button>
+                      </div>
+                      2. O criador deste pedido transferirá <strong style={{ color: "#1e1b4b" }}>{parseFloat(o.amount_aoa).toLocaleString("pt-AO")} Kz</strong> para o teu IBAN / número.<br />
+                      3. Após enviares os dólares, confirma a transação abaixo.
+                    </div>
+                    <div style={{ display: "flex", gap: 8 }}>
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
-                          navigator.clipboard.writeText(o.destination_account);
-                          alert("Conta copiada com sucesso!");
+                          setShowBiometric(true);
                         }}
                         style={{
-                          background: "none",
+                          flex: 1,
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          gap: 5,
+                          background: "#10b981",
                           border: "none",
-                          color: "#6366f1",
+                          color: "#fff",
+                          padding: "8px 12px",
+                          borderRadius: 9,
+                          fontSize: 11,
+                          fontWeight: 800,
                           cursor: "pointer",
-                          fontSize: 10,
-                          fontWeight: 700
+                          boxShadow: "0 4px 12px rgba(16,185,129,0.2)"
                         }}
                       >
-                        Copiar
+                        <Icon name="check" size={12} color="#fff" />
+                        Já Enviei os Dólares
+                      </button>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setActiveTxId(null);
+                        }}
+                        style={{
+                          background: "#e2e8f0",
+                          border: "none",
+                          color: "#475569",
+                          padding: "8px 12px",
+                          borderRadius: 9,
+                          fontSize: 11,
+                          fontWeight: 800,
+                          cursor: "pointer"
+                        }}
+                      >
+                        Voltar
                       </button>
                     </div>
-                    2. O criador deste pedido transferirá <strong style={{ color: "#1e1b4b" }}>{parseFloat(o.amount_aoa).toLocaleString("pt-AO")} Kz</strong> para o teu IBAN / número.<br />
-                    3. Após enviares os dólares, confirma a transação abaixo.
                   </div>
-                  <div style={{ display: "flex", gap: 8 }}>
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onTransact(o.id);
-                        setActiveTxId(null);
-                      }}
-                      style={{
-                        flex: 1,
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        gap: 5,
-                        background: "#10b981",
-                        border: "none",
-                        color: "#fff",
-                        padding: "8px 12px",
-                        borderRadius: 9,
-                        fontSize: 11,
-                        fontWeight: 800,
-                        cursor: "pointer",
-                        boxShadow: "0 4px 12px rgba(16,185,129,0.2)"
-                      }}
-                    >
-                      <Icon name="check" size={12} color="#fff" />
-                      Já Enviei os Dólares
-                    </button>
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setActiveTxId(null);
-                      }}
-                      style={{
-                        background: "#e2e8f0",
-                        border: "none",
-                        color: "#475569",
-                        padding: "8px 12px",
-                        borderRadius: 9,
-                        fontSize: 11,
-                        fontWeight: 800,
-                        cursor: "pointer"
-                      }}
-                    >
-                      Voltar
-                    </button>
-                  </div>
-                </div>
+                )
               ) : (
                 <div style={{ display: "flex", justifyContent: "flex-end", paddingTop: 8, borderTop: "1px solid rgba(229, 231, 235, 0.4)", marginTop: 10 }}>
                   <button

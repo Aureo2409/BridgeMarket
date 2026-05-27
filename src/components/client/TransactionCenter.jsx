@@ -1,17 +1,20 @@
 import { useState, useEffect, useRef } from "react";
 import { sb, uploadProof } from "../../lib/supabase.js";
 import { DESTS } from "../../lib/constants.js";
-import { Icon, StatusPill } from "../shared/UI.jsx";
+import { Icon, StatusPill, ConfirmModal } from "../shared/UI.jsx";
 
 export function TransactionCenter({ order, user, onBack, onCancel }) {
   const [tab, setTab] = useState("partner"); // "partner" or "chat"
   const [messages, setMessages] = useState([]);
   const [newMessage, setNewMessage] = useState("");
   const [partnerProfile, setPartnerProfile] = useState(null);
-  const [rating, setRating] = useState(0);
+  const [rating, setRating] = useState(order.funder_rating || 0);
+  const [biometricSignedUrl, setBiometricSignedUrl] = useState(null);
   const [uploading, setUploading] = useState(false);
   const [copied, setCopied] = useState(false);
   const [currentOrder, setCurrentOrder] = useState(order);
+  const [showConfirmSentModal, setShowConfirmSentModal] = useState(false);
+  const [showReleaseModal, setShowReleaseModal] = useState(false);
   const chatEndRef = useRef(null);
 
   const destInfo = DESTS.find(d => d.id === currentOrder?.destination);
@@ -66,9 +69,32 @@ export function TransactionCenter({ order, user, onBack, onCancel }) {
     }
     const { data } = await sb.from("profiles").select("*").eq("id", partnerId).maybeSingle();
     if (data) {
-      setPartnerProfile(data);
+      const { data: ratingData } = await sb
+        .from("orders")
+        .select("funder_rating")
+        .eq("funder_id", partnerId)
+        .not("funder_rating", "is", null);
+      
+      let avgRating = 0;
+      let totalRatings = 0;
+      if (ratingData && ratingData.length > 0) {
+        totalRatings = ratingData.length;
+        avgRating = ratingData.reduce((acc, curr) => acc + curr.funder_rating, 0) / totalRatings;
+      }
+      setPartnerProfile({ ...data, avgRating, totalRatings });
     }
   }
+
+  useEffect(() => {
+    if (currentOrder.biometric_video_url) {
+      sb.storage
+        .from("transaction-biometrics")
+        .createSignedUrl(currentOrder.biometric_video_url, 3600)
+        .then(({ data }) => {
+          if (data?.signedUrl) setBiometricSignedUrl(data.signedUrl);
+        });
+    }
+  }, [currentOrder.biometric_video_url]);
 
   async function handleSendMessage(e) {
     e?.preventDefault();
@@ -122,8 +148,12 @@ export function TransactionCenter({ order, user, onBack, onCancel }) {
   }
 
   // Sequential Step Triggers
-  async function handleConfirmSent() {
-    if (!window.confirm("Confirmas que já transferiste os dólares para a conta do usuário?")) return;
+  async function handleConfirmSent(bypassConfirm = false) {
+    if (!bypassConfirm) {
+      setShowConfirmSentModal(true);
+      return;
+    }
+    setShowConfirmSentModal(false);
     const { error } = await sb.from("orders").update({
       status: "payment_received"
     }).eq("id", currentOrder.id);
@@ -147,8 +177,12 @@ export function TransactionCenter({ order, user, onBack, onCancel }) {
     }
   }
 
-  async function handleReleaseOrder() {
-    if (!window.confirm("Tens a certeza absoluta que recebeste os dólares na tua conta e queres concluir a transação P2P?")) return;
+  async function handleReleaseOrder(bypassConfirm = false) {
+    if (!bypassConfirm) {
+      setShowReleaseModal(true);
+      return;
+    }
+    setShowReleaseModal(false);
     const { error } = await sb.from("orders").update({
       status: "completed",
       sent_at: new Date().toISOString()
@@ -170,6 +204,16 @@ export function TransactionCenter({ order, user, onBack, onCancel }) {
       const { data } = await sb.from("orders").select("*").eq("id", currentOrder.id).maybeSingle();
       if (data) setCurrentOrder(data);
       alert("Transação finalizada com sucesso!");
+    }
+  }
+
+  async function handleSaveRating(val) {
+    setRating(val);
+    const { error } = await sb.from("orders").update({
+      funder_rating: val
+    }).eq("id", currentOrder.id);
+    if (error) {
+      alert("Erro ao salvar avaliação: " + error.message);
     }
   }
 
@@ -312,38 +356,69 @@ export function TransactionCenter({ order, user, onBack, onCancel }) {
                 <div style={{ fontSize: 16, fontWeight: 900, color: "#1e1b4b", marginBottom: 4 }}>
                   {partnerProfile?.full_name || "Aguardando Parceiro..."}
                 </div>
+                {partnerProfile?.totalRatings > 0 ? (
+                  <div style={{ fontSize: 12, color: "#f59e0b", fontWeight: 700, display: "flex", alignItems: "center", justifyContent: "center", gap: 4, marginBottom: 8 }}>
+                    ★ {partnerProfile.avgRating.toFixed(1)} ({partnerProfile.totalRatings} avaliações)
+                  </div>
+                ) : (
+                  partnerProfile && partnerProfile.full_name !== "Administrador Bridge" && (
+                    <div style={{ fontSize: 11, color: "#94a3b8", fontWeight: 600, marginBottom: 8 }}>
+                      Sem avaliações ainda
+                    </div>
+                  )
+                )}
                 <div style={{ fontSize: 11, color: "#94a3b8", fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 16 }}>
                   {partnerProfile?.full_name === "Administrador Bridge" ? "Suporte Oficial" : `Membro desde ${new Date(partnerProfile?.created_at || Date.now()).toLocaleDateString("pt-PT", { month: "short", year: "numeric" })}`}
                 </div>
 
-                <div style={{ marginTop: 24, paddingTop: 16, borderTop: "1px solid #f1f5f9" }}>
-                  <div style={{ fontSize: 12, fontWeight: 800, color: "#475569", marginBottom: 8 }}>
-                    Como foi a experiência com seu parceiro?
-                  </div>
-                  <div style={{ display: "flex", justifyContent: "center", gap: 8, marginBottom: 12 }}>
-                    {[1, 2, 3, 4, 5].map(val => (
-                      <button
-                        key={val}
-                        onClick={() => setRating(val)}
-                        style={{
-                          background: "none",
-                          border: "none",
-                          cursor: "pointer",
-                          color: val <= rating ? "#f59e0b" : "#e2e8f0",
-                          fontSize: 24,
-                          transition: "transform 0.15s ease"
-                        }}
-                      >
-                        ★
-                      </button>
-                    ))}
-                  </div>
-                  {rating > 0 && (
-                    <div style={{ animation: "fadeIn 0.2s ease-out", fontSize: 11, fontWeight: 700, color: "#16a34a", background: "#f0fdf4", display: "inline-block", padding: "6px 12px", borderRadius: 8 }}>
-                      Avaliado com {rating} Estrelas! Excelente.
+                {/* Biometric Video Mutual Verification Box */}
+                {biometricSignedUrl && (
+                  <div style={{ marginTop: 8, marginBottom: 16, padding: "14px 16px", background: "rgba(0, 229, 195, 0.05)", border: "1px solid rgba(0, 229, 195, 0.2)", borderRadius: 12, textAlign: "left", animation: "fadeIn 0.2s" }} onClick={(e) => e.stopPropagation()}>
+                    <div style={{ fontSize: 11, fontWeight: 900, color: "#00e5c3", textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 6, display: "flex", alignItems: "center", gap: 5 }}>
+                      <span style={{ fontSize: 14 }}>👁</span> Verificação Biométrica do Parceiro
                     </div>
-                  )}
-                </div>
+                    <div style={{ fontSize: 11, color: "#64748b", lineHeight: 1.5, marginBottom: 10 }}>
+                      Este parceiro gravou e autenticou com sucesso um vídeo selfie de 4s ao aceitar esta transação. Assista para confirmar a sua identidade facial:
+                    </div>
+                    <video
+                      src={biometricSignedUrl}
+                      controls
+                      playsInline
+                      style={{ width: "100%", maxHeight: 200, borderRadius: 10, border: "2px solid #00e5c3", backgroundColor: "#000" }}
+                    />
+                  </div>
+                )}
+
+                {currentOrder.status === "completed" && (
+                  <div style={{ marginTop: 24, paddingTop: 16, borderTop: "1px solid #f1f5f9" }}>
+                    <div style={{ fontSize: 12, fontWeight: 800, color: "#475569", marginBottom: 8 }}>
+                      Como foi a experiência com seu parceiro?
+                    </div>
+                    <div style={{ display: "flex", justifyContent: "center", gap: 8, marginBottom: 12 }}>
+                      {[1, 2, 3, 4, 5].map(val => (
+                        <button
+                          key={val}
+                          onClick={() => handleSaveRating(val)}
+                          style={{
+                            background: "none",
+                            border: "none",
+                            cursor: "pointer",
+                            color: val <= rating ? "#f59e0b" : "#e2e8f0",
+                            fontSize: 24,
+                            transition: "transform 0.15s ease"
+                          }}
+                        >
+                          ★
+                        </button>
+                      ))}
+                    </div>
+                    {rating > 0 && (
+                      <div style={{ animation: "fadeIn 0.2s ease-out", fontSize: 11, fontWeight: 700, color: "#16a34a", background: "#f0fdf4", display: "inline-block", padding: "6px 12px", borderRadius: 8 }}>
+                        Avaliado com {rating} Estrelas! Excelente.
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
             ) : (
               <div style={{ display: "flex", flexDirection: "column", height: 320 }}>
@@ -627,6 +702,26 @@ export function TransactionCenter({ order, user, onBack, onCancel }) {
         </div>
 
       </div>
+
+      <ConfirmModal
+        isOpen={showConfirmSentModal}
+        title="Confirmar Envio de Dólares"
+        message={`Confirma que já transferiu exactamente $${parseFloat(currentOrder.amount_usd).toFixed(2)} USD para a conta do usuário?`}
+        confirmText="Sim, transferi"
+        cancelText="Voltar"
+        onConfirm={() => handleConfirmSent(true)}
+        onCancel={() => setShowConfirmSentModal(false)}
+      />
+
+      <ConfirmModal
+        isOpen={showReleaseModal}
+        title="Libertar Fundos e Concluir"
+        message={`Confirma que recebeu os $${parseFloat(currentOrder.amount_usd).toFixed(2)} USD na sua conta e deseja concluir a transação P2P, libertando os Kwanzas?`}
+        confirmText="Sim, libertar"
+        cancelText="Cancelar"
+        onConfirm={() => handleReleaseOrder(true)}
+        onCancel={() => setShowReleaseModal(false)}
+      />
     </div>
   );
 }

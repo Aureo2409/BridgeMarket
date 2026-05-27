@@ -82,3 +82,25 @@ export async function uploadAvatar(userId, file) {
   return { path, signedUrl: data?.signedUrl ?? null };
 }
 
+export async function uploadBiometricVideo(userId, orderId, videoBlob) {
+  const path = `biometric/${orderId}/${userId}_${Date.now()}.webm`;
+  const { error } = await sb.storage
+    .from("transaction-biometrics")
+    .upload(path, videoBlob, { cacheControl: "3600", contentType: "video/webm" });
+
+  if (error) throw error;
+
+  // Atualizar a tabela de ordens com o link da verificação
+  const { error: updateError } = await sb
+    .from("orders")
+    .update({ 
+      biometric_video_url: path, 
+      biometric_verified_at: new Date().toISOString() 
+    })
+    .eq("id", orderId);
+
+  if (updateError) throw updateError;
+
+  return { path };
+}
+
