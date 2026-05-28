@@ -290,42 +290,85 @@ export function OrderList({ orders, onCancel, currentUserId, onTransact, isMarke
                         <Icon name="info" size={13} /> Instruções de Transação P2P
                       </div>
                       <div style={{ fontSize: 11, color: "#4b5563", lineHeight: 1.6, marginBottom: 12 }}>
-                        1. Envia exatamente <strong style={{ color: "#1e1b4b" }}>${parseFloat(o.amount_usd).toFixed(2)}</strong> via <strong style={{ color: "#1e1b4b" }}>{d?.label}</strong> para a conta:<br />
-                        <div style={{
-                          margin: "6px 0",
-                          padding: "8px 10px",
-                          background: "#fff",
-                          border: "1px dashed #cbd5e1",
-                          borderRadius: 8,
-                          fontWeight: 700,
-                          color: "#6366f1",
-                          fontSize: 12,
-                          fontFamily: "monospace",
-                          display: "flex",
-                          justifyContent: "space-between",
-                          alignItems: "center"
-                        }}>
-                          <span>{o.destination_account}</span>
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              navigator.clipboard.writeText(o.destination_account);
-                              alert("Conta copiada com sucesso!");
-                            }}
-                            style={{
-                              background: "none",
-                              border: "none",
+                        {o.side === "sell" ? (
+                          <>
+                            1. Envia exatamente <strong style={{ color: "#1e1b4b" }}>{parseFloat(o.amount_aoa).toLocaleString("pt-AO")} Kz</strong> via Transferência Bancária / Multicaixa Express para o IBAN:<br />
+                            <div style={{
+                              margin: "6px 0",
+                              padding: "8px 10px",
+                              background: "#fff",
+                              border: "1px dashed #cbd5e1",
+                              borderRadius: 8,
+                              fontWeight: 700,
                               color: "#6366f1",
-                              cursor: "pointer",
-                              fontSize: 10,
-                              fontWeight: 700
-                            }}
-                          >
-                            Copiar
-                          </button>
-                        </div>
-                        2. O criador deste pedido transferirá <strong style={{ color: "#1e1b4b" }}>{parseFloat(o.amount_aoa).toLocaleString("pt-AO")} Kz</strong> para o teu IBAN / número.<br />
-                        3. Após enviares os dólares, confirma a transação abaixo.
+                              fontSize: 12,
+                              fontFamily: "monospace",
+                              display: "flex",
+                              justifyContent: "space-between",
+                              alignItems: "center"
+                            }}>
+                              <span>{o.destination_account}</span>
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  navigator.clipboard.writeText(o.destination_account);
+                                  alert("IBAN copiado com sucesso!");
+                                }}
+                                style={{
+                                  background: "none",
+                                  border: "none",
+                                  color: "#6366f1",
+                                  cursor: "pointer",
+                                  fontSize: 10,
+                                  fontWeight: 700
+                                }}
+                              >
+                                Copiar
+                              </button>
+                            </div>
+                            2. O criador deste pedido transferirá <strong style={{ color: "#1e1b4b" }}>${parseFloat(o.amount_usd).toFixed(2)} USD</strong> via <strong style={{ color: "#1e1b4b" }}>{d?.label}</strong> para a tua conta.<br />
+                            3. Após enviares os Kwanzas, confirma a transação abaixo.
+                          </>
+                        ) : (
+                          <>
+                            1. Envia exatamente <strong style={{ color: "#1e1b4b" }}>${parseFloat(o.amount_usd).toFixed(2)}</strong> via <strong style={{ color: "#1e1b4b" }}>{d?.label}</strong> para a conta:<br />
+                            <div style={{
+                              margin: "6px 0",
+                              padding: "8px 10px",
+                              background: "#fff",
+                              border: "1px dashed #cbd5e1",
+                              borderRadius: 8,
+                              fontWeight: 700,
+                              color: "#6366f1",
+                              fontSize: 12,
+                              fontFamily: "monospace",
+                              display: "flex",
+                              justifyContent: "space-between",
+                              alignItems: "center"
+                            }}>
+                              <span>{o.destination_account}</span>
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  navigator.clipboard.writeText(o.destination_account);
+                                  alert("Conta copiada com sucesso!");
+                                }}
+                                style={{
+                                  background: "none",
+                                  border: "none",
+                                  color: "#6366f1",
+                                  cursor: "pointer",
+                                  fontSize: 10,
+                                  fontWeight: 700
+                                }}
+                              >
+                                Copiar
+                              </button>
+                            </div>
+                            2. O criador deste pedido transferirá <strong style={{ color: "#1e1b4b" }}>{parseFloat(o.amount_aoa).toLocaleString("pt-AO")} Kz</strong> para o teu IBAN / número.<br />
+                            3. Após enviares os dólares, confirma a transação abaixo.
+                          </>
+                        )}
                       </div>
                       <div style={{ display: "flex", gap: 8 }}>
                         <button
@@ -351,7 +394,7 @@ export function OrderList({ orders, onCancel, currentUserId, onTransact, isMarke
                           }}
                         >
                           <Icon name="check" size={12} color="#fff" />
-                          Já Enviei os Dólares
+                          {o.side === "sell" ? "Já Enviei os Kwanzas" : "Já Enviei os Dólares"}
                         </button>
                         <button
                           onClick={(e) => {

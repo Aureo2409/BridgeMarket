@@ -550,7 +550,7 @@ function ClientApp({ user, onLogout }) {
   }
 
 
-  async function handleCalcSubmit({ usd, aoa, dest, account, appliedRate }) {
+  async function handleCalcSubmit({ usd, aoa, dest, account, appliedRate, side }) {
     const minUsd = parseFloat(config?.min_amount_usd) || 10;
     const maxUsd = parseFloat(config?.max_amount_usd) || 5000;
 
@@ -593,6 +593,7 @@ function ClientApp({ user, onLogout }) {
         rate_applied: appliedRate, destination: dest,
         destination_account: account,
         status: "awaiting_payment", // Como o KYC está completo, passa logo a aguardar pagamento!
+        side: side || "buy"
       }).select().single();
 
       let result;
@@ -610,6 +611,7 @@ function ClientApp({ user, onLogout }) {
             .eq("amount_usd", usd)
             .eq("destination", dest)
             .eq("destination_account", account)
+            .eq("side", side || "buy")
             .gte("created_at", nowStr)
             .order("created_at", { ascending: false })
             .limit(1)
@@ -1113,7 +1115,11 @@ function ClientApp({ user, onLogout }) {
                         <div style={{ fontSize: 11, color: "#9ca3af", fontWeight: 600 }}>{parseFloat(currentOrder.amount_aoa).toLocaleString("pt-AO")} Kz · taxa {parseFloat(currentOrder.rate_applied).toLocaleString("pt-AO")} Kz/$</div>
                       </div>
                     </div>
-                    {[["Destino", `${destInfo?.label}`], ["Conta", currentOrder.destination_account], ["Referência", currentOrder.order_ref]].map(([l, v]) => (
+                    {[
+                      currentOrder.side === "sell" ? ["Origem USD", `${destInfo?.label}`] : ["Destino USD", `${destInfo?.label}`],
+                      currentOrder.side === "sell" ? ["Conta Kwanza (IBAN)", currentOrder.destination_account] : ["Conta USD", currentOrder.destination_account],
+                      ["Referência", currentOrder.order_ref]
+                    ].map(([l, v]) => (
                       <div key={l} className="sum-row"><span className="sum-l">{l}</span><span className="sum-v">{v}</span></div>
                     ))}
                   </div>
@@ -1286,6 +1292,11 @@ function ClientApp({ user, onLogout }) {
               {/* public/private list */}
               <OrderList
                 orders={orders.filter(o => {
+                  // 1. Filtrar por lado da oferta P2P (Comprar USD mostra quem vende; Vender USD mostra quem compra)
+                  if (marketCategory === "comprar" && (o.side || "buy") !== "sell") return false;
+                  if (marketCategory === "vender" && (o.side || "buy") !== "buy") return false;
+
+                  // 2. Filtrar por barra de pesquisa
                   if (!searchQuery.trim()) return true;
                   const query = searchQuery.toLowerCase();
                   return (
