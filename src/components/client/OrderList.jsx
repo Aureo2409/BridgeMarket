@@ -178,7 +178,7 @@ export function OrderList({ orders, onCancel, currentUserId, onTransact, isMarke
 
   const filteredOrders = isMarket
     ? orders.filter(o => o.user_id !== currentUserId && (o.status === "awaiting_payment" || o.status === "pending"))
-    : orders.filter(o => o.user_id === currentUserId);
+    : orders.filter(o => o.user_id === currentUserId || o.funder_id === currentUserId);
 
   if (filteredOrders.length === 0) {
     return (

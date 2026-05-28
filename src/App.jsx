@@ -527,7 +527,7 @@ function ClientApp({ user, onLogout }) {
         localStorage.setItem("bridge_rate", JSON.stringify(p.new));
         toast_("Novo câmbio: " + parseFloat(p.new.applied_rate).toLocaleString("pt-AO") + " Kz/$");
       })
-      .on("postgres_changes", { event: "UPDATE", schema: "public", table: "orders", filter: `user_id=eq.${user.id}` },
+      .on("postgres_changes", { event: "*", schema: "public", table: "orders" },
         () => loadOrders())
       .on("postgres_changes", { event: "UPDATE", schema: "public", table: "kyc_verifications", filter: `user_id=eq.${user.id}` },
         (p) => {
@@ -545,8 +545,22 @@ function ClientApp({ user, onLogout }) {
   }, [user.id]);
 
   async function loadOrders() {
-    const { data } = await sb.from("orders").select("*").order("created_at", { ascending: false }).limit(100);
-    if (data) setOrders(data);
+    const { data } = await sb.from("orders").select("*, profiles(full_name, avatar_url)").order("created_at", { ascending: false }).limit(100);
+    if (data) {
+      setOrders(data);
+      // Mantém a ordem selecionada em sincronia com o estado global se estiver aberta no TransactionCenter
+      setSelectedOrder(prev => {
+        if (!prev) return null;
+        const fresh = data.find(o => o.id === prev.id);
+        return fresh ? fresh : prev;
+      });
+      // Mantém a ordem ativa do fluxo de criação também sincronizada
+      setOrder(prev => {
+        if (!prev) return null;
+        const fresh = data.find(o => o.id === prev.id);
+        return fresh ? fresh : prev;
+      });
+    }
   }
 
 
@@ -1316,36 +1330,36 @@ function ClientApp({ user, onLogout }) {
             </>
           )
         )}
+        {!selectedOrder && !showCalculator && <div className="content-nav-spacer" />}
       </div>
-
-      {/* Spacer to prevent overlapping with floating nav */}
-      <div className="content-nav-spacer" />
 
       {/* Floating Bottom Nav matching screenshots */}
-      <div className="bottom-nav">
-        <button
-          className={`bottom-nav-item${activeTab === "mercado" ? " active" : ""}`}
-          onClick={() => {
-            setActiveTab("mercado");
-            setSelectedOrder(null);
-            setShowCalculator(false);
-          }}
-        >
-          <Icon name="globe" size={20} color={activeTab === "mercado" ? "#ffffff" : "#8b92a9"} />
-          MERCADO
-        </button>
-        <button
-          className={`bottom-nav-item${activeTab === "perfil" ? " active" : ""}`}
-          onClick={() => {
-            setActiveTab("perfil");
-            setSelectedOrder(null);
-            setShowCalculator(false);
-          }}
-        >
-          <Icon name="user" size={20} color={activeTab === "perfil" ? "#ffffff" : "#8b92a9"} />
-          PERFIL
-        </button>
-      </div>
+      {!selectedOrder && !showCalculator && (
+        <div className="bottom-nav">
+          <button
+            className={`bottom-nav-item${activeTab === "mercado" ? " active" : ""}`}
+            onClick={() => {
+              setActiveTab("mercado");
+              setSelectedOrder(null);
+              setShowCalculator(false);
+            }}
+          >
+            <Icon name="globe" size={20} color={activeTab === "mercado" ? "#ffffff" : "#8b92a9"} />
+            MERCADO
+          </button>
+          <button
+            className={`bottom-nav-item${activeTab === "perfil" ? " active" : ""}`}
+            onClick={() => {
+              setActiveTab("perfil");
+              setSelectedOrder(null);
+              setShowCalculator(false);
+            }}
+          >
+            <Icon name="user" size={20} color={activeTab === "perfil" ? "#ffffff" : "#8b92a9"} />
+            PERFIL
+          </button>
+        </div>
+      )}
       <ConfirmModal
         isOpen={confirmState.isOpen}
         title={confirmState.title}

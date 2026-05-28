@@ -20,10 +20,9 @@ export function TransactionCenter({ order, user, onBack, onCancel }) {
   const destInfo = DESTS.find(d => d.id === currentOrder?.destination);
   const isCreator = user?.id === currentOrder?.user_id;
 
-  // Real-time Chat & Order Status Sync
+  // Real-time Chat & Order Status Sync - Uninterrupted WebSocket channel
   useEffect(() => {
     fetchMessages();
-    fetchPartnerProfile();
 
     const channel = sb.channel(`chat_and_order_sync_${order.id}`)
       .on("postgres_changes", { event: "INSERT", schema: "public", table: "chat_messages", filter: `order_id=eq.${order.id}` }, () => {
@@ -35,7 +34,12 @@ export function TransactionCenter({ order, user, onBack, onCancel }) {
       .subscribe();
 
     return () => sb.removeChannel(channel);
-  }, [order.id, currentOrder?.funder_id]);
+  }, [order.id]);
+
+  // Sync Partner Profile dynamically whenever the partner shifts/updates
+  useEffect(() => {
+    fetchPartnerProfile();
+  }, [currentOrder?.funder_id, isCreator, currentOrder?.user_id]);
 
   useEffect(() => {
     scrollToBottom();

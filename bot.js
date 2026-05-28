@@ -699,6 +699,165 @@ supabase.channel('bot_admin_alerts')
         }
     });
 
+// ── MOTOR DE PROCESSAMENTO DE NOTIFICAÇÕES ────────────────────────────────────
+
+// Processa uma única notificação pendente
+async function processNotification(notification) {
+    if (notification.status !== 'pending') return;
+
+    console.log(`✉️ [NOTIFICAÇÕES] A processar notificação ${notification.id} (canal: ${notification.channel}, template: ${notification.template})`);
+
+    let phone = null;
+
+    // 1. Resolver o telefone de destino de forma inteligente
+    if (notification.recipient_phone) {
+        phone = notification.recipient_phone.replace(/\D/g, '');
+    } else if (notification.destination && /^\+?\d+$/.test(notification.destination.replace(/[\s()-]/g, ''))) {
+        phone = notification.destination.replace(/\D/g, '');
+    }
+
+    // Se ainda não temos o telefone, procuramos no perfil do utilizador associado
+    if (!phone && notification.user_id) {
+        try {
+            const { data: profile } = await supabase
+                .from('profiles')
+                .select('phone')
+                .eq('id', notification.user_id)
+                .maybeSingle();
+            if (profile && profile.phone) {
+                phone = profile.phone.replace(/\D/g, '');
+            }
+        } catch (err) {
+            console.error(`❌ [NOTIFICAÇÕES] Erro ao procurar telefone do utilizador ${notification.user_id}:`, err);
+        }
+    }
+
+    // Se não for possível determinar nenhum telefone, a mensagem não pode ser entregue
+    if (!phone) {
+        console.warn(`⚠️ [NOTIFICAÇÕES] Sem telefone para a notificação ${notification.id}. Marcando como falhada.`);
+        await supabase
+            .from('notifications')
+            .update({ status: 'failed', sent_at: new Date().toISOString() })
+            .eq('id', notification.id);
+        return;
+    }
+
+    // Formatar com o indicativo internacional de Angola se for de 9 dígitos
+    if (phone.length === 9) {
+        phone = '244' + phone;
+    }
+
+    let text = notification.message_body;
+
+    // 2. Se o corpo estiver vazio, construímos com base no template e dados do pedido
+    if (!text) {
+        if (notification.template === 'new_order' && notification.order_id) {
+            try {
+                const { data: orderData } = await supabase
+                    .from('orders')
+                    .select('*')
+                    .eq('id', notification.order_id)
+                    .maybeSingle();
+                if (orderData) {
+                    const orderRef = orderData.order_ref || '#' + orderData.id.slice(0, 8).toUpperCase();
+                    text = `🛒 *NOVO PEDIDO (Bridge)*\n\nUm cliente acabou de criar um novo pedido!\n\n💵 Valor: *$${parseFloat(orderData.amount_usd).toFixed(2)}*\n🇦🇴 Total a Pagar: *${parseFloat(orderData.amount_aoa).toLocaleString('pt-AO')} Kz*\n📄 Referência: ${orderRef}\n🏦 Destino: ${orderData.destination_account}\n\n👉 Acede ao Painel de Administrador para gerir.`;
+                }
+            } catch (err) {
+                console.error(`❌ [NOTIFICAÇÕES] Erro ao carregar dados do pedido para a notificação ${notification.id}:`, err);
+            }
+        } else if (notification.template === 'welcome') {
+            text = `Bem-vindo ao Bridge Marketplace! A tua conta foi criada com sucesso. 🎉`;
+        }
+    }
+
+    if (!text) {
+        console.warn(`⚠️ [NOTIFICAÇÕES] Notificação ${notification.id} não possui corpo de mensagem legível.`);
+        await supabase
+            .from('notifications')
+            .update({ status: 'failed', sent_at: new Date().toISOString() })
+            .eq('id', notification.id);
+        return;
+    }
+
+    // 3. Verificar se o cliente do WhatsApp está pronto
+    if (!clientReady) {
+        console.warn(`⚠️ [NOTIFICAÇÕES] Cliente WhatsApp não está conectado. Adiada notificação ${notification.id} para ${phone}.`);
+        return;
+    }
+
+    try {
+        await sendWhatsappMessage(phone, text);
+
+        // Atualizar estado para enviado
+        await supabase
+            .from('notifications')
+            .update({ status: 'sent', sent_at: new Date().toISOString() })
+            .eq('id', notification.id);
+
+        console.log(`✅ [NOTIFICAÇÕES] Mensagem enviada para ${phone} e estado actualizado para 'sent'.`);
+    } catch (err) {
+        console.error(`❌ [NOTIFICAÇÕES] Erro ao enviar WhatsApp na notificação ${notification.id}:`, err.message);
+        await supabase
+            .from('notifications')
+            .update({ status: 'failed', sent_at: new Date().toISOString() })
+            .eq('id', notification.id);
+    }
+}
+
+// Verifica o backlog de notificações no banco de dados e processa-as em lotes
+async function pollPendingNotifications() {
+    if (!clientReady) return;
+
+    try {
+        const { data, error } = await supabase
+            .from('notifications')
+            .select('*')
+            .eq('status', 'pending')
+            .order('created_at', { ascending: true })
+            .limit(10); // Processar em lotes controlados para evitar inundar a rede
+
+        if (error) {
+            console.error('❌ [NOTIFICAÇÕES] Erro ao puxar notificações pendentes:', error.message);
+            return;
+        }
+
+        if (data && data.length > 0) {
+            console.log(`🧹 [NOTIFICAÇÕES] A processar backlog de ${data.length} mensagens pendentes...`);
+            for (const notif of data) {
+                await processNotification(notif);
+                // Pausa suave de 1.5s entre envios para protecção contra banimento de SPAM
+                await new Promise(resolve => setTimeout(resolve, 1500));
+            }
+        }
+    } catch (err) {
+        console.error('❌ [NOTIFICAÇÕES] Erro no ciclo de varredura:', err.message);
+    }
+}
+
+// Iniciar a subscrição realtime de notificações para envios instantâneos
+supabase.channel('bot_realtime_notifications')
+    .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'notifications' }, async (payload) => {
+        await processNotification(payload.new);
+    })
+    .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'notifications' }, async (payload) => {
+        if (payload.new.status === 'pending') {
+            await processNotification(payload.new);
+        }
+    })
+    .subscribe((status) => {
+        if (status === 'SUBSCRIBED') {
+            console.log('✅ Canal Supabase Realtime de Notificações Ativo!');
+        }
+    });
+
+// Configurar o loop de varredura periódica como fallback e processador de backlog
+whatsappClient.on('ready', () => {
+    // Varre a cada 15 segundos
+    setInterval(pollPendingNotifications, 15000);
+    // Executa uma varredura inicial em backlog após 4 segundos de conexão
+    setTimeout(pollPendingNotifications, 4000);
+});
+
 // ── MODELO GEMINI ─────────────────────────────────────────────────────────────
 const model = genAI.getGenerativeModel({
     model: "gemini-2.5-flash",
