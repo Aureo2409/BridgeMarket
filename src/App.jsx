@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { sb, checkIsAdmin, fetchLatestRate, fetchAdminConfig, uploadKycDocument, uploadAvatar } from "./lib/supabase.js";
 import { CSS, DESTS } from "./lib/constants.js";
-import { Toast, StepBar, Header, Icon } from "./components/shared/UI.jsx";
+import { Toast, StepBar, Header, Icon, ConfirmModal } from "./components/shared/UI.jsx";
 import { Calculator } from "./components/client/Calculator.jsx";
 import { ProofUpload } from "./components/client/ProofUpload.jsx";
 import { OrderList } from "./components/client/OrderList.jsx";
@@ -181,22 +181,28 @@ function KycOnboarding({ user, currentStep, kycRecord, onLogout, onBack }) {
 
   // Pré-carrega a sessão do DIDIT em background para zero latência!
   useEffect(() => {
-    fetch("/api/didit-session", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ user_id: user.id })
-    })
-      .then(res => res.json())
-      .then(data => {
-        if (data.session_url) {
-          setSessionUrl(data.session_url);
-        } else {
-          setPreFetchError(data.error || "DIDIt não devolveu URL de verificação.");
-        }
+    sb.auth.getSession().then(({ data: sessionData }) => {
+      const token = sessionData.session?.access_token;
+      fetch("/api/didit-session", {
+        method: "POST",
+        headers: { 
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`
+        },
+        body: JSON.stringify({ user_id: user.id })
       })
-      .catch(err => {
-        setPreFetchError(err.message || "Erro de ligação ao servidor.");
-      });
+        .then(res => res.json())
+        .then(data => {
+          if (data.session_url) {
+            setSessionUrl(data.session_url);
+          } else {
+            setPreFetchError(data.error || "DIDIt não devolveu URL de verificação.");
+          }
+        })
+        .catch(err => {
+          setPreFetchError(err.message || "Erro de ligação ao servidor.");
+        });
+    });
   }, [user.id]);
 
   const isPending = kycRecord?.ocr_status === "pending" || kycRecord?.liveness_status === "pending";
@@ -216,9 +222,15 @@ function KycOnboarding({ user, currentStep, kycRecord, onLogout, onBack }) {
     const timeoutId = setTimeout(() => controller.abort(), 8000);
 
     try {
+      const { data: sessionData } = await sb.auth.getSession();
+      const token = sessionData.session?.access_token;
+
       const res = await fetch("/api/didit-session", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { 
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`
+        },
         body: JSON.stringify({ user_id: user.id }),
         signal: controller.signal
       });
@@ -345,6 +357,11 @@ function KycOnboarding({ user, currentStep, kycRecord, onLogout, onBack }) {
 
 // ── CLIENT ────────────────────────────────────────────────────────────────────
 function ClientApp({ user, onLogout }) {
+  const [activeTab, setActiveTab] = useState("mercado"); // "mercado" or "perfil"
+  const [marketCategory, setMarketCategory] = useState("comprar"); // "comprar", "vender", "meus_pedidos"
+  const [searchQuery, setSearchQuery] = useState("");
+  const [showCalculator, setShowCalculator] = useState(false);
+
   const [step, setStep] = useState(0);
   const [rate, setRate] = useState(() => {
     try {
@@ -417,6 +434,33 @@ function ClientApp({ user, onLogout }) {
   });
   const [profileLoad, setProfileLoad] = useState(false);
   const [avatarUploading, setAvatarUploading] = useState(false);
+
+  const [confirmState, setConfirmState] = useState({
+    isOpen: false,
+    title: "",
+    message: "",
+    confirmText: "Confirmar",
+    cancelText: "Cancelar",
+    onConfirm: () => {},
+    onCancel: () => {}
+  });
+
+  const triggerConfirm = (title, message, onConfirm, confirmText = "Confirmar", cancelText = "Cancelar") => {
+    setConfirmState({
+      isOpen: true,
+      title,
+      message,
+      confirmText,
+      cancelText,
+      onConfirm: () => {
+        onConfirm();
+        setConfirmState(prev => ({ ...prev, isOpen: false }));
+      },
+      onCancel: () => {
+        setConfirmState(prev => ({ ...prev, isOpen: false }));
+      }
+    });
+  };
 
   const toast_ = useCallback((msg, type = "ok") => {
     setToast({ msg, type }); setTimeout(() => setToast(null), 3000);
@@ -501,7 +545,7 @@ function ClientApp({ user, onLogout }) {
   }, [user.id]);
 
   async function loadOrders() {
-    const { data } = await sb.from("orders").select("*").order("created_at", { ascending: false }).limit(100);
+    const { data } = await sb.from("orders").select("*, profiles(full_name, avatar_url)").order("created_at", { ascending: false }).limit(100);
     if (data) setOrders(data);
   }
 
@@ -605,61 +649,70 @@ function ClientApp({ user, onLogout }) {
   function resetFlow() { setStep(0); setOrder(null); }
 
   async function handleCancelOrder(orderId) {
-    if (!window.confirm("Tens a certeza que queres cancelar este pedido?")) return;
-    const { error } = await sb.from("orders").update({ status: "cancelled" }).eq("id", orderId).eq("user_id", user.id);
-    if (error) { toast_("Erro ao cancelar: " + error.message, "err"); }
-    else {
-      toast_("Pedido cancelado.");
-
-      // Enviar notificação em tempo real para o painel do Administrador
-      const oRef = (orders.find(o => o.id === orderId) || currentOrder)?.order_ref || `#${orderId.slice(0, 8).toUpperCase()}`;
-      sb.from("admin_alerts").insert({
-        type: "cancelled",
-        title: "Pedido Cancelado",
-        body: `O cliente cancelou o pedido ${oRef}.`,
-        order_id: orderId
-      }).then(); // Executa em background (não atrasa a interface do cliente)
-
-      if (currentOrder?.id === orderId) resetFlow();
-      loadOrders();
-    }
+    triggerConfirm(
+      "Cancelar Pedido",
+      "Tens a certeza que queres cancelar este pedido? Esta ação não pode ser desfeita.",
+      async () => {
+        const { error } = await sb.from("orders").update({ status: "cancelled" }).eq("id", orderId).eq("user_id", user.id);
+        if (error) { toast_("Erro ao cancelar: " + error.message, "err"); }
+        else {
+          toast_("Pedido cancelado.");
+          const oRef = (orders.find(o => o.id === orderId) || currentOrder)?.order_ref || `#${orderId.slice(0, 8).toUpperCase()}`;
+          sb.from("admin_alerts").insert({
+            type: "cancelled",
+            title: "Pedido Cancelado",
+            body: `O cliente cancelou o pedido ${oRef}.`,
+            order_id: orderId
+          }).then();
+          if (currentOrder?.id === orderId) resetFlow();
+          loadOrders();
+        }
+      },
+      "Sim, Cancelar",
+      "Voltar"
+    );
   }
 
   async function handleTransactOrder(orderId) {
-    if (!window.confirm("Confirmas que queres aceitar este pedido P2P e iniciar a correspondência?")) return;
-    const { data: orderData, error } = await sb.from("orders").update({
-      status: "processing",
-      funder_id: user.id,
-      admin_notes: `Correspondência P2P iniciada pelo parceiro ${user.email}`
-    }).eq("id", orderId).select().maybeSingle();
+    triggerConfirm(
+      "Iniciar Negociação P2P",
+      "Confirmas que queres aceitar este pedido P2P e iniciar a correspondência com o comprador?",
+      async () => {
+        const { data: orderData, error } = await sb.from("orders").update({
+          status: "processing",
+          funder_id: user.id,
+          admin_notes: `Correspondência P2P iniciada pelo parceiro ${user.email}`
+        }).eq("id", orderId).select().maybeSingle();
 
-    if (error) {
-      toast_("Erro ao iniciar correspondência: " + error.message, "err");
-    } else {
-      toast_("Correspondência iniciada com sucesso!");
-      
-      // Enviar mensagem automática de boas-vindas no chat
-      if (orderData) {
-        await sb.from("chat_messages").insert({
-          order_id: orderId,
-          user_id: orderData.user_id,
-          sender_id: user.id,
-          sender_role: "partner",
-          body: `👋 Olá! Aceitei o teu pedido P2P. Vamos conversar por aqui para transacionar com segurança.`
-        });
-      }
+        if (error) {
+          toast_("Erro ao iniciar correspondência: " + error.message, "err");
+        } else {
+          toast_("Correspondência iniciada com sucesso!");
+          
+          if (orderData) {
+            await sb.from("chat_messages").insert({
+              order_id: orderId,
+              user_id: orderData.user_id,
+              sender_id: user.id,
+              sender_role: "partner",
+              body: `👋 Olá! Aceitei o teu pedido P2P. Vamos conversar por aqui para transacionar com segurança.`
+            });
+          }
 
-      // Enviar alerta em tempo real para o admin
-      sb.from("admin_alerts").insert({
-        type: "payment_received",
-        title: "Parceiro P2P Correspondido",
-        body: `O usuário ${user.email} aceitou parear o pedido do usuário.`,
-        order_id: orderId
-      }).then();
+          sb.from("admin_alerts").insert({
+            type: "payment_received",
+            title: "Parceiro P2P Correspondido",
+            body: `O usuário ${user.email} aceitou parear o pedido do usuário.`,
+            order_id: orderId
+          }).then();
 
-      if (orderData) setSelectedOrder(orderData);
-      loadOrders();
-    }
+          if (orderData) setSelectedOrder(orderData);
+          loadOrders();
+        }
+      },
+      "Confirmar e Iniciar",
+      "Cancelar"
+    );
   }
 
   async function handleUpdatePassword() {
@@ -703,16 +756,23 @@ function ClientApp({ user, onLogout }) {
   }
 
   async function handleDeleteAccount() {
-    if (!window.confirm("ATENÇÃO! Tens a certeza absoluta que queres APAGAR a tua conta permanentemente?\n\nEsta acção não pode ser desfeita e perderás acesso a todo o teu histórico.")) return;
-    setProfileLoad(true);
-    const { error } = await sb.rpc("delete_user");
-    if (error) {
-      toast_("Erro ao apagar conta: " + error.message, "err");
-      setProfileLoad(false);
-    } else {
-      await sb.auth.signOut();
-      window.location.reload();
-    }
+    triggerConfirm(
+      "Apagar Conta Permanentemente",
+      "ATENÇÃO! Tens a certeza absoluta que queres APAGAR a tua conta permanentemente?\n\nEsta acção não pode ser desfeita e perderás acesso a todo o teu histórico.",
+      async () => {
+        setProfileLoad(true);
+        const { error } = await sb.rpc("delete_user");
+        if (error) {
+          toast_("Erro ao apagar conta: " + error.message, "err");
+          setProfileLoad(false);
+        } else {
+          await sb.auth.signOut();
+          window.location.reload();
+        }
+      },
+      "Apagar Definitivamente",
+      "Cancelar"
+    );
   }
 
   async function handleAvatarUpload(e) {
@@ -785,368 +845,504 @@ function ClientApp({ user, onLogout }) {
   }
 
   return (
-    <div className="shell">
+    <div className="shell" style={{ position: "relative", minHeight: "100vh", display: "flex", flexDirection: "column" }}>
       <div className="blob b1" /><div className="blob b2" />
       <Toast toast={toast} />
+      
+      {/* Branded Header matching screenshots */}
       <Header appliedRate={applied} rateAnim={rateAnim} user={user} onLogout={onLogout}
         showOrders={showOrders} showProfile={showProfile}
         onOrdersClick={handleOrdersClick}
         onProfileClick={handleProfileClick}
         avatarUrl={profile?.avatar_url} />
 
-      {showOrders ? (
-        <div className="pg">
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
-            <div style={{ fontWeight: 900, fontSize: 17, color: "#1e1b4b", letterSpacing: "-.4px" }}>
-              {showProfile ? "O meu Perfil" : "Os meus pedidos"}
+      <div className="pg" style={{ flex: 1, overflowY: "auto" }}>
+        {activeTab === "perfil" ? (
+          <>
+            <div style={{ fontWeight: 900, fontSize: 17, color: "#1e1b4b", letterSpacing: "-.4px", marginBottom: 12 }}>
+              O meu Perfil
             </div>
-            <button onClick={handleProfileClick} style={{ background: "none", border: "none", color: "#6366f1", fontSize: 12, fontWeight: 700, cursor: "pointer" }}>
-              {showProfile ? <div style={{ display: "flex", alignItems: "center", gap: 6 }}><Icon name="arrowLeft" size={14} /> Ver pedidos</div> : <div style={{ display: "flex", alignItems: "center", gap: 6 }}><Icon name="user" size={14} /> O meu Perfil</div>}
-            </button>
-          </div>
+            
+            {/* Dados Pessoais Redesenhados e Premium */}
+            {!isEditingProfile ? (
+              <div className="card" style={{ padding: "20px 24px", marginBottom: 14, borderRadius: 16, background: "#fff", border: "1px solid #e2e8f0" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 18 }}>
+                  <div style={{ fontSize: 15, fontWeight: 900, color: "#1e1b4b", letterSpacing: "-0.3px" }}>Dados Pessoais</div>
+                  <button onClick={() => setIsEditingProfile(true)} style={{ background: "rgba(99,102,241,0.08)", border: "none", color: "#6366f1", borderRadius: 8, padding: "6px 12px", fontSize: 12, fontWeight: 700, display: "flex", alignItems: "center", gap: 6, cursor: "pointer", transition: "all 0.2s" }} onMouseEnter={e => e.currentTarget.style.background = "rgba(99,102,241,0.15)"} onMouseLeave={e => e.currentTarget.style.background = "rgba(99,102,241,0.08)"}>
+                    <Icon name="edit" size={13} /> Editar
+                  </button>
+                </div>
 
-          {selectedOrder ? (
+                {/* Premium Profile Photo Frame Upload Box */}
+                <div style={{ display: "flex", flexDirection: "column", alignItems: "center", marginBottom: 24, paddingBottom: 18, borderBottom: "1px solid #f1f5f9" }}>
+                  <div
+                    onClick={() => !avatarUploading && document.getElementById("avatar-upload-file").click()}
+                    style={{
+                      position: "relative",
+                      width: 80,
+                      height: 80,
+                      borderRadius: "50%",
+                      background: "linear-gradient(135deg,#6366f1,#8b5cf6)",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      cursor: "pointer",
+                      overflow: "hidden",
+                      boxShadow: "0 6px 16px rgba(99,102,241,0.18)",
+                      transition: "all 0.2s",
+                      border: "3px solid #fff"
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.transform = "scale(1.04)";
+                      const overlay = e.currentTarget.querySelector(".avatar-overlay");
+                      if (overlay) overlay.style.opacity = 1;
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.transform = "scale(1)";
+                      const overlay = e.currentTarget.querySelector(".avatar-overlay");
+                      if (overlay) overlay.style.opacity = 0;
+                    }}
+                  >
+                    {avatarUploading ? (
+                      <div style={{ color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", animation: "spin 1s linear infinite" }}>
+                        <Icon name="loader" size={24} />
+                      </div>
+                    ) : profile.avatar_url ? (
+                      <img
+                        src={profile.avatar_url}
+                        alt="Avatar"
+                        style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                      />
+                    ) : (
+                      <div style={{ color: "#fff", fontSize: 24, fontWeight: 900 }}>
+                        {profile.full_name?.split(" ").map(n => n[0]).slice(0, 2).join("").toUpperCase() || "B"}
+                      </div>
+                    )}
+                    
+                    {/* Interactive Camera Hover Overlay */}
+                    <div 
+                      style={{
+                        position: "absolute",
+                        bottom: 0,
+                        left: 0,
+                        right: 0,
+                        background: "rgba(0,0,0,0.5)",
+                        color: "#fff",
+                        fontSize: 9,
+                        fontWeight: 800,
+                        padding: "4px 0",
+                        textAlign: "center",
+                        opacity: 0,
+                        transition: "opacity 0.2s",
+                        display: "flex",
+                        justifyContent: "center",
+                        alignItems: "center"
+                      }}
+                      className="avatar-overlay"
+                    >
+                      ALTERAR
+                    </div>
+                  </div>
+                  
+                  <input
+                    id="avatar-upload-file"
+                    type="file"
+                    style={{ display: "none" }}
+                    accept="image/*"
+                    onChange={handleAvatarUpload}
+                  />
+                  
+                  <div style={{ fontSize: 13, fontWeight: 900, color: "#1e1b4b", marginTop: 8 }}>
+                    {profile.full_name || "Utilizador"}
+                  </div>
+                  <div style={{ fontSize: 10, color: "#94a3b8", fontWeight: 700, marginTop: 2 }}>
+                    Clica no círculo para alterar a foto
+                  </div>
+                </div>
+
+                <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+                  {[
+                    { label: "Nome Completo", val: profile.full_name || "Não definido" },
+                    { label: "E-mail", val: user.email, isSecure: true },
+                    { label: "Endereço", val: profile.address || "Não definido" },
+                    { label: "Número de Telefone", val: profile.phone || "Não definido" },
+                    { label: "Data de Nascimento", val: profile.date_of_birth ? new Date(profile.date_of_birth).toLocaleDateString('pt-PT') : "Não definido" },
+                    { label: "Nacionalidade", val: profile.nationality || "Não definido" },
+                    { label: "WhatsApp", val: profile.whatsapp || "Não definido" },
+                  ].map((item, idx) => (
+                    <div key={idx} style={{ display: "flex", flexDirection: "column", paddingBottom: 10, borderBottom: idx < 6 ? "1px solid #f1f5f9" : "none" }}>
+                      <span style={{ fontSize: 11, color: "#94a3b8", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: 4 }}>{item.label}</span>
+                      <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                        <span style={{ fontSize: 13, color: "#1e1b4b", fontWeight: 600 }}>{item.val}</span>
+                        {item.isSecure && <Icon name="lock" size={12} color="#94a3b8" title="Verificado e Protegido" />}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ) : (
+              <div className="card" style={{ padding: "20px 24px", marginBottom: 14, borderRadius: 16, background: "#fff", border: "1px solid #e2e8f0" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 18 }}>
+                  <div style={{ fontSize: 15, fontWeight: 900, color: "#1e1b4b", letterSpacing: "-0.3px" }}>Editar Dados Pessoais</div>
+                </div>
+
+                <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+                  <div>
+                    <label className="lbl">Nome Completo</label>
+                    <input className="inp" type="text" placeholder="Nome Completo" value={profile.full_name} onChange={e => setProfile({ ...profile, full_name: e.target.value })} />
+                  </div>
+                  <div>
+                    <label className="lbl">E-mail (Seguro)</label>
+                    <input className="inp" type="text" disabled value={user.email} style={{ background: "#f8fafc", color: "#64748b", cursor: "not-allowed" }} />
+                  </div>
+                  <div>
+                    <label className="lbl">Endereço</label>
+                    <input className="inp" type="text" placeholder="Endereço" value={profile.address || ""} onChange={e => setProfile({ ...profile, address: e.target.value })} />
+                  </div>
+                  <div>
+                    <label className="lbl">Número de Telefone</label>
+                    <input className="inp" type="tel" placeholder="+244 9XX XXX XXX" value={profile.phone} onChange={e => setProfile({ ...profile, phone: e.target.value })} />
+                  </div>
+                  <div>
+                    <label className="lbl">Data de Nascimento</label>
+                    <input className="inp" type="date" value={profile.date_of_birth || ""} onChange={e => setProfile({ ...profile, date_of_birth: e.target.value })} />
+                  </div>
+                  <div>
+                    <label className="lbl">Nacionalidade</label>
+                    <input className="inp" type="text" placeholder="Nacionalidade" value={profile.address || ""} onChange={e => setProfile({ ...profile, nationality: e.target.value })} />
+                  </div>
+                  <div>
+                    <label className="lbl">WhatsApp</label>
+                    <input className="inp" type="tel" placeholder="WhatsApp" value={profile.whatsapp || ""} onChange={e => setProfile({ ...profile, whatsapp: e.target.value })} />
+                  </div>
+
+                  <div style={{ display: "flex", gap: 10, marginTop: 10 }}>
+                    <button className="btn btn-p" onClick={handleUpdateProfile} disabled={profileLoad} style={{ flex: 1 }}>
+                      {profileLoad ? "A guardar..." : "Guardar Alterações"}
+                    </button>
+                    <button className="btn btn-o" onClick={() => setIsEditingProfile(false)} disabled={profileLoad} style={{ flex: 1, marginTop: 0 }}>
+                      Cancelar
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Verificação de Identidade */}
+            <div className="card" style={{ marginBottom: 14 }}>
+              <div style={{ fontSize: 14, fontWeight: 800, color: "#1e1b4b", marginBottom: 10 }}>Verificação de Identidade</div>
+              {isKycComplete ? (
+                <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "12px 14px", background: "#f0fdf4", border: "1px solid #bbf7d0", borderRadius: 12 }}>
+                  <div style={{ width: 30, height: 30, borderRadius: "50%", background: "#10b981", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                    <Icon name="check" size={16} />
+                  </div>
+                  <div>
+                    <div style={{ fontSize: 13, fontWeight: 800, color: "#16a34a" }}>Identidade Verificada (DIDIT)</div>
+                    <div style={{ fontSize: 11, color: "#15803d", fontWeight: 600, marginTop: 2 }}>A tua conta está totalmente validada e segura para transações.</div>
+                  </div>
+                </div>
+              ) : (
+                <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "12px 14px", background: "#fffbeb", border: "1px solid #fef3c7", borderRadius: 12 }}>
+                  <div style={{ width: 30, height: 30, borderRadius: "50%", background: "#f59e0b", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                    <Icon name="alertTriangle" size={16} />
+                  </div>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontSize: 13, fontWeight: 800, color: "#d97706" }}>Identidade Não Verificada</div>
+                    <div style={{ fontSize: 11, color: "#b45309", fontWeight: 600, marginTop: 2 }}>Verifica a tua identidade para poderes criar pedidos e transacionar.</div>
+                  </div>
+                  <button className="btn btn-p" style={{ width: "auto", padding: "6px 12px", fontSize: 11, height: "auto" }} onClick={() => setShowKycTrigger(true)}>
+                    Verificar
+                  </button>
+                </div>
+              )}
+            </div>
+
+            {/* Segurança da Conta */}
+            <div className="card" style={{ marginBottom: 14 }}>
+              <div style={{ fontSize: 14, fontWeight: 800, color: "#1e1b4b", marginBottom: 10 }}>Segurança da Conta</div>
+              <div style={{ fontSize: 12, color: "#6b7280", marginBottom: 14, fontWeight: 500 }}>Define uma nova palavra-passe para a tua conta ({user.email}).</div>
+              <label className="lbl">Nova palavra-passe</label>
+              <input className="inp" style={{ marginBottom: 10 }} type="password" placeholder="Mínimo 6 caracteres" value={newPwd} onChange={e => setNewPwd(e.target.value)} />
+              <button className="btn btn-p" style={{ background: "#475569" }} onClick={handleUpdatePassword} disabled={pwdLoad}>
+                {pwdLoad ? "A guardar..." : "Guardar nova senha"}
+              </button>
+
+              <div style={{ marginTop: 24, paddingTop: 14, borderTop: "1px solid #e2e8f0" }}>
+                <div style={{ fontSize: 12, color: "#ef4444", marginBottom: 10, fontWeight: 600 }}>Zona de Perigo</div>
+                <button className="btn btn-o" style={{ color: "#ef4444", borderColor: "#fecaca", background: "#fef2f2" }} onClick={handleDeleteAccount} disabled={profileLoad}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 6, justifyContent: "center" }}><Icon name="trash" size={14} /> Apagar conta permanentemente</div>
+                </button>
+              </div>
+            </div>
+          </>
+        ) : (
+          /* activeTab === "mercado" */
+          selectedOrder ? (
             <TransactionCenter
               order={selectedOrder}
               user={user}
               onBack={() => { setSelectedOrder(null); loadOrders(); }}
               onCancel={handleCancelOrder}
             />
-          ) : showProfile ? (
+          ) : showCalculator ? (
+            /* Calculator view toggled */
             <>
-              {/* Dados Pessoais Redesenhados e Premium */}
-              {!isEditingProfile ? (
-                <div className="card" style={{ padding: "20px 24px", marginBottom: 14, borderRadius: 16, background: "#fff", border: "1px solid #e2e8f0" }}>
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 18 }}>
-                    <div style={{ fontSize: 15, fontWeight: 900, color: "#1e1b4b", letterSpacing: "-0.3px" }}>Dados Pessoais</div>
-                    <button onClick={() => setIsEditingProfile(true)} style={{ background: "rgba(99,102,241,0.08)", border: "none", color: "#6366f1", borderRadius: 8, padding: "6px 12px", fontSize: 12, fontWeight: 700, display: "flex", alignItems: "center", gap: 6, cursor: "pointer", transition: "all 0.2s" }} onMouseEnter={e => e.currentTarget.style.background = "rgba(99,102,241,0.15)"} onMouseLeave={e => e.currentTarget.style.background = "rgba(99,102,241,0.08)"}>
-                      <Icon name="edit" size={13} /> Editar
-                    </button>
-                  </div>
-
-                  {/* Premium Profile Photo Frame Upload Box */}
-                  <div style={{ display: "flex", flexDirection: "column", alignItems: "center", marginBottom: 24, paddingBottom: 18, borderBottom: "1px solid #f1f5f9" }}>
-                    <div
-                      onClick={() => !avatarUploading && document.getElementById("avatar-upload-file").click()}
-                      style={{
-                        position: "relative",
-                        width: 80,
-                        height: 80,
-                        borderRadius: "50%",
-                        background: "linear-gradient(135deg,#6366f1,#8b5cf6)",
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        cursor: "pointer",
-                        overflow: "hidden",
-                        boxShadow: "0 6px 16px rgba(99,102,241,0.18)",
-                        transition: "all 0.2s",
-                        border: "3px solid #fff"
-                      }}
-                      onMouseEnter={(e) => {
-                        e.currentTarget.style.transform = "scale(1.04)";
-                        const overlay = e.currentTarget.querySelector(".avatar-overlay");
-                        if (overlay) overlay.style.opacity = 1;
-                      }}
-                      onMouseLeave={(e) => {
-                        e.currentTarget.style.transform = "scale(1)";
-                        const overlay = e.currentTarget.querySelector(".avatar-overlay");
-                        if (overlay) overlay.style.opacity = 0;
-                      }}
-                    >
-                      {avatarUploading ? (
-                        <div style={{ color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", animation: "spin 1s linear infinite" }}>
-                          <Icon name="loader" size={24} />
-                        </div>
-                      ) : profile.avatar_url ? (
-                        <img
-                          src={profile.avatar_url}
-                          alt="Avatar"
-                          style={{ width: "100%", height: "100%", objectFit: "cover" }}
-                        />
-                      ) : (
-                        <div style={{ color: "#fff", fontSize: 24, fontWeight: 900 }}>
-                          {profile.full_name?.split(" ").map(n => n[0]).slice(0, 2).join("").toUpperCase() || "B"}
-                        </div>
-                      )}
-                      
-                      {/* Interactive Camera Hover Overlay */}
-                      <div 
-                        style={{
-                          position: "absolute",
-                          bottom: 0,
-                          left: 0,
-                          right: 0,
-                          background: "rgba(0,0,0,0.5)",
-                          color: "#fff",
-                          fontSize: 9,
-                          fontWeight: 800,
-                          padding: "4px 0",
-                          textAlign: "center",
-                          opacity: 0,
-                          transition: "opacity 0.2s",
-                          display: "flex",
-                          justifyContent: "center",
-                          alignItems: "center"
-                        }}
-                        className="avatar-overlay"
-                      >
-                        ALTERAR
-                      </div>
-                    </div>
-                    
-                    <input
-                      id="avatar-upload-file"
-                      type="file"
-                      style={{ display: "none" }}
-                      accept="image/*"
-                      onChange={handleAvatarUpload}
-                    />
-                    
-                    <div style={{ fontSize: 13, fontWeight: 900, color: "#1e1b4b", marginTop: 8 }}>
-                      {profile.full_name || "Utilizador"}
-                    </div>
-                    <div style={{ fontSize: 10, color: "#94a3b8", fontWeight: 700, marginTop: 2 }}>
-                      Clica no círculo para alterar a foto
-                    </div>
-                  </div>
-
-                  <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-                    {[
-                      { label: "Nome Completo", val: profile.full_name || "Não definido" },
-                      { label: "E-mail", val: user.email, isSecure: true },
-                      { label: "Endereço", val: profile.address || "Não definido" },
-                      { label: "Número de Telefone", val: profile.phone || "Não definido" },
-                      { label: "Data de Nascimento", val: profile.date_of_birth ? new Date(profile.date_of_birth).toLocaleDateString('pt-PT') : "Não definido" },
-                      { label: "Nacionalidade", val: profile.nationality || "Não definido" },
-                      { label: "WhatsApp", val: profile.whatsapp || "Não definido" },
-                    ].map((item, idx) => (
-                      <div key={idx} style={{ display: "flex", flexDirection: "column", paddingBottom: 10, borderBottom: idx < 6 ? "1px solid #f1f5f9" : "none" }}>
-                        <span style={{ fontSize: 11, color: "#94a3b8", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: 4 }}>{item.label}</span>
-                        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                          <span style={{ fontSize: 13, color: "#1e1b4b", fontWeight: 600 }}>{item.val}</span>
-                          {item.isSecure && <Icon name="lock" size={12} color="#94a3b8" title="Verificado e Protegido" />}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              ) : (
-                <div className="card" style={{ padding: "20px 24px", marginBottom: 14, borderRadius: 16, background: "#fff", border: "1px solid #e2e8f0" }}>
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 18 }}>
-                    <div style={{ fontSize: 15, fontWeight: 900, color: "#1e1b4b", letterSpacing: "-0.3px" }}>Editar Dados Pessoais</div>
-                  </div>
-
-                  <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-                    <div>
-                      <label className="lbl">Nome Completo</label>
-                      <input className="inp" type="text" placeholder="Nome Completo" value={profile.full_name} onChange={e => setProfile({ ...profile, full_name: e.target.value })} />
-                    </div>
-                    <div>
-                      <label className="lbl">E-mail (Seguro)</label>
-                      <input className="inp" type="text" disabled value={user.email} style={{ background: "#f8fafc", color: "#64748b", cursor: "not-allowed" }} />
-                    </div>
-                    <div>
-                      <label className="lbl">Endereço</label>
-                      <input className="inp" type="text" placeholder="Endereço" value={profile.address || ""} onChange={e => setProfile({ ...profile, address: e.target.value })} />
-                    </div>
-                    <div>
-                      <label className="lbl">Número de Telefone</label>
-                      <input className="inp" type="tel" placeholder="+244 9XX XXX XXX" value={profile.phone} onChange={e => setProfile({ ...profile, phone: e.target.value })} />
-                    </div>
-                    <div>
-                      <label className="lbl">Data de Nascimento</label>
-                      <input className="inp" type="date" value={profile.date_of_birth || ""} onChange={e => setProfile({ ...profile, date_of_birth: e.target.value })} />
-                    </div>
-                    <div>
-                      <label className="lbl">Nacionalidade</label>
-                      <input className="inp" type="text" placeholder="Nacionalidade" value={profile.nationality || ""} onChange={e => setProfile({ ...profile, nationality: e.target.value })} />
-                    </div>
-                    <div>
-                      <label className="lbl">WhatsApp</label>
-                      <input className="inp" type="tel" placeholder="WhatsApp" value={profile.whatsapp || ""} onChange={e => setProfile({ ...profile, whatsapp: e.target.value })} />
-                    </div>
-
-                    <div style={{ display: "flex", gap: 10, marginTop: 10 }}>
-                      <button className="btn btn-p" onClick={handleUpdateProfile} disabled={profileLoad} style={{ flex: 1 }}>
-                        {profileLoad ? "A guardar..." : "Guardar Alterações"}
-                      </button>
-                      <button className="btn btn-o" onClick={() => setIsEditingProfile(false)} disabled={profileLoad} style={{ flex: 1, marginTop: 0 }}>
-                        Cancelar
-                      </button>
-                    </div>
-                  </div>
-                </div>
+              <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
+                <button className="btn-g" onClick={() => setShowCalculator(false)} style={{ display: "flex", alignItems: "center", gap: 5, padding: "6px 12px", background: "rgba(99,102,241,0.06)", borderRadius: 10, border: "none", color: "#6366f1", cursor: "pointer", fontWeight: 800, fontSize: 12 }}>
+                  <Icon name="arrowLeft" size={14} /> Voltar ao Mercado
+                </button>
+              </div>
+              <StepBar step={step} />
+              
+              {step === 0 && (
+                <Calculator appliedRate={applied} rate={rate} onSubmit={handleCalcSubmit}
+                  loading={orderLoad} user={user} kycStep={kycStep} config={config} />
               )}
 
-              {/* Verificação de Identidade */}
-              <div className="card" style={{ marginBottom: 14 }}>
-                <div style={{ fontSize: 14, fontWeight: 800, color: "#1e1b4b", marginBottom: 10 }}>Verificação de Identidade</div>
-                {isKycComplete ? (
-                  <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "12px 14px", background: "#f0fdf4", border: "1px solid #bbf7d0", borderRadius: 12 }}>
-                    <div style={{ width: 30, height: 30, borderRadius: "50%", background: "#10b981", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                      <Icon name="check" size={16} />
+              {step === 1 && currentOrder && (
+                <>
+                  <div style={{ fontWeight: 900, fontSize: 19, color: "#1e1b4b", marginBottom: 3, letterSpacing: "-.5px" }}>Resumo do pedido</div>
+                  <div style={{ fontSize: 12, color: "#9ca3af", marginBottom: 14, fontWeight: 500 }}>Confirma os detalhes</div>
+                  <div className="card">
+                    <div className="o-ref">{currentOrder.order_ref ?? "#" + currentOrder.id.slice(0, 8).toUpperCase()}</div>
+                    <div style={{ display: "flex", alignItems: "center", gap: 10, margin: "10px 0 13px" }}>
+                      <div style={{ width: 46, height: 46, borderRadius: 13, background: destInfo?.bg, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}
+                        dangerouslySetInnerHTML={{ __html: destInfo?.svg ?? "" }} />
+                      <div>
+                        <div style={{ fontSize: 26, fontWeight: 900, color: "#1e1b4b", letterSpacing: -1 }}>${parseFloat(currentOrder.amount_usd).toFixed(2)}</div>
+                        <div style={{ fontSize: 11, color: "#9ca3af", fontWeight: 600 }}>{parseFloat(currentOrder.amount_aoa).toLocaleString("pt-AO")} Kz · taxa {parseFloat(currentOrder.rate_applied).toLocaleString("pt-AO")} Kz/$</div>
+                      </div>
                     </div>
-                    <div>
-                      <div style={{ fontSize: 13, fontWeight: 800, color: "#16a34a" }}>Identidade Verificada (DIDIT)</div>
-                      <div style={{ fontSize: 11, color: "#15803d", fontWeight: 600, marginTop: 2 }}>A tua conta está totalmente validada e segura para transações.</div>
-                    </div>
+                    {[["Destino", `${destInfo?.label}`], ["Conta", currentOrder.destination_account], ["Referência", currentOrder.order_ref]].map(([l, v]) => (
+                      <div key={l} className="sum-row"><span className="sum-l">{l}</span><span className="sum-v">{v}</span></div>
+                    ))}
                   </div>
-                ) : (
-                  <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "12px 14px", background: "#fffbeb", border: "1px solid #fef3c7", borderRadius: 12 }}>
-                    <div style={{ width: 30, height: 30, borderRadius: "50%", background: "#f59e0b", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                      <Icon name="alertTriangle" size={16} />
+                  <button className="btn btn-p" onClick={() => setStep(2)}>
+                    <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}>
+                      Já paguei — Enviar comprovante <Icon name="arrowRight" size={14} />
                     </div>
-                    <div style={{ flex: 1 }}>
-                      <div style={{ fontSize: 13, fontWeight: 800, color: "#d97706" }}>Identidade Não Verificada</div>
-                      <div style={{ fontSize: 11, color: "#b45309", fontWeight: 600, marginTop: 2 }}>Verifica a tua identidade para poderes criar pedidos e transacionar.</div>
-                    </div>
-                    <button className="btn btn-p" style={{ width: "auto", padding: "6px 12px", fontSize: 11, height: "auto" }} onClick={() => setShowKycTrigger(true)}>
-                      Verificar
-                    </button>
+                  </button>
+                  <button className="btn btn-o" onClick={() => handleCancelOrder(currentOrder.id)}><div style={{ display: "flex", alignItems: "center", gap: 6, justifyContent: "center" }}><Icon name="arrowLeft" size={14} /> Cancelar pedido</div></button>
+                </>
+              )}
+
+              {step === 2 && currentOrder && (
+                <ProofUpload order={currentOrder} user={user} config={config}
+                  onSuccess={() => setStep(3)} onBack={() => setStep(1)} />
+              )}
+
+              {step === 3 && (
+                <div className="succ">
+                  <div className="succ-ico"><Icon name="checkCircle" size={60} color="#10b981" /></div>
+                  <div className="succ-title">Pedido submetido!</div>
+                  <div className="succ-sub">
+                    O teu comprovante foi enviado.<br />
+                    O admin vai verificar e enviar os dólares<br />
+                    para a tua conta <strong>{destInfo?.label}</strong>.
                   </div>
+                  {currentOrder && (
+                    <div className="card" style={{ textAlign: "left", marginTop: 18 }}>
+                      <div className="o-ref">{currentOrder.order_ref ?? "#" + currentOrder.id.slice(0, 8).toUpperCase()}</div>
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 8 }}>
+                        <div>
+                          <div style={{ fontSize: 20, fontWeight: 900, color: "#6366f1" }}>${parseFloat(currentOrder.amount_usd).toFixed(2)}</div>
+                          <div style={{ fontSize: 11, color: "#9ca3af", fontWeight: 600 }}>{parseFloat(currentOrder.amount_aoa).toLocaleString("pt-AO")} Kz</div>
+                        </div>
+                        <span className="pill" style={{ background: "#eff6ff", color: "#2563eb", display: "flex", alignItems: "center", gap: 4 }}><Icon name="file" size={12} /> Comprovante OK</span>
+                      </div>
+                    </div>
+                  )}
+                  <button className="btn btn-p" style={{ marginTop: 16 }} onClick={() => { resetFlow(); setShowCalculator(false); }}>Nova transação</button>
+                  <button className="btn btn-o" onClick={() => { setSelectedOrder(currentOrder); setShowCalculator(false); loadOrders(); }}><div style={{ display: "flex", alignItems: "center", gap: 6, justifyContent: "center" }}><Icon name="clipboard" size={14} /> Ver todos os pedidos</div></button>
+                </div>
+              )}
+            </>
+          ) : (
+            /* Home/Market dashboard view active */
+            <>
+              {/* Branded metrics cards matching Screenshot 1 */}
+              <div className="metric-card">
+                <div className="metric-icon-box green">
+                  <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" strokeWidth="2.8" strokeLinecap="round" strokeLinejoin="round">
+                    <line x1="7" y1="17" x2="17" y2="7" />
+                    <polyline points="7 7 17 7 17 17" />
+                  </svg>
+                </div>
+                <div className="metric-content">
+                  <div className="metric-label">Taxa de Hoje</div>
+                  <div className="metric-value">
+                    {applied.toFixed(2)} <span>AOA/USD</span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="metric-card">
+                <div className="metric-icon-box blue">
+                  <Icon name="shield" size={22} color="#3b82f6" />
+                </div>
+                <div className="metric-content">
+                  <div className="metric-label">Sua Confiança</div>
+                  <div className="metric-value">98%</div>
+                  <div className="metric-bar-container">
+                    <div className="metric-bar-fill" style={{ width: "98%" }} />
+                  </div>
+                </div>
+              </div>
+
+              {/* Purple Safety Hero Card */}
+              <div className="purple-hero-card">
+                <div className="purple-hero-icon">
+                  <Icon name="lock" size={20} color="#ffffff" />
+                </div>
+                <div className="purple-hero-text">
+                  Suas trocas são 100% garantidas
+                </div>
+              </div>
+
+              {/* Search Box matching Screenshot 2 */}
+              <div className="search-container">
+                <div className="search-icon-box">
+                  <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                    <circle cx="11" cy="11" r="8" />
+                    <line x1="21" y1="21" x2="16.65" y2="16.65" />
+                  </svg>
+                </div>
+                <input
+                  type="text"
+                  className="search-input"
+                  placeholder="Procurar ofertas..."
+                  value={searchQuery}
+                  onChange={e => setSearchQuery(e.target.value)}
+                />
+              </div>
+
+              {/* Category selector pills matching Screenshot 2 */}
+              <div style={{ display: "flex", gap: 4, background: "#f0efff", borderRadius: 13, padding: 4, marginBottom: 16 }}>
+                {[
+                  { id: "comprar", label: "Comprar" },
+                  { id: "vender", label: "Vender" },
+                  { id: "meus_pedidos", label: "Meus Pedidos" }
+                ].map(c => (
+                  <button
+                    key={c.id}
+                    onClick={() => setMarketCategory(c.id)}
+                    style={{
+                      flex: 1,
+                      padding: "9px",
+                      border: "none",
+                      borderRadius: 10,
+                      fontFamily: "inherit",
+                      fontSize: 13,
+                      fontWeight: 700,
+                      cursor: "pointer",
+                      transition: "all 0.2s",
+                      background: marketCategory === c.id ? "white" : "transparent",
+                      color: marketCategory === c.id ? "#1e1b4b" : "#6b7280",
+                      boxShadow: marketCategory === c.id ? "0 2px 8px rgba(0,0,0,.08)" : "none"
+                    }}
+                  >
+                    {c.label}
+                  </button>
+                ))}
+              </div>
+
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+                <div style={{ fontWeight: 900, fontSize: 16, color: "#1e1b4b", letterSpacing: "-.4px" }}>
+                  {marketCategory === "meus_pedidos" ? "Os Meus Pedidos" : "Ofertas Recomendadas"}
+                </div>
+                {marketCategory !== "meus_pedidos" && (
+                  <button
+                    onClick={() => {
+                      const isKycComp = (profile?.kyc_status === "verified") || 
+                                        (kycRecord?.step_personal_done === true && 
+                                         kycRecord?.ocr_status === "passed" && 
+                                         kycRecord?.liveness_status === "passed");
+                      if (!isKycComp) {
+                        setShowKycTrigger(true);
+                      } else {
+                        resetFlow();
+                        setShowCalculator(true);
+                      }
+                    }}
+                    style={{
+                      background: "rgba(99,102,241,0.08)",
+                      border: "none",
+                      color: "#6366f1",
+                      borderRadius: 8,
+                      padding: "6px 12px",
+                      fontSize: 11,
+                      fontWeight: 800,
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 4,
+                      cursor: "pointer"
+                    }}
+                  >
+                    ➕ Criar Oferta
+                  </button>
                 )}
               </div>
 
-              {/* Segurança da Conta */}
-              <div className="card">
-                <div style={{ fontSize: 14, fontWeight: 800, color: "#1e1b4b", marginBottom: 10 }}>Segurança da Conta</div>
-                <div style={{ fontSize: 12, color: "#6b7280", marginBottom: 14, fontWeight: 500 }}>Define uma nova palavra-passe para a tua conta ({user.email}).</div>
-                <label className="lbl">Nova palavra-passe</label>
-                <input className="inp" style={{ marginBottom: 10 }} type="password" placeholder="Mínimo 6 caracteres" value={newPwd} onChange={e => setNewPwd(e.target.value)} />
-                <button className="btn btn-p" style={{ background: "#475569" }} onClick={handleUpdatePassword} disabled={pwdLoad}>
-                  {pwdLoad ? "A guardar..." : "Guardar nova senha"}
-                </button>
-
-                <div style={{ marginTop: 24, paddingTop: 14, borderTop: "1px solid #e2e8f0" }}>
-                  <div style={{ fontSize: 12, color: "#ef4444", marginBottom: 10, fontWeight: 600 }}>Zona de Perigo</div>
-                  <button className="btn btn-o" style={{ color: "#ef4444", borderColor: "#fecaca", background: "#fef2f2" }} onClick={handleDeleteAccount} disabled={profileLoad}>
-                    <div style={{ display: "flex", alignItems: "center", gap: 6, justifyContent: "center" }}><Icon name="trash" size={14} /> Apagar conta permanentemente</div>
-                  </button>
-                </div>
-              </div>
-            </>
-          ) : (
-            <>
-              <div style={{ display: "flex", gap: 10, marginBottom: 14 }}>
-                <button
-                  onClick={() => setOrdersTab("my")}
-                  style={{
-                    flex: 1,
-                    padding: "10px 14px",
-                    borderRadius: 12,
-                    border: "none",
-                    background: ordersTab === "my" ? "linear-gradient(135deg,#6366f1,#8b5cf6)" : "rgba(255,255,255,0.7)",
-                    color: ordersTab === "my" ? "#fff" : "#475569",
-                    fontWeight: 800,
-                    fontSize: 12,
-                    cursor: "pointer",
-                    transition: "all 0.2s",
-                    boxShadow: ordersTab === "my" ? "0 4px 12px rgba(99,102,241,0.18)" : "none"
-                  }}
-                >
-                  Os Meus Pedidos
-                </button>
-                <button
-                  onClick={() => setOrdersTab("market")}
-                  style={{
-                    flex: 1,
-                    padding: "10px 14px",
-                    borderRadius: 12,
-                    border: "none",
-                    background: ordersTab === "market" ? "linear-gradient(135deg,#6366f1,#8b5cf6)" : "rgba(255,255,255,0.7)",
-                    color: ordersTab === "market" ? "#fff" : "#475569",
-                    fontWeight: 800,
-                    fontSize: 12,
-                    cursor: "pointer",
-                    transition: "all 0.2s",
-                    boxShadow: ordersTab === "market" ? "0 4px 12px rgba(99,102,241,0.18)" : "none"
-                  }}
-                >
-                  Mercado P2P
-                </button>
-              </div>
+              {/* public/private list */}
               <OrderList
-                orders={orders}
+                orders={orders.filter(o => {
+                  if (!searchQuery.trim()) return true;
+                  const query = searchQuery.toLowerCase();
+                  return (
+                    o.destination_account?.toLowerCase().includes(query) ||
+                    o.amount_usd?.toString().includes(query) ||
+                    o.amount_aoa?.toString().includes(query) ||
+                    (o.order_ref && o.order_ref.toLowerCase().includes(query))
+                  );
+                })}
                 onCancel={handleCancelOrder}
                 currentUserId={user?.id}
                 onTransact={handleTransactOrder}
-                isMarket={ordersTab === "market"}
+                isMarket={marketCategory !== "meus_pedidos"}
                 onSelect={setSelectedOrder}
               />
             </>
-          )}
-        </div>
-      ) : (
-        <>
-          <StepBar step={step} />
-          <div className="pg">
+          )
+        )}
+      </div>
 
-            {step === 0 && (
-              <Calculator appliedRate={applied} rate={rate} onSubmit={handleCalcSubmit}
-                loading={orderLoad} user={user} kycStep={kycStep} config={config} />
-            )}
+      {/* Spacer to prevent overlapping with floating nav */}
+      <div className="content-nav-spacer" />
 
-            {step === 1 && currentOrder && (
-              <>
-                <div style={{ fontWeight: 900, fontSize: 19, color: "#1e1b4b", marginBottom: 3, letterSpacing: "-.5px" }}>Resumo do pedido</div>
-                <div style={{ fontSize: 12, color: "#9ca3af", marginBottom: 14, fontWeight: 500 }}>Confirma os detalhes</div>
-                <div className="card">
-                  <div className="o-ref">{currentOrder.order_ref ?? "#" + currentOrder.id.slice(0, 8).toUpperCase()}</div>
-                  <div style={{ display: "flex", alignItems: "center", gap: 10, margin: "10px 0 13px" }}>
-                    <div style={{ width: 46, height: 46, borderRadius: 13, background: destInfo?.bg, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}
-                      dangerouslySetInnerHTML={{ __html: destInfo?.svg ?? "" }} />
-                    <div>
-                      <div style={{ fontSize: 26, fontWeight: 900, color: "#1e1b4b", letterSpacing: -1 }}>${parseFloat(currentOrder.amount_usd).toFixed(2)}</div>
-                      <div style={{ fontSize: 11, color: "#9ca3af", fontWeight: 600 }}>{parseFloat(currentOrder.amount_aoa).toLocaleString("pt-AO")} Kz · taxa {parseFloat(currentOrder.rate_applied).toLocaleString("pt-AO")} Kz/$</div>
-                    </div>
-                  </div>
-                  {[["Destino", `${destInfo?.label}`], ["Conta", currentOrder.destination_account], ["Referência", currentOrder.order_ref]].map(([l, v]) => (
-                    <div key={l} className="sum-row"><span className="sum-l">{l}</span><span className="sum-v">{v}</span></div>
-                  ))}
-                </div>
-                <button className="btn btn-p" onClick={() => setStep(2)}>
-                  <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}>
-                    Já paguei — Enviar comprovante <Icon name="arrowRight" size={14} />
-                  </div>
-                </button>
-                <button className="btn btn-o" onClick={() => handleCancelOrder(currentOrder.id)}><div style={{ display: "flex", alignItems: "center", gap: 6, justifyContent: "center" }}><Icon name="arrowLeft" size={14} /> Cancelar pedido</div></button>
-              </>
-            )}
-
-            {step === 2 && currentOrder && (
-              <ProofUpload order={currentOrder} user={user} config={config}
-                onSuccess={() => setStep(3)} onBack={() => setStep(1)} />
-            )}
-
-            {step === 3 && (
-              <div className="succ">
-                <div className="succ-ico"><Icon name="checkCircle" size={60} color="#10b981" /></div>
-                <div className="succ-title">Pedido submetido!</div>
-                <div className="succ-sub">
-                  O teu comprovante foi enviado.<br />
-                  O admin vai verificar e enviar os dólares<br />
-                  para a tua conta <strong>{destInfo?.label}</strong>.
-                </div>
-                {currentOrder && (
-                  <div className="card" style={{ textAlign: "left", marginTop: 18 }}>
-                    <div className="o-ref">{currentOrder.order_ref ?? "#" + currentOrder.id.slice(0, 8).toUpperCase()}</div>
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 8 }}>
-                      <div>
-                        <div style={{ fontSize: 20, fontWeight: 900, color: "#6366f1" }}>${parseFloat(currentOrder.amount_usd).toFixed(2)}</div>
-                        <div style={{ fontSize: 11, color: "#9ca3af", fontWeight: 600 }}>{parseFloat(currentOrder.amount_aoa).toLocaleString("pt-AO")} Kz</div>
-                      </div>
-                      <span className="pill" style={{ background: "#eff6ff", color: "#2563eb", display: "flex", alignItems: "center", gap: 4 }}><Icon name="file" size={12} /> Comprovante OK</span>
-                    </div>
-                  </div>
-                )}
-                <button className="btn btn-p" style={{ marginTop: 16 }} onClick={resetFlow}>Nova transação</button>
-                <button className="btn btn-o" onClick={() => { setShowO(true); setSelectedOrder(currentOrder); loadOrders(); }}><div style={{ display: "flex", alignItems: "center", gap: 6, justifyContent: "center" }}><Icon name="clipboard" size={14} /> Ver todos os pedidos</div></button>
-              </div>
-            )}
-          </div>
-        </>
-      )}
+      {/* Floating Bottom Nav matching screenshots */}
+      <div className="bottom-nav">
+        <button
+          className={`bottom-nav-item${activeTab === "mercado" ? " active" : ""}`}
+          onClick={() => {
+            setActiveTab("mercado");
+            setSelectedOrder(null);
+            setShowCalculator(false);
+          }}
+        >
+          <Icon name="globe" size={20} color={activeTab === "mercado" ? "#ffffff" : "#8b92a9"} />
+          MERCADO
+        </button>
+        <button
+          className={`bottom-nav-item${activeTab === "perfil" ? " active" : ""}`}
+          onClick={() => {
+            setActiveTab("perfil");
+            setSelectedOrder(null);
+            setShowCalculator(false);
+          }}
+        >
+          <Icon name="user" size={20} color={activeTab === "perfil" ? "#ffffff" : "#8b92a9"} />
+          PERFIL
+        </button>
+      </div>
+      <ConfirmModal
+        isOpen={confirmState.isOpen}
+        title={confirmState.title}
+        message={confirmState.message}
+        confirmText={confirmState.confirmText}
+        cancelText={confirmState.cancelText}
+        onConfirm={confirmState.onConfirm}
+        onCancel={confirmState.onCancel}
+      />
     </div>
   );
 }

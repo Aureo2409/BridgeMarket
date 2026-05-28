@@ -111,6 +111,8 @@ export function TransactionCenter({ order, user, onBack, onCancel }) {
     if (!error) {
       setNewMessage("");
       fetchMessages();
+    } else {
+      alert("Erro ao enviar mensagem: " + error.message);
     }
   }
 
@@ -133,6 +135,8 @@ export function TransactionCenter({ order, user, onBack, onCancel }) {
 
       if (!error) {
         fetchMessages();
+      } else {
+        alert("Erro ao enviar comprovativo: " + error.message);
       }
     } catch (err) {
       alert("Erro ao carregar ficheiro: " + err.message);
@@ -422,6 +426,9 @@ export function TransactionCenter({ order, user, onBack, onCancel }) {
               </div>
             ) : (
               <div style={{ display: "flex", flexDirection: "column", height: 320 }}>
+                <div className="security-chat-warning">
+                  🛡️ Aviso de Segurança: Nunca partilhes dados de pagamento ou IBANs fora da plataforma. Não continues a negociação no WhatsApp.
+                </div>
                 <div style={{ flex: 1, overflowY: "auto", paddingRight: 4, display: "flex", flexDirection: "column", gap: 10, marginBottom: 12 }}>
                   {messages.length === 0 ? (
                     <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", color: "#94a3b8", fontSize: 11, fontWeight: 600 }}>

@@ -1,5 +1,9 @@
-// api/didit-session.js
-// Vercel Serverless Function para criação instantânea de sessões da DIDIT v3
+import { createClient } from "@supabase/supabase-js";
+
+const SUPABASE_URL = process.env.VITE_SUPABASE_URL || "https://gexlmuclvadddhlbmgkl.supabase.co";
+const SUPABASE_ANON_KEY = process.env.VITE_SUPABASE_ANON_KEY || "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdleGxtdWNsdmFkZGRobGJtZ2tsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzgwOTM2NjksImV4cCI6MjA5MzY2OTY2OX0.c4Bgf2C-QcTSsl_CzCvyBHzpFDmKVXVdQ0x34LywFTk";
+
+const sb = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 export default async function handler(req, res) {
   // CORS Headers
@@ -8,7 +12,7 @@ export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS,PATCH,DELETE,POST,PUT');
   res.setHeader(
     'Access-Control-Allow-Headers',
-    'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version'
+    'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version, Authorization'
   );
 
   // Tratar requisição OPTIONS (Preflight CORS)
@@ -21,12 +25,35 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
+  // 1. Validar autenticação JWT Supabase do utilizador
+  const authHeader = req.headers['authorization'];
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    return res.status(401).json({ error: 'Pedido não autorizado. Cabeçalho de autorização em falta ou inválido.' });
+  }
+
+  const token = authHeader.split(' ')[1];
+  const { data: { user }, error: authError } = await sb.auth.getUser(token);
+  
+  if (authError || !user) {
+    console.error('❌ Falha na autenticação JWT:', authError?.message);
+    return res.status(401).json({ error: 'Sessão inválida ou expirada. Inicie sessão novamente.' });
+  }
+
   const { user_id } = req.body;
   if (!user_id) {
     return res.status(400).json({ error: 'user_id é obrigatório.' });
   }
 
-  const DIDIT_API_KEY = process.env.DIDIT_API_KEY || 'OFb8lJF-ShhMs-Gg28d5AZqQF2Dqt6uNDNtnPIR5z14';
+  // Garantir que o user_id do corpo do pedido coincide com o utilizador autenticado
+  if (user_id !== user.id) {
+    return res.status(403).json({ error: 'Acesso proibido. Não pode criar uma sessão de verificação para outro utilizador.' });
+  }
+
+  const DIDIT_API_KEY = process.env.DIDIT_API_KEY;
+  if (!DIDIT_API_KEY) {
+    console.error('❌ DIDIT_API_KEY em falta nas variáveis de ambiente!');
+    return res.status(500).json({ error: 'O servidor do DIDIt está em falta de configuração no painel principal.' });
+  }
 
   try {
     const response = await fetch('https://verification.didit.me/v3/session/', {

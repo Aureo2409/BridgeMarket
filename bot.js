@@ -303,7 +303,7 @@ app.get('/qr', (req, res) => {
 });
 
 // ── DIDIT.ME — KYC SEGURO ───────────────────────────────────────────────────
-const DIDIT_API_KEY = 'OFb8lJF-ShhMs-Gg28d5AZqQF2Dqt6uNDNtnPIR5z14';
+const DIDIT_API_KEY = process.env.DIDIT_API_KEY;
 
 // Helper para descarregar um ficheiro do DIDIt e enviar para o nosso Supabase Storage
 async function downloadAndUploadToSupabase(url, userId, type) {
