@@ -2,6 +2,7 @@ import { useState, useRef } from "react";
 import { DESTS } from "../../lib/constants.js";
 import { StatusPill, Icon } from "../shared/UI.jsx";
 import { uploadBiometricVideo } from "../../lib/supabase.js";
+import { ANGOLAN_BANKS } from "./Calculator.jsx";
 
 function BiometricCapture({ orderId, orderRef, amountUsd, currentUserId, onCaptureDone, onCancel }) {
   const [stream, setStream] = useState(null);
@@ -468,7 +469,7 @@ export function OrderList({ orders, onCancel, currentUserId, onTransact, isMarke
               <StatusPill status={o.status} />
             </div>
             <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, color: "#9ca3af", fontWeight: 600 }}>
-              <span>{d?.label} · {o.destination_account}</span>
+              <span>{o.side === "sell" ? "Venda" : "Compra"} · {d?.label} ⇄ {ANGOLAN_BANKS.find(b => b.id === o.payment_method)?.label || "Multicaixa"} · {o.destination_account}</span>
               <span>{new Date(o.created_at).toLocaleDateString("pt-AO")}</span>
             </div>
 

@@ -9,22 +9,22 @@ export const DESTS = [
     hint:  "ID ou endereço RedotPay (ex: UID12345678)",
     svg: `<svg viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
       <rect width="40" height="40" rx="10" fill="#E8173A"/>
-      <path d="M20 8C13.373 8 8 13.373 8 20s5.373 12 12 12 12-5.373 12-12S26.627 8 20 8zm0 4a8 8 0 110 16 8 8 0 010-16z" fill="white" opacity="0.3"/>
-      <path d="M20 12a8 8 0 100 16A8 8 0 0020 12zm0 3a5 5 0 110 10A5 5 0 0120 15z" fill="white"/>
-      <circle cx="20" cy="20" r="3" fill="#E8173A"/>
+      <path d="M14 12h8a5 5 0 110 10h-8V12z" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+      <path d="M18 22l6 7" stroke="white" stroke-width="3" stroke-linecap="round"/>
+      <circle cx="14" cy="20" r="2.5" fill="white"/>
     </svg>`,
   },
   {
     id:    "airtm",
     label: "Airtm",
-    color: "#1A1A1A",
-    bg:    "#f5f5f5",
+    color: "#00A8E8",
+    bg:    "#f0faff",
     desc:  "Conta digital global",
     hint:  "Email da conta Airtm",
     svg: `<svg viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <rect width="40" height="40" rx="10" fill="#F5F5F5"/>
-      <path d="M20 9L11 21h3.5l-2 10h15l-2-10H29L20 9z" fill="none" stroke="#1A1A1A" stroke-width="2.5" stroke-linejoin="round"/>
-      <path d="M16 21h8" stroke="#1A1A1A" stroke-width="2" stroke-linecap="round"/>
+      <rect width="40" height="40" rx="10" fill="#00A8E8"/>
+      <path d="M13 23.5a4.5 4.5 0 011.5-8.7 6 6 0 0111 0 4.5 4.5 0 011.5 8.7" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+      <path d="M17 21l3-3 3 3M20 18v8" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
     </svg>`,
   },
   {
@@ -35,9 +35,8 @@ export const DESTS = [
     desc:  "Exchange cripto Binance",
     hint:  "UID Binance (ex: 123456789)",
     svg: `<svg viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <rect width="40" height="40" rx="10" fill="#1A1A1A"/>
-      <path d="M20 10l3 3-3 3-3-3 3-3zM13 17l3 3-3 3-3-3 3-3zM27 17l3 3-3 3-3-3 3-3zM20 24l3 3-3 3-3-3 3-3z" fill="#F0B90B"/>
-      <path d="M17 20l3 3 3-3-3-3-3 3z" fill="#F0B90B"/>
+      <rect width="40" height="40" rx="10" fill="#121212"/>
+      <path d="M20 10l3.5 3.5L20 17l-3.5-3.5L20 10zm-6.5 6.5l3.5 3.5-3.5 3.5-3.5-3.5 3.5-3.5zm13 0l3.5 3.5-3.5 3.5-3.5-3.5 3.5-3.5zM20 23l3.5 3.5L20 30l-3.5-3.5L20 23zm0-6.2l2.7 2.7-2.7 2.7-2.7-2.7 2.7-2.7z" fill="#F0B90B"/>
     </svg>`,
   },
   {
@@ -49,12 +48,12 @@ export const DESTS = [
     hint:  "Número do cartão (16 dígitos)",
     svg: `<svg viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
       <rect width="40" height="40" rx="10" fill="#1A1F71"/>
-      <rect x="6" y="14" width="28" height="12" rx="2" fill="#F5F5F5" opacity="0.15"/>
-      <text x="20" y="23" font-family="Arial" font-size="9" font-weight="900" fill="white" text-anchor="middle" letter-spacing="0.5">VISA</text>
-      <rect x="6" y="24" width="8" height="3" rx="1" fill="#F0B90B"/>
-      <rect x="16" y="24" width="8" height="3" rx="1" fill="#F0B90B" opacity="0.6"/>
+      <path d="M8 15h3.8l2.4 6.8 1.4-5.8c.2-.9.8-1 1.6-1H22l-3.2 8h-3.8L11.2 17l-.8-3.5C10.2 13 9 13 8 13.2V15z" fill="white"/>
+      <path d="M22 15h3.2l2 8H24l-.4-1.8h-2.4L21 23h-2.2l3.2-8zm.8 4.6l.8-3.4-.6 3.4H22.8z" fill="white"/>
+      <path d="M27.5 18c0-1.2.8-1.8 1.8-1.8 1.2 0 1.8.6 1.8 1.4h-1.4c0-.4-.3-.6-.7-.6-.4 0-.6.2-.6.4 0 .4.4.5.9.7 1.1.4 1.7 1 1.7 1.8 0 1.3-1 2-2.2 2-1.3 0-2-.6-2-1.5h1.4c0 .5.3.7.8.7.4 0 .7-.1.7-.4 0-.4-.4-.5-.9-.7-1.1-.4-1.8-1-1.8-1.9z" fill="white"/>
+      <path d="M12.5 15l-1.5 6L9.6 15" stroke="#F0B90B" stroke-width="1.8" stroke-linecap="round"/>
     </svg>`,
-  },
+  }
 ];
 
 // ── Estados dos pedidos ───────────────────────────────────────────────────────

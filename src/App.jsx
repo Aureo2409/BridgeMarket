@@ -545,12 +545,12 @@ function ClientApp({ user, onLogout }) {
   }, [user.id]);
 
   async function loadOrders() {
-    const { data } = await sb.from("orders").select("*, profiles(full_name, avatar_url)").order("created_at", { ascending: false }).limit(100);
+    const { data } = await sb.from("orders").select("*").order("created_at", { ascending: false }).limit(100);
     if (data) setOrders(data);
   }
 
 
-  async function handleCalcSubmit({ usd, aoa, dest, account, appliedRate, side }) {
+  async function handleCalcSubmit({ usd, aoa, dest, account, appliedRate, side, bank }) {
     const minUsd = parseFloat(config?.min_amount_usd) || 10;
     const maxUsd = parseFloat(config?.max_amount_usd) || 5000;
 
@@ -593,7 +593,8 @@ function ClientApp({ user, onLogout }) {
         rate_applied: appliedRate, destination: dest,
         destination_account: account,
         status: "awaiting_payment", // Como o KYC está completo, passa logo a aguardar pagamento!
-        side: side || "buy"
+        side: side || "buy",
+        payment_method: bank || "bai"
       }).select().single();
 
       let result;
