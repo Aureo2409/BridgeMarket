@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { DESTS } from "../../lib/constants.js";
 import { Icon } from "../shared/UI.jsx";
 
@@ -222,6 +222,24 @@ export function Calculator({ appliedRate, rate, onSubmit, loading, user, kycStep
   // Modal display states
   const [showWalletModal, setShowWalletModal] = useState(false);
   const [showBankModal, setShowBankModal] = useState(false);
+
+  useEffect(() => {
+    const isModalOpen = showWalletModal || showBankModal;
+    const nav = document.querySelector(".bottom-nav");
+    if (nav) {
+      if (isModalOpen) {
+        nav.style.opacity = "0";
+        nav.style.pointerEvents = "none";
+        nav.style.transform = "translateY(24px)";
+        nav.style.transition = "all 0.25s cubic-bezier(0.16, 1, 0.3, 1)";
+      } else {
+        nav.style.opacity = "1";
+        nav.style.pointerEvents = "auto";
+        nav.style.transform = "translateY(0)";
+        nav.style.transition = "all 0.25s cubic-bezier(0.16, 1, 0.3, 1)";
+      }
+    }
+  }, [showWalletModal, showBankModal]);
 
   const destInfo = DESTS.find(d => d.id === dest);
   const bInfo = ANGOLAN_BANKS.find(b => b.id === selectedBank);
