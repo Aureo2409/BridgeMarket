@@ -427,9 +427,9 @@ function ClientApp({ user, onLogout }) {
   const [profile, setProfile] = useState(() => {
     try {
       const cached = localStorage.getItem("bridge_profile");
-      return cached ? JSON.parse(cached) : { full_name: "", phone: "", date_of_birth: "", nationality: "", whatsapp: "", address: "", kyc_status: "", avatar_url: "" };
+      return cached ? JSON.parse(cached) : { full_name: "", phone: "", date_of_birth: "", nationality: "", whatsapp: "", address: "", kyc_status: "", avatar_url: "", access_status: "inactive", access_expires_at: null, payment_destinations: {} };
     } catch {
-      return { full_name: "", phone: "", date_of_birth: "", nationality: "", whatsapp: "", address: "", kyc_status: "", avatar_url: "" };
+      return { full_name: "", phone: "", date_of_birth: "", nationality: "", whatsapp: "", address: "", kyc_status: "", avatar_url: "", access_status: "inactive", access_expires_at: null, payment_destinations: {} };
     }
   });
   const [profileLoad, setProfileLoad] = useState(false);
@@ -477,8 +477,14 @@ function ClientApp({ user, onLogout }) {
       localStorage.setItem("bridge_config", JSON.stringify(c));
     }).catch(() => { });
 
-    sb.from("profiles").select("full_name, phone, date_of_birth, nationality, whatsapp, address, kyc_status, avatar_url").eq("id", user.id).maybeSingle().then(({ data }) => {
+    sb.from("profiles").select("full_name, phone, date_of_birth, nationality, whatsapp, address, kyc_status, avatar_url, access_status, access_expires_at, payment_destinations").eq("id", user.id).maybeSingle().then(({ data }) => {
       if (data) {
+        let currentStatus = data.access_status || "inactive";
+        if (data.access_expires_at && new Date() > new Date(data.access_expires_at) && (currentStatus === "active" || currentStatus === "expiring_soon")) {
+          currentStatus = "expired";
+          sb.from("profiles").update({ access_status: "expired" }).eq("id", user.id).then();
+        }
+        
         const p = {
           full_name: data.full_name || "",
           phone: data.phone || "",
@@ -487,7 +493,10 @@ function ClientApp({ user, onLogout }) {
           whatsapp: data.whatsapp || "",
           address: data.address || "",
           kyc_status: data.kyc_status || "",
-          avatar_url: data.avatar_url || ""
+          avatar_url: data.avatar_url || "",
+          access_status: currentStatus,
+          access_expires_at: data.access_expires_at || null,
+          payment_destinations: data.payment_destinations || {}
         };
         setProfile(p);
         localStorage.setItem("bridge_profile", JSON.stringify(p));
@@ -752,7 +761,8 @@ function ClientApp({ user, onLogout }) {
       date_of_birth: profile.date_of_birth || null,
       nationality: profile.nationality || null,
       whatsapp: profile.whatsapp || null,
-      address: profile.address || null
+      address: profile.address || null,
+      payment_destinations: profile.payment_destinations || {}
     }).eq("id", user.id);
     setProfileLoad(false);
     if (error) toast_("Erro ao atualizar: " + error.message, "err");
@@ -764,7 +774,8 @@ function ClientApp({ user, onLogout }) {
         date_of_birth: profile.date_of_birth,
         nationality: profile.nationality,
         whatsapp: profile.whatsapp,
-        address: profile.address
+        address: profile.address,
+        payment_destinations: profile.payment_destinations || {}
       };
       setProfile(p);
       localStorage.setItem("bridge_profile", JSON.stringify(p));
@@ -845,6 +856,83 @@ function ClientApp({ user, onLogout }) {
                         (kycRecord?.step_personal_done === true && 
                          kycRecord?.ocr_status === "passed" && 
                          kycRecord?.liveness_status === "passed");
+
+  // SE KYC ESTÁ COMPLETO, MAS O ACESSO SEMANAL NÃO ESTÁ ACTIVO
+  const hasActiveAccess = profile?.access_status === "active" || profile?.access_status === "expiring_soon";
+
+  if (isKycComplete && !hasActiveAccess) {
+    return (
+      <div className="shell" style={{ position: "relative", minHeight: "100vh", display: "flex", flexDirection: "column" }}>
+        <div className="blob b1" /><div className="blob b2" />
+        <Toast toast={toast} />
+        <Header appliedRate={applied} rateAnim={rateAnim} user={user} onLogout={onLogout}
+          showOrders={false} showProfile={false}
+          onOrdersClick={() => {}}
+          onProfileClick={() => {}}
+          avatarUrl={profile?.avatar_url} />
+        
+        <div style={{ flex: 1, display: "flex", flexDirection: "column", justifyContent: "center", padding: "24px 20px" }}>
+          <div className="card" style={{ padding: "28px 22px", textAlign: "center", border: "1.5px solid #6366f1", borderRadius: 20 }}>
+            <div style={{ width: 56, height: 56, borderRadius: "50%", background: "rgba(99,102,241,0.08)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 16px", color: "#6366f1" }}>
+              <Icon name="shield" size={28} />
+            </div>
+            
+            <h2 style={{ fontSize: 18, fontWeight: 900, color: "#1e1b4b", letterSpacing: "-0.4px", marginBottom: 6 }}>
+              Acesso Semanal Pré-Pago
+            </h2>
+            <div style={{ fontSize: 12, color: "#64748b", fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 12 }}>
+              Taxa de Acesso: 500 Kz
+            </div>
+            <p style={{ fontSize: 12, color: "#6b7280", lineHeight: 1.6, marginBottom: 20, fontWeight: 500 }}>
+              Paga apenas 500 Kz e obtém 7 dias de acesso ativo e ilimitado para comprar ou vender dólares sem qualquer comissão por transação!
+            </p>
+            
+            <div style={{ background: "#f8fafc", border: "1px dashed #cbd5e1", borderRadius: 12, padding: 14, textAlign: "left", marginBottom: 20 }}>
+              <div style={{ fontSize: 11, fontWeight: 800, color: "#475569", textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 6 }}>
+                Dados para Transferência
+              </div>
+              <div style={{ display: "flex", flexDirection: "column", gap: 6, fontSize: 12, color: "#1e1b4b", fontWeight: 600 }}>
+                <div>Banco: <span style={{ color: "#4f46e5" }}>BAI</span></div>
+                <div>IBAN: <span style={{ color: "#4f46e5", fontFamily: "monospace" }}>AO06 0040 0000 5543 2190 1012 3</span></div>
+                <div>Destinatário: <span style={{ color: "#475569" }}>Pixel Flex Lda.</span></div>
+              </div>
+            </div>
+
+            {/* Test Simulation Bypass Button */}
+            <button
+              className="btn btn-p"
+              onClick={async () => {
+                setOrdLoad(true);
+                const expiryDate = new Date();
+                expiryDate.setDate(expiryDate.getDate() + 7);
+                const { error } = await sb.from("profiles").update({
+                  access_status: "active",
+                  access_expires_at: expiryDate.toISOString()
+                }).eq("id", user.id);
+                setOrdLoad(false);
+                if (error) {
+                  toast_("Erro ao ativar acesso: " + error.message, "err");
+                } else {
+                  toast_("Acesso ativado com sucesso por 7 dias!");
+                  const updatedP = { ...profile, access_status: "active", access_expires_at: expiryDate.toISOString() };
+                  setProfile(updatedP);
+                  localStorage.setItem("bridge_profile", JSON.stringify(updatedP));
+                }
+              }}
+              disabled={orderLoad}
+              style={{ width: "100%", background: "linear-gradient(135deg,#6366f1,#8b5cf6)", boxShadow: "0 6px 16px rgba(99,102,241,0.2)" }}
+            >
+              {orderLoad ? "A processar..." : "Simular Pagamento e Activar"}
+            </button>
+            
+            <div style={{ fontSize: 10, color: "#94a3b8", fontWeight: 700, marginTop: 10 }}>
+              Nota: O acesso expira automaticamente após 7 dias
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   if (showKycTrigger) {
     return (
@@ -996,6 +1084,34 @@ function ClientApp({ user, onLogout }) {
                     </div>
                   ))}
                 </div>
+
+                {/* Active Payment Destinations Display */}
+                <div style={{ marginTop: 20, paddingTop: 16, borderTop: "1px solid #f1f5f9" }}>
+                  <div style={{ fontSize: 13, fontWeight: 900, color: "#1e1b4b", marginBottom: 12 }}>Métodos de Recebimento Ativos</div>
+                  {Object.entries(profile.payment_destinations || {}).filter(([_, info]) => info.active && info.value).length === 0 ? (
+                    <div style={{ fontSize: 11, color: "#64748b", background: "#f8fafc", padding: "10px 14px", borderRadius: 10, textAlign: "center", border: "1px dashed #cbd5e1" }}>
+                      Nenhum método configurado. Edita os teus dados para adicionar os teus destinos de recebimento!
+                    </div>
+                  ) : (
+                    <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                      {Object.entries(profile.payment_destinations || {}).filter(([_, info]) => info.active && info.value).map(([id, info]) => {
+                        const d = DESTS.find(x => x.id === id);
+                        if (!d) return null;
+                        return (
+                          <div key={id} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 14px", background: "#f8fafc", borderRadius: 12, border: "1px solid #e2e8f0" }}>
+                            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                              <div style={{ width: 28, height: 28, borderRadius: 8, background: d.bg, display: "flex", alignItems: "center", justifyContent: "center" }} dangerouslySetInnerHTML={{ __html: d.svg }} />
+                              <div>
+                                <div style={{ fontSize: 12, fontWeight: 800, color: "#1e1b4b" }}>{d.label}</div>
+                                <div style={{ fontSize: 11, color: "#64748b", fontFamily: "monospace", marginTop: 2 }}>{info.value}</div>
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
               </div>
             ) : (
               <div className="card" style={{ padding: "20px 24px", marginBottom: 14, borderRadius: 16, background: "#fff", border: "1px solid #e2e8f0" }}>
@@ -1031,6 +1147,53 @@ function ClientApp({ user, onLogout }) {
                   <div>
                     <label className="lbl">WhatsApp</label>
                     <input className="inp" type="tel" placeholder="WhatsApp" value={profile.whatsapp || ""} onChange={e => setProfile({ ...profile, whatsapp: e.target.value })} />
+                  </div>
+
+                  <div style={{ borderTop: "1px solid #e2e8f0", paddingTop: 14, marginTop: 10 }}>
+                    <div style={{ fontSize: 13, fontWeight: 900, color: "#1e1b4b", marginBottom: 10 }}>Os Meus Destinos de Recebimento</div>
+                    <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                      {DESTS.map(d => {
+                        const active = !!profile.payment_destinations?.[d.id]?.active;
+                        const val = profile.payment_destinations?.[d.id]?.value || "";
+                        return (
+                          <div key={d.id} style={{ display: "flex", flexDirection: "column", gap: 6, padding: 10, background: "#f8fafc", borderRadius: 10, border: "1px solid #e2e8f0" }}>
+                            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                              <input
+                                type="checkbox"
+                                checked={active}
+                                onChange={e => {
+                                  const updated = {
+                                    ...profile.payment_destinations,
+                                    [d.id]: { active: e.target.checked, value: val }
+                                  };
+                                  setProfile({ ...profile, payment_destinations: updated });
+                                }}
+                              />
+                              <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
+                                <div style={{ width: 24, height: 24, borderRadius: 6, background: d.bg, display: "flex", alignItems: "center", justifyContent: "center" }} dangerouslySetInnerHTML={{ __html: d.svg }} fill="none" />
+                                <span style={{ fontSize: 12, fontWeight: 800, color: "#1e1b4b" }}>{d.label}</span>
+                              </div>
+                            </div>
+                            {active && (
+                              <input
+                                className="inp"
+                                style={{ padding: "6px 10px", fontSize: 11.5 }}
+                                type="text"
+                                placeholder={d.hint}
+                                value={val}
+                                onChange={e => {
+                                  const updated = {
+                                    ...profile.payment_destinations,
+                                    [d.id]: { active: true, value: e.target.value }
+                                  };
+                                  setProfile({ ...profile, payment_destinations: updated });
+                                }}
+                              />
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
                   </div>
 
                   <div style={{ display: "flex", gap: 10, marginTop: 10 }}>

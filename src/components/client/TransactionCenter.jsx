@@ -19,6 +19,10 @@ export function TransactionCenter({ order, user, onBack, onCancel }) {
 
   const destInfo = DESTS.find(d => d.id === currentOrder?.destination);
   const isCreator = user?.id === currentOrder?.user_id;
+  const selectedDest = currentOrder?.selected_destination 
+    ? DESTS.find(d => d.id === currentOrder.selected_destination)
+    : destInfo;
+  const selectedAccount = currentOrder?.selected_destination_account || currentOrder?.destination_account;
 
   // Real-time Chat & Order Status Sync - Uninterrupted WebSocket channel
   useEffect(() => {
@@ -222,6 +226,31 @@ export function TransactionCenter({ order, user, onBack, onCancel }) {
     }).eq("id", currentOrder.id);
     if (error) {
       alert("Erro ao salvar avaliação: " + error.message);
+    }
+  }
+
+  async function handleSelectDestination(destId, destAcc) {
+    const d = DESTS.find(x => x.id === destId);
+    const destLabel = d ? d.label : destId.toUpperCase();
+    
+    const { error } = await sb.from("orders").update({
+      selected_destination: destId,
+      selected_destination_account: destAcc
+    }).eq("id", currentOrder.id);
+    
+    if (error) {
+      alert("Erro ao selecionar método: " + error.message);
+    } else {
+      await sb.from("chat_messages").insert({
+        order_id: currentOrder.id,
+        user_id: currentOrder.user_id,
+        sender_id: user.id,
+        sender_role: "partner",
+        body: `🤖 Bridge Bot: O parceiro confirmou que enviará os dólares via **${destLabel}** (Conta: \`${destAcc}\`).`
+      });
+      
+      const { data } = await sb.from("orders").select("*").eq("id", currentOrder.id).maybeSingle();
+      if (data) setCurrentOrder(data);
     }
   }
 
@@ -567,19 +596,19 @@ export function TransactionCenter({ order, user, onBack, onCancel }) {
 
             <div style={{ display: "flex", alignItems: "center", gap: 10, paddingBottom: 10, borderBottom: "1px solid #f1f5f9" }}>
               <div style={{
-                width: 32, height: 32, borderRadius: "50%", background: destInfo?.bg || "rgba(99,102,241,0.06)",
-                display: "flex", alignItems: "center", justifyContent: "center", color: destInfo?.color || "#6366f1", flexShrink: 0, overflow: "hidden"
+                width: 32, height: 32, borderRadius: "50%", background: selectedDest?.bg || "rgba(99,102,241,0.06)",
+                display: "flex", alignItems: "center", justifyContent: "center", color: selectedDest?.color || "#6366f1", flexShrink: 0, overflow: "hidden"
               }}>
-                {destInfo?.svg ? (
-                  <div style={{ width: 32, height: 32 }} dangerouslySetInnerHTML={{ __html: destInfo.svg }} />
+                {selectedDest?.svg ? (
+                  <div style={{ width: 32, height: 32 }} dangerouslySetInnerHTML={{ __html: selectedDest.svg }} fill="none" />
                 ) : (
                   <Icon name="globe" size={14} />
                 )}
               </div>
               <div style={{ flex: 1 }}>
-                <span style={{ fontSize: 10, color: "#94a3b8", fontWeight: 700 }}>VOCÊ RECEBEU EM</span>
+                <span style={{ fontSize: 10, color: "#94a3b8", fontWeight: 700 }}>{isCreator ? "VOCÊ RECEBEU EM" : "ENVIAR PARA"}</span>
                 <div style={{ fontSize: 12, fontWeight: 800, color: "#1e1b4b", marginTop: 2 }}>
-                  {destInfo?.label || "USD"} · {currentOrder.destination_account}
+                  {selectedDest?.label || "USD"} · {selectedAccount}
                 </div>
               </div>
               <span style={{ fontSize: 14, fontWeight: 900, color: "#6366f1" }}>
@@ -648,29 +677,132 @@ export function TransactionCenter({ order, user, onBack, onCancel }) {
                     </div>
                   </>
                 ) : (
-                  <>
-                    <div style={{ fontSize: 13, fontWeight: 900, color: "#1e1b4b", marginBottom: 6 }}>Ação Requerida: Enviar USD</div>
-                    <div style={{ fontSize: 11, color: "#64748b", lineHeight: 1.5, marginBottom: 12 }}>
-                      Envia <strong>${parseFloat(currentOrder.amount_usd).toFixed(2)} USD</strong> para a conta do usuário e confirma o envio.
-                    </div>
-                    <button
-                      onClick={handleConfirmSent}
-                      style={{
-                        width: "100%",
-                        background: "linear-gradient(135deg,#10b981,#059669)",
-                        border: "none",
-                        color: "#fff",
-                        padding: "10px 14px",
-                        borderRadius: 10,
-                        fontSize: 12,
-                        fontWeight: 800,
-                        cursor: "pointer",
-                        boxShadow: "0 4px 12px rgba(16,185,129,0.18)"
-                      }}
-                    >
-                      Já Enviei os Dólares (Confirmar Envio)
-                    </button>
-                  </>
+                  !currentOrder.selected_destination ? (
+                    (() => {
+                      const activeBuyerDests = Object.entries(partnerProfile?.payment_destinations || {})
+                        .filter(([_, info]) => info.active && info.value);
+                      if (activeBuyerDests.length > 0) {
+                        return (
+                          <>
+                            <div style={{ fontSize: 13, fontWeight: 900, color: "#1e1b4b", marginBottom: 6 }}>Selecionar Método de Envio</div>
+                            <div style={{ fontSize: 11.5, color: "#64748b", lineHeight: 1.5, marginBottom: 12 }}>
+                              O comprador aceita receber através dos seguintes destinos. Seleciona o método que pretendes utilizar para transferir os dólares:
+                            </div>
+                            <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 12, textAlign: "left" }}>
+                              {activeBuyerDests.map(([id, info]) => {
+                                const d = DESTS.find(x => x.id === id);
+                                if (!d) return null;
+                                return (
+                                  <button
+                                    key={id}
+                                    onClick={() => handleSelectDestination(id, info.value)}
+                                    style={{
+                                      display: "flex",
+                                      alignItems: "center",
+                                      justifyContent: "space-between",
+                                      padding: "10px 12px",
+                                      background: "#fff",
+                                      border: "1px solid #cbd5e1",
+                                      borderRadius: 12,
+                                      cursor: "pointer",
+                                      width: "100%",
+                                      fontFamily: "inherit",
+                                      transition: "all 0.2s"
+                                    }}
+                                  >
+                                    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                                      <div style={{ width: 24, height: 24, borderRadius: 6, background: d.bg, display: "flex", alignItems: "center", justifyContent: "center" }} dangerouslySetInnerHTML={{ __html: d.svg }} />
+                                      <div>
+                                        <div style={{ fontSize: 11.5, fontWeight: 800, color: "#1e1b4b" }}>{d.label}</div>
+                                        <div style={{ fontSize: 10, color: "#64748b", fontFamily: "monospace", marginTop: 2 }}>{info.value}</div>
+                                      </div>
+                                    </div>
+                                    <span style={{ fontSize: 10, fontWeight: 800, color: "#6366f1" }}>Escolher &gt;</span>
+                                  </button>
+                                );
+                              })}
+                            </div>
+                          </>
+                        );
+                      } else {
+                        // Fallback to order destination
+                        return (
+                          <>
+                            <div style={{ fontSize: 13, fontWeight: 900, color: "#1e1b4b", marginBottom: 6 }}>Confirmar Método de Envio</div>
+                            <div style={{ fontSize: 11, color: "#64748b", lineHeight: 1.5, marginBottom: 12 }}>
+                              O comprador não registou métodos adicionais no seu perfil. Confirmas o envio dos dólares para o destino padrão do pedido?
+                              <strong style={{ display: "block", marginTop: 6, color: "#1e1b4b" }}>{destInfo?.label || "USD"} ({currentOrder.destination_account})</strong>
+                            </div>
+                            <button
+                              onClick={() => handleSelectDestination(currentOrder.destination, currentOrder.destination_account)}
+                              className="btn btn-p"
+                              style={{ width: "100%" }}
+                            >
+                              Confirmar Envio via {destInfo?.label || "USD"}
+                            </button>
+                          </>
+                        );
+                      }
+                    })()
+                  ) : (
+                    <>
+                      <div style={{ fontSize: 13, fontWeight: 900, color: "#1e1b4b", marginBottom: 6 }}>Ação Requerida: Enviar USD</div>
+                      <div style={{ fontSize: 11, color: "#64748b", lineHeight: 1.5, marginBottom: 12 }}>
+                        Envia exactamente <strong>${parseFloat(currentOrder.amount_usd).toFixed(2)} USD</strong> via <strong style={{ color: "#6366f1" }}>{selectedDest?.label}</strong> para a conta:<br />
+                        <div style={{
+                          margin: "6px 0",
+                          padding: "8px 10px",
+                          background: "#fff",
+                          border: "1px dashed #cbd5e1",
+                          borderRadius: 8,
+                          fontWeight: 700,
+                          color: "#6366f1",
+                          fontSize: 12,
+                          fontFamily: "monospace",
+                          display: "flex",
+                          justifyContent: "space-between",
+                          alignItems: "center"
+                        }}>
+                          <span>{selectedAccount}</span>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              navigator.clipboard.writeText(selectedAccount);
+                              alert("Conta copiada com sucesso!");
+                            }}
+                            style={{
+                              background: "none",
+                              border: "none",
+                              color: "#6366f1",
+                              cursor: "pointer",
+                              fontSize: 10,
+                              fontWeight: 700
+                            }}
+                          >
+                            Copiar
+                          </button>
+                        </div>
+                        Após enviares, confirma a transação abaixo.
+                      </div>
+                      <button
+                        onClick={handleConfirmSent}
+                        style={{
+                          width: "100%",
+                          background: "linear-gradient(135deg,#10b981,#059669)",
+                          border: "none",
+                          color: "#fff",
+                          padding: "10px 14px",
+                          borderRadius: 10,
+                          fontSize: 12,
+                          fontWeight: 800,
+                          cursor: "pointer",
+                          boxShadow: "0 4px 12px rgba(16,185,129,0.18)"
+                        }}
+                      >
+                        Já Enviei os Dólares (Confirmar Envio)
+                      </button>
+                    </>
+                  )
                 )
               )}
 

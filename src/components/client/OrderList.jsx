@@ -8,7 +8,7 @@ function BiometricCapture({ orderId, orderRef, amountUsd, currentUserId, onCaptu
   const [stream, setStream] = useState(null);
   const [recording, setRecording] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [countdown, setCountdown] = useState(4);
+  const [countdown, setCountdown] = useState(6);
   const [error, setError] = useState(null);
   const videoRef = useRef(null);
   const mediaRecorderRef = useRef(null);
@@ -72,7 +72,7 @@ function BiometricCapture({ orderId, orderRef, amountUsd, currentUserId, onCaptu
     mediaRecorder.start();
     setRecording(true);
 
-    let count = 4;
+    let count = 6;
     setCountdown(count);
     const interval = setInterval(() => {
       count -= 1;
@@ -95,7 +95,7 @@ function BiometricCapture({ orderId, orderRef, amountUsd, currentUserId, onCaptu
         <span style={{ fontSize: 15 }}>👁</span> Verificação Biométrica Obrigatória
       </div>
       <div style={{ fontSize: 11, color: "#475569", lineHeight: 1.5, marginBottom: 12 }}>
-        Grava um vídeo rápido de 4 segundos dizendo a frase abaixo para autorizar esta transação P2P com segurança absoluta.
+        Grava um vídeo rápido de 6 segundos dizendo a frase abaixo para autorizar esta transação P2P com segurança absoluta.
       </div>
 
       {error ? (
@@ -145,7 +145,7 @@ function BiometricCapture({ orderId, orderRef, amountUsd, currentUserId, onCaptu
               boxShadow: "0 4px 12px rgba(99,102,241,0.2)"
             }}
           >
-            Iniciar Gravação (4s)
+            Iniciar Gravação (6s)
           </button>
         )}
         <button

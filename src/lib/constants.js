@@ -1,57 +1,94 @@
-// ── Carteiras (ícones SVG reais) ─────────────────────────────────────────────
+// ── Carteiras (ícones SVG reais da Fase 1) ─────────────────────────────────────
 export const DESTS = [
   {
-    id:    "redotpay",
-    label: "RedotPay",
-    color: "#E8173A",
-    bg:    "#fff0f2",
-    desc:  "Carteira cripto global",
-    hint:  "ID ou endereço RedotPay (ex: UID12345678)",
+    id:    "multicaixa",
+    label: "Multicaixa Express",
+    color: "#0F172A",
+    bg:    "#f1f5f9",
+    desc:  "Carteira digital local",
+    hint:  "Número de telefone associado ao Express (9XXXXXXXX)",
     svg: `<svg viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <rect width="40" height="40" rx="10" fill="#E8173A"/>
-      <path d="M14 12h8a5 5 0 110 10h-8V12z" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
-      <path d="M18 22l6 7" stroke="white" stroke-width="3" stroke-linecap="round"/>
-      <circle cx="14" cy="20" r="2.5" fill="white"/>
+      <rect width="40" height="40" rx="10" fill="#0F172A"/>
+      <rect x="13" y="10" width="14" height="20" rx="2" stroke="white" stroke-width="2.5"/>
+      <circle cx="20" cy="25" r="2.5" fill="white"/>
+      <line x1="16" y1="14" x2="24" y2="14" stroke="white" stroke-width="2" stroke-linecap="round"/>
     </svg>`,
   },
   {
-    id:    "airtm",
-    label: "Airtm",
-    color: "#00A8E8",
-    bg:    "#f0faff",
-    desc:  "Conta digital global",
-    hint:  "Email da conta Airtm",
+    id:    "unitel_money",
+    label: "Unitel Money",
+    color: "#FF6B00",
+    bg:    "#fff7ed",
+    desc:  "Carteira móvel Unitel",
+    hint:  "Número Unitel associado (9XXXXXXXX)",
     svg: `<svg viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <rect width="40" height="40" rx="10" fill="#00A8E8"/>
-      <path d="M13 23.5a4.5 4.5 0 011.5-8.7 6 6 0 0111 0 4.5 4.5 0 011.5 8.7" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
-      <path d="M17 21l3-3 3 3M20 18v8" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+      <rect width="40" height="40" rx="10" fill="#FF6B00"/>
+      <path d="M12 25V15a3 3 0 016 0v10M22 25V15a3 3 0 016 0v10" stroke="white" stroke-width="3" stroke-linecap="round"/>
+      <line x1="12" y1="20" x2="28" y2="20" stroke="white" stroke-width="2.5"/>
     </svg>`,
   },
   {
-    id:    "binance",
-    label: "Binance",
-    color: "#F0B90B",
-    bg:    "#fffbeb",
-    desc:  "Exchange cripto Binance",
-    hint:  "UID Binance (ex: 123456789)",
+    id:    "bai_visa",
+    label: "BAI Visa",
+    color: "#0056B3",
+    bg:    "#eff6ff",
+    desc:  "Cartão bancário BAI",
+    hint:  "IBAN ou número do cartão BAI",
     svg: `<svg viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <rect width="40" height="40" rx="10" fill="#121212"/>
-      <path d="M20 10l3.5 3.5L20 17l-3.5-3.5L20 10zm-6.5 6.5l3.5 3.5-3.5 3.5-3.5-3.5 3.5-3.5zm13 0l3.5 3.5-3.5 3.5-3.5-3.5 3.5-3.5zM20 23l3.5 3.5L20 30l-3.5-3.5L20 23zm0-6.2l2.7 2.7-2.7 2.7-2.7-2.7 2.7-2.7z" fill="#F0B90B"/>
+      <rect width="40" height="40" rx="10" fill="#0056B3"/>
+      <path d="M11 26h18M13 26v-8M17 26v-8M21 26v-8M25 26v-8M11 15l9-5 9 5v3H11v-3z" stroke="white" stroke-width="2" stroke-linejoin="round"/>
     </svg>`,
   },
   {
-    id:    "visa",
-    label: "Visa Prepaid",
-    color: "#1A1F71",
-    bg:    "#f0f2ff",
-    desc:  "Cartão Visa pré-pago",
-    hint:  "Número do cartão (16 dígitos)",
+    id:    "paypal",
+    label: "PayPal",
+    color: "#003087",
+    bg:    "#eaf0ff",
+    desc:  "Carteira internacional",
+    hint:  "E-mail da conta PayPal (ex: conta@paypal.com)",
     svg: `<svg viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <rect width="40" height="40" rx="10" fill="#1A1F71"/>
-      <path d="M8 15h3.8l2.4 6.8 1.4-5.8c.2-.9.8-1 1.6-1H22l-3.2 8h-3.8L11.2 17l-.8-3.5C10.2 13 9 13 8 13.2V15z" fill="white"/>
-      <path d="M22 15h3.2l2 8H24l-.4-1.8h-2.4L21 23h-2.2l3.2-8zm.8 4.6l.8-3.4-.6 3.4H22.8z" fill="white"/>
-      <path d="M27.5 18c0-1.2.8-1.8 1.8-1.8 1.2 0 1.8.6 1.8 1.4h-1.4c0-.4-.3-.6-.7-.6-.4 0-.6.2-.6.4 0 .4.4.5.9.7 1.1.4 1.7 1 1.7 1.8 0 1.3-1 2-2.2 2-1.3 0-2-.6-2-1.5h1.4c0 .5.3.7.8.7.4 0 .7-.1.7-.4 0-.4-.4-.5-.9-.7-1.1-.4-1.8-1-1.8-1.9z" fill="white"/>
-      <path d="M12.5 15l-1.5 6L9.6 15" stroke="#F0B90B" stroke-width="1.8" stroke-linecap="round"/>
+      <rect width="40" height="40" rx="10" fill="#003087"/>
+      <path d="M15 12h7c4 0 6 2 5 5s-3 5-7 5h-3l-2 8H11l4-18z" stroke="white" stroke-width="2.5" stroke-linejoin="round" fill="none"/>
+      <path d="M18 15h6c3.5 0 5 1.5 4.5 4s-2.5 4-6 4h-2.5l-1.5 6" stroke="white" stroke-width="1.8" stroke-linejoin="round"/>
+    </svg>`,
+  },
+  {
+    id:    "wise",
+    label: "Wise",
+    color: "#9FE870",
+    bg:    "#f6fdf0",
+    desc:  "Transferência Wise",
+    hint:  "E-mail ou dados de conta Wise (USD)",
+    svg: `<svg viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <rect width="40" height="40" rx="10" fill="#25B55E"/>
+      <path d="M12 13h16l-8 14-8-14z" fill="white"/>
+      <path d="M20 13v9" stroke="white" stroke-width="2" stroke-linecap="round"/>
+    </svg>`,
+  },
+  {
+    id:    "iban_eu",
+    label: "IBAN Europeu",
+    color: "#003399",
+    bg:    "#f0f4ff",
+    desc:  "Conta bancária EU (SEPA)",
+    hint:  "IBAN Europeu (ex: PT50 0003...)",
+    svg: `<svg viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <rect width="40" height="40" rx="10" fill="#003399"/>
+      <circle cx="20" cy="20" r="8" stroke="white" stroke-width="2"/>
+      <path d="M17 17.5h5M17 20h4M17 22.5h5" stroke="white" stroke-width="1.8" stroke-linecap="round"/>
+    </svg>`,
+  },
+  {
+    id:    "iban_us",
+    label: "IBAN Americano",
+    color: "#0A3161",
+    bg:    "#f0f4f8",
+    desc:  "Conta bancária EUA (ACH)",
+    hint:  "Número da conta e Routing Number (ACH)",
+    svg: `<svg viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <rect width="40" height="40" rx="10" fill="#0A3161"/>
+      <circle cx="20" cy="20" r="8" stroke="white" stroke-width="2"/>
+      <path d="M20 15v10M17.5 17.5h5a2.5 2.5 0 010 5h-5a2.5 2.5 0 000 5h5" stroke="white" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
     </svg>`,
   }
 ];
