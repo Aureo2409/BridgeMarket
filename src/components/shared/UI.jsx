@@ -77,7 +77,7 @@ export function StatusPill({ status }) {
 
 export function Header({ appliedRate, rateAnim, onOrdersClick, showOrders, user, onLogout, onProfileClick, showProfile, avatarUrl }) {
   return (
-    <div className="hdr">
+    <div className="hdr" style={{ position: "sticky", top: 0, zIndex: 1000 }}>
       <div className="logo">
         <div className="logo-mark" style={{ display: "flex", alignItems: "center", justifyContent: "center" }}>
           <svg viewBox="185 -45 500 500" width="18" height="18">
