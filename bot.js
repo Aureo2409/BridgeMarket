@@ -4,6 +4,7 @@ import WebSocket from 'ws';
 import dotenv from 'dotenv';
 import { existsSync, unlinkSync, readdirSync, statSync } from 'fs';
 import { join } from 'path';
+import nodemailer from 'nodemailer';
 dotenv.config();
 
 // ── SERVIDOR WEB ──────────────────────────────────────────────────────────────
@@ -513,6 +514,155 @@ supabase.from('exchange_rates')
 // Número do administrador
 const ADMIN_PHONE = process.env.ADMIN_PHONE_NUMBER || '244976344207';
 
+// ── CONFIGURAÇÕES DE E-MAIL (SMTP) ──────────────────────────────────────────
+const smtpHost = process.env.SMTP_HOST;
+const smtpPort = process.env.SMTP_PORT ? parseInt(process.env.SMTP_PORT) : 587;
+const smtpUser = process.env.SMTP_USER;
+const smtpPass = process.env.SMTP_PASS;
+const smtpFrom = process.env.SMTP_FROM || '"Bridge Marketplace" <no-reply@bridge.co>';
+const ADMIN_EMAIL = process.env.ADMIN_EMAIL || null;
+
+let mailTransporter = null;
+
+if (smtpHost && smtpUser && smtpPass) {
+    try {
+        mailTransporter = nodemailer.createTransport({
+            host: smtpHost,
+            port: smtpPort,
+            secure: smtpPort === 465,
+            auth: {
+                user: smtpUser,
+                pass: smtpPass
+            },
+            tls: {
+                rejectUnauthorized: false
+            }
+        });
+        console.log('📬 [SMTP] Transportador de e-mail SMTP inicializado com sucesso!');
+    } catch (error) {
+        console.error('❌ [SMTP] Erro ao inicializar o transportador de e-mail:', error.message);
+    }
+} else {
+    console.warn('⚠️ [SMTP] Configurações de SMTP em falta. As notificações por e-mail estão desativadas ou em modo de simulação/logs.');
+}
+
+// Auxiliar: Gera template HTML responsivo e elegante da Bridge
+function buildEmailTemplate(title, bodyHtml, actionText = null, actionUrl = null) {
+    const primaryColor = '#7c3aed'; // Roxo/Indigo da Bridge
+    const darkBg = '#0f172a'; // Slate-900
+    
+    let actionBtnHtml = '';
+    if (actionText && actionUrl) {
+        actionBtnHtml = `
+            <div style="text-align: center; margin: 30px 0;">
+                <a href="${actionUrl}" style="background-color: ${primaryColor}; color: #ffffff; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-weight: bold; display: inline-block; box-shadow: 0 4px 6px rgba(124, 58, 237, 0.25); font-family: sans-serif;">
+                    ${actionText}
+                </a>
+            </div>
+        `;
+    }
+
+    return `
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>${title}</title>
+    </head>
+    <body style="margin: 0; padding: 0; background-color: #f8fafc; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: #334155;">
+        <table align="center" border="0" cellpadding="0" cellspacing="0" width="100%" style="max-width: 600px; margin: 20px auto; background-color: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1); border: 1px solid #e2e8f0;">
+            <tr>
+                <td style="background-color: ${darkBg}; padding: 30px; text-align: center; border-bottom: 4px solid ${primaryColor};">
+                    <h1 style="color: #ffffff; margin: 0; font-size: 24px; letter-spacing: 1px; font-weight: 800; font-family: sans-serif;">
+                        BRIDGE <span style="color: ${primaryColor}; font-size: 14px; font-weight: normal; vertical-align: middle;">AOA/USD</span>
+                    </h1>
+                </td>
+            </tr>
+            <tr>
+                <td style="padding: 40px 30px; line-height: 1.6;">
+                    <h2 style="color: #1e293b; margin-top: 0; margin-bottom: 20px; font-size: 20px; font-weight: 700; border-bottom: 2px solid #f1f5f9; padding-bottom: 10px;">
+                        ${title}
+                    </h2>
+                    <div style="font-size: 16px; color: #475569;">
+                        ${bodyHtml}
+                    </div>
+                    ${actionBtnHtml}
+                </td>
+            </tr>
+            <tr>
+                <td style="background-color: #f1f5f9; padding: 20px 30px; text-align: center; font-size: 12px; color: #64748b; border-top: 1px solid #e2e8f0;">
+                    <p style="margin: 0 0 8px 0;">Este é um e-mail automático enviado pela plataforma **Bridge**.</p>
+                    <p style="margin: 0 0 8px 0;">Luanda, Estádio 11 de Novembro, Bairro Sapo 2. Suporte: 976-344-207</p>
+                    <p style="margin: 0; font-weight: bold; color: #475569;">&copy; ${new Date().getFullYear()} Pixel Flex. Todos os direitos reservados.</p>
+                </td>
+            </tr>
+        </table>
+    </body>
+    </html>
+    `;
+}
+
+// Auxiliar: Envia e-mail SMTP com fallback
+async function sendEmailNotification(to, subject, htmlContent, textFallback = "") {
+    if (!mailTransporter) {
+        console.warn(`⚠️ [SMTP] Envio de e-mail abortado para ${to}. Transportador SMTP não está configurado.`);
+        return false;
+    }
+
+    try {
+        const mailOptions = {
+            from: smtpFrom,
+            to: to,
+            subject: subject,
+            text: textFallback || subject,
+            html: htmlContent
+        };
+
+        const info = await mailTransporter.sendMail(mailOptions);
+        console.log(`✅ [SMTP] E-mail enviado com sucesso para ${to}. MessageId: ${info.messageId}`);
+        return true;
+    } catch (error) {
+        console.error(`❌ [SMTP] Erro ao enviar e-mail para ${to}:`, error.message);
+        return false;
+    }
+}
+
+// Auxiliar: Resolve o email de um utilizador no Auth do Supabase usando Service Role
+async function getUserEmail(userId) {
+    if (!supabase) return null;
+    try {
+        const { data, error } = await supabase.auth.admin.getUserById(userId);
+        if (error) {
+            console.error(`❌ [SUPABASE AUTH] Erro ao buscar e-mail do utilizador ${userId}:`, error.message);
+            return null;
+        }
+        return data?.user?.email || null;
+    } catch (err) {
+        console.error(`❌ [SUPABASE AUTH] Exceção ao buscar e-mail do utilizador ${userId}:`, err.message);
+        return null;
+    }
+}
+
+// Auxiliar: Verifica se as notificações por e-mail estão ativas no perfil
+async function isEmailNotificationEnabled(userId) {
+    if (!supabase) return true;
+    try {
+        const { data, error } = await supabase
+            .from('profiles')
+            .select('email_notifications')
+            .eq('id', userId)
+            .maybeSingle();
+        if (error) {
+            console.warn(`⚠️ [SUPABASE BD] Erro ao verificar preferências de e-mail de ${userId}:`, error.message);
+            return true;
+        }
+        return data ? data.email_notifications !== false : true;
+    } catch (err) {
+        return true;
+    }
+}
+
 // ── SYSTEM PROMPT ─────────────────────────────────────────────────────────────
 const systemInstruction = `
 Idioma Obrigatório:
@@ -582,6 +732,18 @@ supabase.channel('bot_admin_alerts')
         if (newData.ocr_status === 'pending' && oldData.ocr_status !== 'pending') {
             const alertMsg = `🚨 *Nova Verificação de Identidade (KYC)*\n\nUm cliente acabou de submeter o seu vídeo e documento.\n\n👉 Acede ao Painel de Administrador para analisar e dar o teu veredicto (Aprovar/Rejeitar).`;
             sendWhatsappMessage(ADMIN_PHONE, alertMsg).catch(err => console.error('Erro ao enviar alerta KYC ao admin:', err));
+
+            if (ADMIN_EMAIL) {
+                const subject = `🚨 Nova Verificação de Identidade (KYC) - Bridge`;
+                const html = buildEmailTemplate(
+                    "Nova Verificação de Identidade (KYC) Pendente",
+                    `<p>Um cliente acabou de submeter o seu vídeo e documentos para verificação.</p>
+                     <p>Por favor, aceda ao Painel de Administrador da Bridge para analisar e dar o veredicto (Aprovar/Rejeitar).</p>`,
+                    "Aceder ao Painel",
+                    "https://bridge-market-delta.vercel.app"
+                );
+                sendEmailNotification(ADMIN_EMAIL, subject, html, "Nova Verificação de Identidade (KYC) pendente na Bridge.").catch(err => console.error('Erro ao enviar e-mail KYC ao admin:', err));
+            }
         }
 
         // Alerta para o Cliente quando Admin aprova ou rejeita
@@ -605,6 +767,41 @@ supabase.channel('bot_admin_alerts')
                         sendWhatsappMessage(phone, msg).catch(err => console.error('Erro ao enviar rejeição KYC:', err));
                     }
                 }
+
+                // Disparo de e-mail em paralelo se ativado
+                const userEmail = await getUserEmail(newData.user_id);
+                const emailEnabled = await isEmailNotificationEnabled(newData.user_id);
+
+                if (userEmail && emailEnabled) {
+                    const clientName = profile ? (profile.full_name ? profile.full_name.split(' ')[0] : 'Cliente') : 'Cliente';
+                    if (newData.ocr_status === 'passed') {
+                        const subject = `🎉 Conta Aprovada - Bridge Marketplace`;
+                        const html = buildEmailTemplate(
+                            "Sua Conta foi Aprovada!",
+                            `<p>Olá <strong>${clientName}</strong>,</p>
+                             <p>Temos o prazer de informar que a tua identidade foi verificada com sucesso pela nossa equipa!</p>
+                             <p>A tua conta está agora totalmente ativa. Já podes simular, criar pedidos e realizar transações de câmbio seguras no Bridge Marketplace.</p>`,
+                            "Aceder ao Marketplace",
+                            "https://bridge-market-delta.vercel.app"
+                        );
+                        sendEmailNotification(userEmail, subject, html, "A tua identidade foi verificada com sucesso no Bridge Marketplace!").catch(err => console.error('Erro ao enviar e-mail de aprovação KYC:', err));
+                    } else if (newData.ocr_status === 'rejected') {
+                        const reason = newData.rejection_reason || "Documentos ilegíveis ou inválidos.";
+                        const subject = `❌ Verificação de Identidade Recusada - Bridge Marketplace`;
+                        const html = buildEmailTemplate(
+                            "Verificação de Identidade Recusada",
+                            `<p>Olá <strong>${clientName}</strong>,</p>
+                             <p>Lamentamos informar que não foi possível validar os documentos e vídeo submetidos.</p>
+                             <div style="background-color: #fff1f2; border-left: 4px solid #f43f5e; padding: 15px; margin: 20px 0; border-radius: 4px; font-weight: bold; color: #991b1b;">
+                                 Motivo: ${reason}
+                             </div>
+                             <p>Por favor, acede à plataforma oficial para submeter novamente fotografias mais nítidas e legíveis dos teus documentos.</p>`,
+                            "Submeter Novamente",
+                            "https://bridge-market-delta.vercel.app"
+                        );
+                        sendEmailNotification(userEmail, subject, html, `Infelizmente, a tua identidade não pôde ser verificada na Bridge. Motivo: ${reason}`).catch(err => console.error('Erro ao enviar e-mail de rejeição KYC:', err));
+                    }
+                }
             } catch (error) {
                 console.error('Erro ao alertar cliente sobre KYC:', error);
             }
@@ -617,12 +814,42 @@ supabase.channel('bot_admin_alerts')
         const orderRef = newOrder.order_ref || '#' + newOrder.id.slice(0, 8).toUpperCase();
         const alertMsg = `🛒 *NOVO PEDIDO (Bridge)*\n\nUm cliente acabou de criar um novo pedido!\n\n💵 Valor: *$${parseFloat(newOrder.amount_usd).toFixed(2)}*\n🇦🇴 Total a Pagar: *${parseFloat(newOrder.amount_aoa).toLocaleString('pt-AO')} Kz*\n📄 Referência: ${orderRef}\n🏦 Destino: ${newOrder.destination_account}\n\n👉 Acede ao Painel de Administrador para gerir.`;
         sendWhatsappMessage(ADMIN_PHONE, alertMsg).catch(err => console.error('Erro ao enviar alerta de novo pedido:', err));
+
+        if (ADMIN_EMAIL) {
+            const subject = `🛒 Novo Pedido Criado - ${orderRef} - Bridge`;
+            const html = buildEmailTemplate(
+                "Novo Pedido no Marketplace",
+                `<p>Um cliente acabou de criar um novo pedido na plataforma!</p>
+                 <table style="width: 100%; border-collapse: collapse; margin: 20px 0; font-size: 15px;">
+                     <tr style="border-bottom: 1px solid #e2e8f0;"><td style="padding: 10px 0; font-weight: bold;">Referência:</td><td style="padding: 10px 0; text-align: right;">${orderRef}</td></tr>
+                     <tr style="border-bottom: 1px solid #e2e8f0;"><td style="padding: 10px 0; font-weight: bold;">Valor em Dólares:</td><td style="padding: 10px 0; text-align: right; color: #16a34a; font-weight: bold;">$${parseFloat(newOrder.amount_usd).toFixed(2)}</td></tr>
+                     <tr style="border-bottom: 1px solid #e2e8f0;"><td style="padding: 10px 0; font-weight: bold;">Total em Kwanzas:</td><td style="padding: 10px 0; text-align: right; font-weight: bold;">${parseFloat(newOrder.amount_aoa).toLocaleString('pt-AO')} Kz</td></tr>
+                     <tr style="border-bottom: 1px solid #e2e8f0;"><td style="padding: 10px 0; font-weight: bold;">Destino:</td><td style="padding: 10px 0; text-align: right;">${newOrder.destination} (${newOrder.destination_account})</td></tr>
+                 </table>
+                 <p>Por favor, aceda ao Painel de Administrador para gerir o pedido.</p>`,
+                "Aceder ao Painel",
+                "https://bridge-market-delta.vercel.app"
+            );
+            sendEmailNotification(ADMIN_EMAIL, subject, html, `Novo pedido ${orderRef} no valor de $${parseFloat(newOrder.amount_usd).toFixed(2)} criado na Bridge.`).catch(err => console.error('Erro ao enviar e-mail de novo pedido ao admin:', err));
+        }
     })
 
     // Comprovativo enviado — Alerta para Admin
     .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'payment_proofs' }, (payload) => {
         const alertMsg = `💰 *PAGAMENTO RECEBIDO (Bridge)*\n\nUm cliente acabou de enviar um comprovante de pagamento!\n\n👉 Acede ao teu Painel de Administrador para validar a transferência e confirmar o envio dos dólares.`;
         sendWhatsappMessage(ADMIN_PHONE, alertMsg).catch(err => console.error('Erro ao enviar alerta de pagamento:', err));
+
+        if (ADMIN_EMAIL) {
+            const subject = `💰 Comprovativo de Pagamento Recebido - Bridge`;
+            const html = buildEmailTemplate(
+                "Comprovativo de Pagamento Recebido",
+                `<p>Um cliente acabou de submeter um comprovativo de pagamento na plataforma.</p>
+                 <p>Por favor, aceda ao Painel de Administrador para validar a transferência de Kwanzas e confirmar o envio correspondente dos dólares.</p>`,
+                "Validar no Painel",
+                "https://bridge-market-delta.vercel.app"
+            );
+            sendEmailNotification(ADMIN_EMAIL, subject, html, "Novo comprovativo de pagamento recebido na Bridge.").catch(err => console.error('Erro ao enviar e-mail de comprovativo ao admin:', err));
+        }
     })
 
     // Pedido concluído — Alerta para Cliente
@@ -640,6 +867,30 @@ supabase.channel('bot_admin_alerts')
                     const clientName = profile.full_name ? profile.full_name.split(' ')[0] : 'Cliente';
                     const msg = `✅ *PEDIDO ENVIADO*\n\nOlá ${clientName},\nO teu pedido ${orderRef} foi processado e os dólares já foram enviados para a tua conta!\n\n💵 Valor: *$${parseFloat(newData.amount_usd).toFixed(2)}*\n🏦 Destino: ${newData.destination_account}\n\nObrigado pela preferência! 🚀`;
                     sendWhatsappMessage(phone, msg).catch(err => console.error('Erro ao enviar mensagem ao cliente:', err));
+                }
+
+                // Disparo de e-mail em paralelo se ativado
+                const userEmail = await getUserEmail(newData.user_id);
+                const emailEnabled = await isEmailNotificationEnabled(newData.user_id);
+
+                if (userEmail && emailEnabled) {
+                    const clientName = profile ? (profile.full_name ? profile.full_name.split(' ')[0] : 'Cliente') : 'Cliente';
+                    const orderRef = newData.order_ref || '#' + newData.id.slice(0, 8).toUpperCase();
+                    const subject = `✅ Pedido Enviado - ${orderRef} - Bridge Marketplace`;
+                    const html = buildEmailTemplate(
+                        "O teu pedido foi enviado com sucesso!",
+                        `<p>Olá <strong>${clientName}</strong>,</p>
+                         <p>Temos o prazer de informar que o teu pedido de compra de dólares foi processado e os fundos já foram enviados para a tua conta de destino!</p>
+                         <table style="width: 100%; border-collapse: collapse; margin: 20px 0; font-size: 15px;">
+                             <tr style="border-bottom: 1px solid #e2e8f0;"><td style="padding: 10px 0; font-weight: bold;">Referência:</td><td style="padding: 10px 0; text-align: right;">${orderRef}</td></tr>
+                             <tr style="border-bottom: 1px solid #e2e8f0;"><td style="padding: 10px 0; font-weight: bold;">Valor Recebido:</td><td style="padding: 10px 0; text-align: right; color: #16a34a; font-weight: bold;">$${parseFloat(newData.amount_usd).toFixed(2)}</td></tr>
+                             <tr style="border-bottom: 1px solid #e2e8f0;"><td style="padding: 10px 0; font-weight: bold;">Destino dos Fundos:</td><td style="padding: 10px 0; text-align: right;">${newData.destination} (${newData.destination_account})</td></tr>
+                         </table>
+                         <p>Muito obrigado pela tua preferência e confiança na **Bridge**. Se gostaste do nosso serviço, partilha com os teus amigos! 🚀</p>`,
+                        "Ver o meu Painel",
+                        "https://bridge-market-delta.vercel.app"
+                    );
+                    sendEmailNotification(userEmail, subject, html, `O teu pedido ${orderRef} foi concluído e os dólares enviados para a tua conta de destino na Bridge.`).catch(err => console.error('Erro ao enviar e-mail de pedido concluído:', err));
                 }
             } catch (error) {
                 console.error('Erro ao alertar o cliente sobre pedido concluído:', error);
@@ -710,6 +961,90 @@ async function processNotification(notification) {
 
     console.log(`✉️ [NOTIFICAÇÕES] A processar notificação ${notification.id} (canal: ${notification.channel}, template: ${notification.template})`);
 
+    // ───────────────── PROCESSAMENTO DE E-MAIL ─────────────────
+    if (notification.channel === 'email') {
+        let email = null;
+
+        // 1. Resolver o e-mail de destino de forma inteligente
+        if (notification.recipient_email) {
+            email = notification.recipient_email.trim();
+        } else if (notification.destination && notification.destination.includes('@')) {
+            email = notification.destination.trim();
+        }
+
+        // Se ainda não temos o e-mail, procuramos no Auth do Supabase
+        if (!email && notification.user_id) {
+            email = await getUserEmail(notification.user_id);
+        }
+
+        if (!email) {
+            console.warn(`⚠️ [NOTIFICAÇÕES] Sem e-mail de destino para a notificação ${notification.id}. Marcando como falhada.`);
+            await supabase
+                .from('notifications')
+                .update({ status: 'failed', sent_at: new Date().toISOString() })
+                .eq('id', notification.id);
+            return;
+        }
+
+        let subject = 'Notificação - Bridge Marketplace';
+        let bodyHtml = notification.message_body;
+
+        // 2. Se o corpo estiver vazio, construímos com base no template e dados do pedido
+        if (!bodyHtml) {
+            if (notification.template === 'new_order' && notification.order_id) {
+                try {
+                    const { data: orderData } = await supabase
+                        .from('orders')
+                        .select('*')
+                        .eq('id', notification.order_id)
+                        .maybeSingle();
+                    if (orderData) {
+                        const orderRef = orderData.order_ref || '#' + orderData.id.slice(0, 8).toUpperCase();
+                        subject = `🛒 Novo Pedido Criado - ${orderRef} - Bridge`;
+                        bodyHtml = `<p>Um cliente acabou de criar um novo pedido na plataforma!</p>
+                                     <table style="width: 100%; border-collapse: collapse; margin: 20px 0; font-size: 15px;">
+                                         <tr style="border-bottom: 1px solid #e2e8f0;"><td style="padding: 10px 0; font-weight: bold;">Referência:</td><td style="padding: 10px 0; text-align: right;">${orderRef}</td></tr>
+                                         <tr style="border-bottom: 1px solid #e2e8f0;"><td style="padding: 10px 0; font-weight: bold;">Valor em Dólares:</td><td style="padding: 10px 0; text-align: right; color: #16a34a; font-weight: bold;">$${parseFloat(orderData.amount_usd).toFixed(2)}</td></tr>
+                                         <tr style="border-bottom: 1px solid #e2e8f0;"><td style="padding: 10px 0; font-weight: bold;">Total em Kwanzas:</td><td style="padding: 10px 0; text-align: right; font-weight: bold;">${parseFloat(orderData.amount_aoa).toLocaleString('pt-AO')} Kz</td></tr>
+                                         <tr style="border-bottom: 1px solid #e2e8f0;"><td style="padding: 10px 0; font-weight: bold;">Destino:</td><td style="padding: 10px 0; text-align: right;">${orderData.destination} (${orderData.destination_account})</td></tr>
+                                     </table>
+                                     <p>Por favor, acede ao Painel de Administrador para gerir.</p>`;
+                    }
+                } catch (err) {
+                    console.error(`❌ [NOTIFICAÇÕES] Erro ao carregar dados do pedido para a notificação ${notification.id}:`, err);
+                }
+            } else if (notification.template === 'welcome') {
+                subject = 'Bem-vindo ao Bridge Marketplace! 🎉';
+                bodyHtml = `<p>Bem-vindo ao Bridge Marketplace! A tua conta foi criada com sucesso.</p>
+                             <p>Acede à plataforma para completar a verificação de identidade e começar a transacionar de forma segura e rápida.</p>`;
+            }
+        }
+
+        if (!bodyHtml) {
+            console.warn(`⚠️ [NOTIFICAÇÕES] Notificação de e-mail ${notification.id} não possui corpo de mensagem legível.`);
+            await supabase
+                .from('notifications')
+                .update({ status: 'failed', sent_at: new Date().toISOString() })
+                .eq('id', notification.id);
+            return;
+        }
+
+        const htmlEmail = buildEmailTemplate(subject, bodyHtml, "Aceder à Plataforma", "https://bridge-market-delta.vercel.app");
+        const success = await sendEmailNotification(email, subject, htmlEmail, subject);
+
+        await supabase
+            .from('notifications')
+            .update({ 
+                status: success ? 'sent' : 'failed', 
+                sent_at: new Date().toISOString() 
+            })
+            .eq('id', notification.id);
+
+        console.log(`✅ [NOTIFICAÇÕES] E-mail ${success ? 'enviado' : 'falhado'} para ${email} (Notificação: ${notification.id}).`);
+        return;
+    }
+
+    // ──────────────── PROCESSAMENTO DE WHATSAPP ────────────────
     let phone = null;
 
     // 1. Resolver o telefone de destino de forma inteligente
@@ -797,7 +1132,7 @@ async function processNotification(notification) {
             .update({ status: 'sent', sent_at: new Date().toISOString() })
             .eq('id', notification.id);
 
-        console.log(`✅ [NOTIFICAÇÕES] Mensagem enviada para ${phone} e estado actualizado para 'sent'.`);
+        console.log(`✅ [NOTIFICAÇÕES] Mensagem WhatsApp enviada para ${phone} e estado actualizado para 'sent'.`);
     } catch (err) {
         console.error(`❌ [NOTIFICAÇÕES] Erro ao enviar WhatsApp na notificação ${notification.id}:`, err.message);
         await supabase
