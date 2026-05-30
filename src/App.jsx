@@ -1396,6 +1396,76 @@ function ClientApp({ user, onLogout }) {
     );
   }
 
+  function renderActivationCard() {
+    return (
+      <div className="card" style={{ padding: "28px 22px", textAlign: "center", border: "1.5px solid #6366f1", borderRadius: 20, maxWidth: 500, margin: "20px auto" }}>
+        <div style={{ width: 56, height: 56, borderRadius: "50%", background: "rgba(99,102,241,0.08)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 16px", color: "#6366f1" }}>
+          <Icon name="shield" size={28} />
+        </div>
+        
+        <h2 style={{ fontSize: 18, fontWeight: 900, color: "#1e1b4b", letterSpacing: "-0.4px", marginBottom: 6 }}>
+          Acesso Semanal Pré-Pago
+        </h2>
+        <div style={{ fontSize: 12, color: "#64748b", fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 12 }}>
+          Taxa de Acesso: 500 Kz
+        </div>
+        <p style={{ fontSize: 12, color: "#6b7280", lineHeight: 1.6, marginBottom: 20, fontWeight: 500 }}>
+          Paga apenas 500 Kz e obtém 7 dias de acesso ativo e ilimitado para comprar ou vender dólares sem qualquer comissão por transação!
+        </p>
+        
+        <div style={{ background: "#f8fafc", border: "1px dashed #cbd5e1", borderRadius: 12, padding: 14, textAlign: "left", marginBottom: 20 }}>
+          <div style={{ fontSize: 11, fontWeight: 800, color: "#475569", textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 6 }}>
+            Dados para Transferência
+          </div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 6, fontSize: 12, color: "#1e1b4b", fontWeight: 600 }}>
+            <div>Banco: <span style={{ color: "#4f46e5" }}>BAI</span></div>
+            <div>IBAN: <span style={{ color: "#4f46e5", fontFamily: "monospace" }}>AO06 0040 0000 5543 2190 1012 3</span></div>
+            <div>Destinatário: <span style={{ color: "#475569" }}>Pixel Flex Lda.</span></div>
+          </div>
+        </div>
+
+        <button
+          className="btn btn-p"
+          onClick={async () => {
+            setOrdLoad(true);
+            const expiryDate = new Date();
+            expiryDate.setDate(expiryDate.getDate() + 7);
+            const { error } = await sb.from("profiles").update({
+              access_status: "active",
+              access_expires_at: expiryDate.toISOString()
+            }).eq("id", user.id);
+            setOrdLoad(false);
+            if (error) {
+              toast_("Erro ao ativar acesso: " + error.message, "err");
+            } else {
+              toast_("Acesso ativado com sucesso por 7 dias!");
+              const updatedP = { ...profile, access_status: "active", access_expires_at: expiryDate.toISOString() };
+              setProfile(updatedP);
+              localStorage.setItem("bridge_profile", JSON.stringify(updatedP));
+              setShowActivationScreen(false);
+            }
+          }}
+          disabled={orderLoad}
+          style={{ width: "100%", background: "linear-gradient(135deg,#6366f1,#8b5cf6)", boxShadow: "0 6px 16px rgba(99,102,241,0.2)" }}
+        >
+          {orderLoad ? "A processar..." : "Simular Pagamento e Activar"}
+        </button>
+
+        <button
+          className="btn"
+          onClick={() => setShowActivationScreen(false)}
+          style={{ width: "100%", marginTop: 12, background: "rgba(107, 114, 128, 0.08)", color: "#64748b", border: "1px solid rgba(148, 163, 184, 0.15)" }}
+        >
+          Voltar ao Mercado
+        </button>
+        
+        <div style={{ fontSize: 10, color: "#94a3b8", fontWeight: 700, marginTop: 10 }}>
+          Nota: O acesso expira automaticamente após 7 dias
+        </div>
+      </div>
+    );
+  }
+
   function renderDesktopSettings() {
     return (
       <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
@@ -1607,89 +1677,6 @@ function ClientApp({ user, onLogout }) {
     );
   }
 
-  if (showActivationScreen) {
-    return (
-      <div className="shell" style={{ position: "relative", minHeight: "100vh", display: "flex", flexDirection: "column" }}>
-        <div className="blob b1" /><div className="blob b2" />
-        <Toast toast={toast} />
-        <Header appliedRate={applied} rateAnim={rateAnim} user={user} onLogout={onLogout}
-          showOrders={showOrders} showProfile={showProfile}
-          onOrdersClick={handleOrdersClick}
-          onProfileClick={handleProfileClick}
-          avatarUrl={profile?.avatar_url} />
-        
-        <div style={{ flex: 1, display: "flex", flexDirection: "column", justifyContent: "center", padding: "24px 20px" }}>
-          <div className="card" style={{ padding: "28px 22px", textAlign: "center", border: "1.5px solid #6366f1", borderRadius: 20 }}>
-            <div style={{ width: 56, height: 56, borderRadius: "50%", background: "rgba(99,102,241,0.08)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 16px", color: "#6366f1" }}>
-              <Icon name="shield" size={28} />
-            </div>
-            
-            <h2 style={{ fontSize: 18, fontWeight: 900, color: "#1e1b4b", letterSpacing: "-0.4px", marginBottom: 6 }}>
-              Acesso Semanal Pré-Pago
-            </h2>
-            <div style={{ fontSize: 12, color: "#64748b", fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 12 }}>
-              Taxa de Acesso: 500 Kz
-            </div>
-            <p style={{ fontSize: 12, color: "#6b7280", lineHeight: 1.6, marginBottom: 20, fontWeight: 500 }}>
-              Paga apenas 500 Kz e obtém 7 dias de acesso ativo e ilimitado para comprar ou vender dólares sem qualquer comissão por transação!
-            </p>
-            
-            <div style={{ background: "#f8fafc", border: "1px dashed #cbd5e1", borderRadius: 12, padding: 14, textAlign: "left", marginBottom: 20 }}>
-              <div style={{ fontSize: 11, fontWeight: 800, color: "#475569", textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 6 }}>
-                Dados para Transferência
-              </div>
-              <div style={{ display: "flex", flexDirection: "column", gap: 6, fontSize: 12, color: "#1e1b4b", fontWeight: 600 }}>
-                <div>Banco: <span style={{ color: "#4f46e5" }}>BAI</span></div>
-                <div>IBAN: <span style={{ color: "#4f46e5", fontFamily: "monospace" }}>AO06 0040 0000 5543 2190 1012 3</span></div>
-                <div>Destinatário: <span style={{ color: "#475569" }}>Pixel Flex Lda.</span></div>
-              </div>
-            </div>
-
-            {/* Test Simulation Bypass Button */}
-            <button
-              className="btn btn-p"
-              onClick={async () => {
-                setOrdLoad(true);
-                const expiryDate = new Date();
-                expiryDate.setDate(expiryDate.getDate() + 7);
-                const { error } = await sb.from("profiles").update({
-                  access_status: "active",
-                  access_expires_at: expiryDate.toISOString()
-                }).eq("id", user.id);
-                setOrdLoad(false);
-                if (error) {
-                  toast_("Erro ao ativar acesso: " + error.message, "err");
-                } else {
-                  toast_("Acesso ativado com sucesso por 7 dias!");
-                  const updatedP = { ...profile, access_status: "active", access_expires_at: expiryDate.toISOString() };
-                  setProfile(updatedP);
-                  localStorage.setItem("bridge_profile", JSON.stringify(updatedP));
-                  setShowActivationScreen(false);
-                }
-              }}
-              disabled={orderLoad}
-              style={{ width: "100%", background: "linear-gradient(135deg,#6366f1,#8b5cf6)", boxShadow: "0 6px 16px rgba(99,102,241,0.2)" }}
-            >
-              {orderLoad ? "A processar..." : "Simular Pagamento e Activar"}
-            </button>
-
-            <button
-              className="btn"
-              onClick={() => setShowActivationScreen(false)}
-              style={{ width: "100%", marginTop: 12, background: "rgba(107, 114, 128, 0.08)", color: "#64748b", border: "1px solid rgba(148, 163, 184, 0.15)" }}
-            >
-              Voltar ao Mercado
-            </button>
-            
-            <div style={{ fontSize: 10, color: "#94a3b8", fontWeight: 700, marginTop: 10 }}>
-              Nota: O acesso expira automaticamente após 7 dias
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
   if (isDesktop) {
     return (
       <div className="app-layout">
@@ -1786,7 +1773,16 @@ function ClientApp({ user, onLogout }) {
                 <span className="bell-badge" />
               </button>
               
-              <div className="user-avatar-btn">
+              <button
+                className="user-avatar-btn"
+                onClick={() => {
+                  setActiveTab("perfil");
+                  setSelectedOrder(null);
+                  setShowCalculator(false);
+                }}
+                style={{ border: "none", background: "none", display: "flex", alignItems: "center", gap: 10, cursor: "pointer" }}
+                title="Ver Perfil"
+              >
                 <div className="user-avatar-circle">
                   {profile.avatar_url ? (
                     <img src={profile.avatar_url} alt="Avatar" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
@@ -1795,15 +1791,23 @@ function ClientApp({ user, onLogout }) {
                   )}
                 </div>
                 <div className="user-info-text">
-                  <span className="user-name-label">{profile.full_name || "Parceiro P2P"}</span>
+                  <span className="user-name-label">{profile.full_name || user.email.split("@")[0]}</span>
                   <span className="user-email-label">{user.email}</span>
                 </div>
-              </div>
+              </button>
             </div>
           </div>
           
           <div style={{ padding: 32, flex: 1, overflowY: "auto" }}>
-            {activeTab === "mercado" ? (
+            {showKycTrigger ? (
+              <div className="card" style={{ padding: 24, background: "#fff" }}>
+                <KycOnboarding user={user} currentStep={kycStep} kycRecord={kycRecord} onLogout={onLogout} onBack={() => setShowKycTrigger(false)} />
+              </div>
+            ) : showActivationScreen ? (
+              <div style={{ display: "flex", justifyContent: "center", alignItems: "center", minHeight: "80vh" }}>
+                {renderActivationCard()}
+              </div>
+            ) : activeTab === "mercado" ? (
               renderDesktopMarket()
             ) : (
               renderDesktopSettings()
@@ -1820,6 +1824,39 @@ function ClientApp({ user, onLogout }) {
           onConfirm={confirmState.onConfirm}
           onCancel={confirmState.onCancel}
         />
+      </div>
+    );
+  }
+
+  if (showKycTrigger) {
+    return (
+      <div className="shell" style={{ position: "relative", minHeight: "100vh", display: "flex", flexDirection: "column" }}>
+        <div className="blob b1" /><div className="blob b2" />
+        <Toast toast={toast} />
+        <Header appliedRate={applied} rateAnim={rateAnim} user={user} onLogout={onLogout}
+          showOrders={showOrders} showProfile={showProfile}
+          onOrdersClick={handleOrdersClick}
+          onProfileClick={handleProfileClick}
+          avatarUrl={profile?.avatar_url} />
+        <KycOnboarding user={user} currentStep={kycStep} kycRecord={kycRecord} onLogout={onLogout} onBack={() => setShowKycTrigger(false)} />
+      </div>
+    );
+  }
+
+  if (showActivationScreen) {
+    return (
+      <div className="shell" style={{ position: "relative", minHeight: "100vh", display: "flex", flexDirection: "column" }}>
+        <div className="blob b1" /><div className="blob b2" />
+        <Toast toast={toast} />
+        <Header appliedRate={applied} rateAnim={rateAnim} user={user} onLogout={onLogout}
+          showOrders={showOrders} showProfile={showProfile}
+          onOrdersClick={handleOrdersClick}
+          onProfileClick={handleProfileClick}
+          avatarUrl={profile?.avatar_url} />
+        
+        <div style={{ flex: 1, display: "flex", flexDirection: "column", justifyContent: "center", padding: "24px 20px" }}>
+          {renderActivationCard()}
+        </div>
       </div>
     );
   }
