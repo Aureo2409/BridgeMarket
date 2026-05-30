@@ -436,6 +436,10 @@ function ClientApp({ user, onLogout }) {
   const [showActivationScreen, setShowActivationScreen] = useState(false);
   const [avatarUploading, setAvatarUploading] = useState(false);
 
+  const [userRating, setUserRating] = useState({ avg: 0, total: 0 });
+  const [isDesktop, setIsDesktop] = useState(window.innerWidth >= 768);
+  const [activeSettingsTab, setActiveSettingsTab] = useState("perfil");
+
   const [confirmState, setConfirmState] = useState({
     isOpen: false,
     title: "",
@@ -468,6 +472,11 @@ function ClientApp({ user, onLogout }) {
   }, []);
 
   useEffect(() => {
+    const handleResize = () => setIsDesktop(window.innerWidth >= 768);
+    window.addEventListener("resize", handleResize);
+
+    loadOrders(); // Load ratings and orders immediately
+
     fetchLatestRate().then(r => {
       setRate(r);
       localStorage.setItem("bridge_rate", JSON.stringify(r));
@@ -553,23 +562,66 @@ function ClientApp({ user, onLogout }) {
           setKycStep(s);
         })
       .subscribe();
-    return () => sb.removeChannel(ch);
+    return () => {
+      sb.removeChannel(ch);
+      window.removeEventListener("resize", handleResize);
+    };
   }, [user.id]);
 
   async function loadOrders() {
     const { data } = await sb.from("orders").select("*, profiles(full_name, avatar_url)").order("created_at", { ascending: false }).limit(100);
+    
+    let userRatingsMap = {};
+    try {
+      const { data: ratingData } = await sb
+        .from("orders")
+        .select("user_id, funder_id, buyer_rating, seller_rating")
+        .or("buyer_rating.not.is.null,seller_rating.not.is.null");
+
+      if (ratingData) {
+        ratingData.forEach(o => {
+          if (o.buyer_rating !== null && o.buyer_rating !== undefined) {
+            if (!userRatingsMap[o.user_id]) userRatingsMap[o.user_id] = { sum: 0, count: 0 };
+            userRatingsMap[o.user_id].sum += o.buyer_rating;
+            userRatingsMap[o.user_id].count += 1;
+          }
+          if (o.seller_rating !== null && o.seller_rating !== undefined && o.funder_id) {
+            if (!userRatingsMap[o.funder_id]) userRatingsMap[o.funder_id] = { sum: 0, count: 0 };
+            userRatingsMap[o.funder_id].sum += o.seller_rating;
+            userRatingsMap[o.funder_id].count += 1;
+          }
+        });
+      }
+    } catch (e) {
+      console.error("Erro ao carregar classificações:", e);
+    }
+
     if (data) {
-      setOrders(data);
-      // Mantém a ordem selecionada em sincronia com o estado global se estiver aberta no TransactionCenter
+      const ordersWithRatings = data.map(o => {
+        const creatorRating = userRatingsMap[o.user_id];
+        return {
+          ...o,
+          creator_rating: creatorRating ? creatorRating.sum / creatorRating.count : 0,
+          creator_rating_count: creatorRating ? creatorRating.count : 0
+        };
+      });
+
+      setOrders(ordersWithRatings);
+
+      const ownRating = userRatingsMap[user.id];
+      setUserRating({
+        avg: ownRating ? ownRating.sum / ownRating.count : 0,
+        total: ownRating ? ownRating.count : 0
+      });
+
       setSelectedOrder(prev => {
         if (!prev) return null;
-        const fresh = data.find(o => o.id === prev.id);
+        const fresh = ordersWithRatings.find(o => o.id === prev.id);
         return fresh ? fresh : prev;
       });
-      // Mantém a ordem ativa do fluxo de criação também sincronizada
       setOrder(prev => {
         if (!prev) return null;
-        const fresh = data.find(o => o.id === prev.id);
+        const fresh = ordersWithRatings.find(o => o.id === prev.id);
         return fresh ? fresh : prev;
       });
     }
@@ -935,6 +987,626 @@ function ClientApp({ user, onLogout }) {
   // SE KYC ESTÁ COMPLETO, MAS O ACESSO SEMANAL NÃO ESTÁ ACTIVO
   const hasActiveAccess = profile?.access_status === "active" || profile?.access_status === "expiring_soon";
 
+  function renderSettingsTabs() {
+    return (
+      <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+        {/* Tab Selector */}
+        <div className="settings-tabs-container">
+          {[
+            { id: "perfil", label: "Perfil" },
+            { id: "preferencias", label: "Preferências" },
+            { id: "verificacao", label: "Verificação" },
+            { id: "seguranca", label: "Segurança" },
+            { id: "metodos", label: "Métodos de Pagamento" }
+          ].map(t => (
+            <button
+              key={t.id}
+              className={`settings-tab-btn${activeSettingsTab === t.id ? " active" : ""}`}
+              onClick={() => {
+                setActiveSettingsTab(t.id);
+                setIsEditingProfile(false); // reset edit state when switching tabs
+              }}
+            >
+              {t.label}
+            </button>
+          ))}
+        </div>
+
+        {/* Tab Content */}
+        {activeSettingsTab === "perfil" && (
+          <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+            {!isEditingProfile ? (
+              <div className="card" style={{ padding: "20px 24px", background: "#fff", border: "1px solid #e2e8f0" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 18 }}>
+                  <div style={{ fontSize: 15, fontWeight: 900, color: "#1e1b4b" }}>Dados Pessoais</div>
+                  <button onClick={() => setIsEditingProfile(true)} style={{ background: "rgba(99,102,241,0.08)", border: "none", color: "#6366f1", borderRadius: 8, padding: "6px 12px", fontSize: 12, fontWeight: 700, display: "flex", alignItems: "center", gap: 6, cursor: "pointer" }}>
+                    <Icon name="edit" size={13} /> Editar
+                  </button>
+                </div>
+
+                <div style={{ display: "flex", flexDirection: "column", alignItems: "center", marginBottom: 24, paddingBottom: 18, borderBottom: "1px solid #f1f5f9" }}>
+                  <div
+                    onClick={() => !avatarUploading && document.getElementById("avatar-upload-file").click()}
+                    style={{
+                      position: "relative",
+                      width: 80,
+                      height: 80,
+                      borderRadius: "50%",
+                      background: "linear-gradient(135deg,#6366f1,#8b5cf6)",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      cursor: "pointer",
+                      overflow: "hidden",
+                      boxShadow: "0 6px 16px rgba(99,102,241,0.18)",
+                      border: "3px solid #fff"
+                    }}
+                  >
+                    {avatarUploading ? (
+                      <div style={{ color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", animation: "spin 1s linear infinite" }}>
+                        <Icon name="loader" size={24} />
+                      </div>
+                    ) : profile.avatar_url ? (
+                      <img src={profile.avatar_url} alt="Avatar" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                    ) : (
+                      <div style={{ color: "#fff", fontSize: 24, fontWeight: 900 }}>
+                        {profile.full_name?.split(" ").map(n => n[0]).slice(0, 2).join("").toUpperCase() || "B"}
+                      </div>
+                    )}
+                    <div className="avatar-overlay" style={{ position: "absolute", bottom: 0, left: 0, right: 0, background: "rgba(0,0,0,0.5)", color: "#fff", fontSize: 9, fontWeight: 800, padding: "4px 0", textAlign: "center", opacity: 0, transition: "opacity 0.2s", display: "flex", justifyContent: "center", alignItems: "center" }}>ALTERAR</div>
+                  </div>
+                  <input id="avatar-upload-file" type="file" style={{ display: "none" }} accept="image/*" onChange={handleAvatarUpload} />
+                  <div style={{ fontSize: 13, fontWeight: 900, color: "#1e1b4b", marginTop: 8 }}>{profile.full_name || "Utilizador"}</div>
+                  <div style={{ fontSize: 10, color: "#94a3b8", fontWeight: 700, marginTop: 2 }}>Clica no círculo para alterar a foto</div>
+                </div>
+
+                <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+                  {[
+                    { label: "Nome Completo", val: profile.full_name || "Não definido" },
+                    { label: "E-mail", val: user.email, isSecure: true },
+                    { label: "Endereço", val: profile.address || "Não definido" },
+                    { label: "Número de Telefone", val: profile.phone || "Não definido" },
+                    { label: "Data de Nascimento", val: profile.date_of_birth ? new Date(profile.date_of_birth).toLocaleDateString('pt-PT') : "Não definido" },
+                    { label: "Nacionalidade", val: profile.nationality || "Não definido" },
+                    { label: "WhatsApp", val: profile.whatsapp || "Não definido" },
+                  ].map((item, idx) => (
+                    <div key={idx} style={{ display: "flex", flexDirection: "column", paddingBottom: 10, borderBottom: idx < 6 ? "1px solid #f1f5f9" : "none" }}>
+                      <span style={{ fontSize: 11, color: "#94a3b8", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: 4 }}>{item.label}</span>
+                      <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                        <span style={{ fontSize: 13, color: "#1e1b4b", fontWeight: 600 }}>{item.val}</span>
+                        {item.isSecure && <Icon name="lock" size={12} color="#94a3b8" />}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ) : (
+              <div className="card" style={{ padding: "20px 24px", background: "#fff", border: "1px solid #e2e8f0" }}>
+                <div style={{ fontSize: 15, fontWeight: 900, color: "#1e1b4b", marginBottom: 18 }}>Editar Dados Pessoais</div>
+                <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+                  <div>
+                    <label className="lbl">Nome Completo</label>
+                    <input className="inp" type="text" placeholder="Nome Completo" value={profile.full_name} onChange={e => setProfile({ ...profile, full_name: e.target.value })} />
+                  </div>
+                  <div>
+                    <label className="lbl">Endereço</label>
+                    <input className="inp" type="text" placeholder="Endereço" value={profile.address || ""} onChange={e => setProfile({ ...profile, address: e.target.value })} />
+                  </div>
+                  <div>
+                    <label className="lbl">Número de Telefone</label>
+                    <input className="inp" type="tel" placeholder="+244 9XX XXX XXX" value={profile.phone} onChange={e => setProfile({ ...profile, phone: e.target.value })} />
+                  </div>
+                  <div>
+                    <label className="lbl">Data de Nascimento</label>
+                    <input className="inp" type="date" value={profile.date_of_birth || ""} onChange={e => setProfile({ ...profile, date_of_birth: e.target.value })} />
+                  </div>
+                  <div>
+                    <label className="lbl">Nacionalidade</label>
+                    <input className="inp" type="text" placeholder="Nacionalidade" value={profile.nationality || ""} onChange={e => setProfile({ ...profile, nationality: e.target.value })} />
+                  </div>
+                  <div>
+                    <label className="lbl">WhatsApp</label>
+                    <input className="inp" type="tel" placeholder="WhatsApp" value={profile.whatsapp || ""} onChange={e => setProfile({ ...profile, whatsapp: e.target.value })} />
+                  </div>
+
+                  <div style={{ display: "flex", gap: 10, marginTop: 10 }}>
+                    <button className="btn btn-p" onClick={handleUpdateProfile} disabled={profileLoad} style={{ flex: 1 }}>
+                      {profileLoad ? "A guardar..." : "Guardar Alterações"}
+                    </button>
+                    <button className="btn btn-o" onClick={() => setIsEditingProfile(false)} disabled={profileLoad} style={{ flex: 1, marginTop: 0 }}>
+                      Cancelar
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Zona de Perigo em Perfil */}
+            <div className="card" style={{ padding: "20px 24px", background: "#fff", border: "1px solid #fee2e2" }}>
+              <div style={{ fontSize: 13, color: "#ef4444", marginBottom: 10, fontWeight: 800 }}>ZONA DE PERIGO</div>
+              <div style={{ fontSize: 11.5, color: "#64748b", marginBottom: 14 }}>Esta acção irá eliminar permanentemente a tua conta e todos os teus dados da nossa plataforma. Esta acção é irreversível.</div>
+              <button className="btn" style={{ background: "#fef2f2", border: "1px solid #fecaca", color: "#ef4444", fontWeight: 800 }} onClick={handleDeleteAccount} disabled={profileLoad}>
+                Eliminar Conta
+              </button>
+            </div>
+          </div>
+        )}
+
+        {activeSettingsTab === "preferencias" && (
+          <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+            {/* Local Details matching Screenshot 3 */}
+            <div className="card" style={{ padding: "20px 24px", background: "#fff", border: "1px solid #e2e8f0" }}>
+              <div style={{ fontSize: 16, fontWeight: 900, color: "#1e1b4b", marginBottom: 6 }}>Detalhes locais</div>
+              <div style={{ display: "flex", flexDirection: "column", gap: 16, marginTop: 16 }}>
+                <div>
+                  <label className="lbl">Moeda local (mostrada na taxa média do mercado)</label>
+                  <select className="inp" style={{ background: "#fff", cursor: "pointer" }} defaultValue="aoa">
+                    <option value="aoa">AOA - Kwanza</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="lbl">Idioma</label>
+                  <select className="inp" style={{ background: "#fff", cursor: "pointer" }} defaultValue="pt">
+                    <option value="pt">PT - Português</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="lbl">Fuso horário</label>
+                  <select className="inp" style={{ background: "#fff", cursor: "pointer" }} defaultValue="luanda">
+                    <option value="luanda">África/Luanda (UTC +01:00)</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            {/* Secondary Email matching Screenshot 3 */}
+            <div className="card" style={{ padding: "20px 24px", background: "#fff", border: "1px solid #e2e8f0" }}>
+              <div style={{ fontSize: 16, fontWeight: 900, color: "#1e1b4b", marginBottom: 6 }}>Email secundário</div>
+              <div style={{ fontSize: 12, color: "#64748b", lineHeight: 1.5, marginBottom: 14 }}>
+                Use e-mails secundários para configurar métodos de pagamento com um e-mail diferente do e-mail principal associado à sua conta Airtm.
+              </div>
+              <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
+                <input className="inp" type="email" placeholder="Insira o e-mail secundário" style={{ flex: 1 }} defaultValue="" />
+                <button className="btn btn-o" style={{ width: "auto", margin: 0, whiteSpace: "nowrap", padding: "10px 16px" }} onClick={() => toast_("Envio de verificação simulado com sucesso!")}>
+                  Verifique o e-mail secundário
+                </button>
+              </div>
+              <div style={{ fontSize: 11, color: "#94a3b8", marginTop: 8 }}>
+                Principal: {user.email}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {activeSettingsTab === "verificacao" && (
+          <div className="card" style={{ padding: "20px 24px", background: "#fff", border: "1px solid #e2e8f0" }}>
+            <div style={{ fontSize: 16, fontWeight: 900, color: "#1e1b4b", marginBottom: 14 }}>Verificação de Identidade</div>
+            {isKycComplete ? (
+              <div style={{ display: "flex", alignItems: "center", gap: 12, padding: "16px", background: "#f0fdf4", border: "1px solid #bbf7d0", borderRadius: 16 }}>
+                <div style={{ width: 36, height: 36, borderRadius: "50%", background: "#10b981", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                  <Icon name="check" size={20} color="#fff" />
+                </div>
+                <div>
+                  <div style={{ fontSize: 14, fontWeight: 900, color: "#16a34a" }}>Conta Verificada (DIDIT KYC)</div>
+                  <div style={{ fontSize: 12, color: "#15803d", fontWeight: 600, marginTop: 2 }}>Sua identidade foi confirmada e sua conta está totalmente aprovada para negociar no mercado P2P.</div>
+                </div>
+              </div>
+            ) : (
+              <div style={{ display: "flex", alignItems: "center", gap: 12, padding: "16px", background: "#fffbeb", border: "1px solid #fef3c7", borderRadius: 16 }}>
+                <div style={{ width: 36, height: 36, borderRadius: "50%", background: "#f59e0b", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                  <Icon name="alertTriangle" size={20} color="#fff" />
+                </div>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontSize: 14, fontWeight: 900, color: "#d97706" }}>Identidade Não Verificada</div>
+                  <div style={{ fontSize: 12, color: "#b45309", fontWeight: 600, marginTop: 2 }}>A sua conta encontra-se pendente de validação. Complete a verificação biométrica para transacionar sem limites.</div>
+                </div>
+                <button className="btn btn-p" style={{ width: "auto", padding: "10px 18px", fontSize: 12 }} onClick={() => setShowKycTrigger(true)}>
+                  Verificar
+                </button>
+              </div>
+            )}
+          </div>
+        )}
+
+        {activeSettingsTab === "seguranca" && (
+          <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+            {/* Security level progress matching Screenshot 4 */}
+            <div className="card" style={{ padding: "20px 24px", background: "#fff", border: "1px solid #e2e8f0" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 12, padding: "14px 18px", background: "#eff6ff", borderRadius: 16, border: "1px solid #bfdbfe", marginBottom: 20 }}>
+                <div style={{ color: "#3b82f6", display: "flex", alignItems: "center" }}>
+                  <Icon name="lock" size={24} color="#3b82f6" />
+                </div>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontSize: 13, fontWeight: 900, color: "#1e3a8a" }}>Nível de segurança: 3/3</div>
+                  <div style={{ fontSize: 11.5, color: "#2563eb", fontWeight: 700, marginTop: 2 }}>Seus fundos estão seguros.</div>
+                </div>
+              </div>
+
+              {/* Password update form */}
+              <div style={{ fontSize: 16, fontWeight: 900, color: "#1e1b4b", marginBottom: 12 }}>Senha</div>
+              <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                <div>
+                  <label className="lbl">Nova palavra-passe</label>
+                  <input className="inp" type="password" placeholder="Mínimo 6 caracteres" value={newPwd} onChange={e => setNewPwd(e.target.value)} />
+                </div>
+                <button className="btn btn-p" style={{ background: "#475569" }} onClick={handleUpdatePassword} disabled={pwdLoad}>
+                  {pwdLoad ? "A guardar..." : "Alterar a senha"}
+                </button>
+              </div>
+            </div>
+
+            {/* 2FA switches matching Screenshot 4 */}
+            <div className="card" style={{ padding: "20px 24px", background: "#fff", border: "1px solid #e2e8f0" }}>
+              <div style={{ fontSize: 16, fontWeight: 900, color: "#1e1b4b", marginBottom: 4 }}>Autenticação de dois fatores (2FA)</div>
+              <div style={{ fontSize: 12, color: "#64748b", marginBottom: 18 }}>Pode exigir a instalação de aplicativos em seu smartphone.</div>
+
+              <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                  <div>
+                    <div style={{ fontSize: 13, fontWeight: 800, color: "#1e1b4b" }}>Iniciar sessão</div>
+                    <div style={{ fontSize: 11, color: "#94a3b8" }}>Solicitar código 2FA ao fazer login</div>
+                  </div>
+                  <input type="checkbox" defaultChecked style={{ width: 40, height: 20 }} />
+                </div>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", borderTop: "1px solid #f1f5f9", paddingTop: 12 }}>
+                  <div>
+                    <div style={{ fontSize: 13, fontWeight: 800, color: "#1e1b4b" }}>Transações</div>
+                    <div style={{ fontSize: 11, color: "#94a3b8" }}>Solicitar confirmação adicional para transacionar</div>
+                  </div>
+                  <input type="checkbox" defaultChecked style={{ width: 40, height: 20 }} />
+                </div>
+              </div>
+
+              <button className="btn btn-p" style={{ marginTop: 20, background: "#6366f1" }} onClick={() => toast_("Definições 2FA reiniciadas")}>
+                Reiniciar 2FA
+              </button>
+            </div>
+          </div>
+        )}
+
+        {activeSettingsTab === "metodos" && (
+          <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+            {/* Active Methods Display as Grid + Add Button matching Screenshot 5 */}
+            <div className="card" style={{ padding: "20px 24px", background: "#fff", border: "1px solid #e2e8f0" }}>
+              <div style={{ fontSize: 16, fontWeight: 900, color: "#1e1b4b", marginBottom: 16 }}>Métodos de Pagamento</div>
+              
+              {!isEditingProfile ? (
+                <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+                  {/* Grid layout */}
+                  <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))", gap: 12 }}>
+                    {/* Add button card */}
+                    <div
+                      onClick={() => setIsEditingProfile(true)}
+                      style={{
+                        border: "2px dashed #cbd5e1",
+                        borderRadius: 16,
+                        padding: 20,
+                        textAlign: "center",
+                        cursor: "pointer",
+                        display: "flex",
+                        flexDirection: "column",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        gap: 8,
+                        minHeight: 120,
+                        transition: "all 0.2s"
+                      }}
+                      onMouseEnter={e => { e.currentTarget.style.borderColor = "#6366f1"; e.currentTarget.style.background = "#f8faff"; }}
+                      onMouseLeave={e => { e.currentTarget.style.borderColor = "#cbd5e1"; e.currentTarget.style.background = "none"; }}
+                    >
+                      <span style={{ fontSize: 24, color: "#6366f1" }}>+</span>
+                      <div style={{ fontSize: 12, fontWeight: 800, color: "#6366f1" }}>Adicionar novo método de pagamento</div>
+                    </div>
+
+                    {/* Active Cards */}
+                    {Object.entries(profile.payment_destinations || {}).filter(([_, info]) => info.active && info.value).map(([id, info]) => {
+                      const d = DESTS.find(x => x.id === id);
+                      if (!d) return null;
+                      return (
+                        <div
+                          key={id}
+                          style={{
+                            border: "1px solid #e2e8f0",
+                            borderRadius: 16,
+                            padding: 16,
+                            background: "#fff",
+                            display: "flex",
+                            flexDirection: "column",
+                            justifyContent: "space-between",
+                            minHeight: 120,
+                            boxShadow: "0 2px 6px rgba(0,0,0,0.02)"
+                          }}
+                        >
+                          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                            <div style={{ width: 28, height: 28, borderRadius: 8, background: d.bg, display: "flex", alignItems: "center", justifyContent: "center" }} dangerouslySetInnerHTML={{ __html: d.svg }} />
+                            <div style={{ fontSize: 12, fontWeight: 800, color: "#1e1b4b" }}>{d.label}</div>
+                          </div>
+                          <div style={{ fontSize: 11, color: "#64748b", fontFamily: "monospace", marginTop: 12, wordBreak: "break-all" }}>{info.value}</div>
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  <button className="btn btn-o" onClick={() => setIsEditingProfile(true)}>
+                    Gerir Métodos de Pagamento
+                  </button>
+                </div>
+              ) : (
+                /* Configurator form */
+                <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+                  <div style={{ fontSize: 13, fontWeight: 900, color: "#1e1b4b", marginBottom: 4 }}>Gerir Métodos de Recebimento</div>
+                  <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                    {DESTS.map(d => {
+                      const active = !!profile.payment_destinations?.[d.id]?.active;
+                      const val = profile.payment_destinations?.[d.id]?.value || "";
+                      return (
+                        <div key={d.id} style={{ display: "flex", flexDirection: "column", gap: 6, padding: 10, background: "#f8fafc", borderRadius: 10, border: "1px solid #e2e8f0" }}>
+                          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                            <input
+                              type="checkbox"
+                              checked={active}
+                              onChange={e => {
+                                const updated = {
+                                  ...profile.payment_destinations,
+                                  [d.id]: { active: e.target.checked, value: val }
+                                };
+                                setProfile({ ...profile, payment_destinations: updated });
+                              }}
+                            />
+                            <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
+                              <div style={{ width: 24, height: 24, borderRadius: 6, background: d.bg, display: "flex", alignItems: "center", justifyContent: "center" }} dangerouslySetInnerHTML={{ __html: d.svg }} fill="none" />
+                              <span style={{ fontSize: 12, fontWeight: 800, color: "#1e1b4b" }}>{d.label}</span>
+                            </div>
+                          </div>
+                          {active && (
+                            <input
+                              className="inp"
+                              style={{ padding: "6px 10px", fontSize: 11.5 }}
+                              type="text"
+                              placeholder={d.hint}
+                              value={val}
+                              onChange={e => {
+                                const updated = {
+                                  ...profile.payment_destinations,
+                                  [d.id]: { active: true, value: e.target.value }
+                                };
+                                setProfile({ ...profile, payment_destinations: updated });
+                              }}
+                            />
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  <div style={{ display: "flex", gap: 10, marginTop: 10 }}>
+                    <button className="btn btn-p" onClick={handleUpdateProfile} disabled={profileLoad} style={{ flex: 1 }}>
+                      {profileLoad ? "A guardar..." : "Guardar Métodos"}
+                    </button>
+                    <button className="btn btn-o" onClick={() => setIsEditingProfile(false)} disabled={profileLoad} style={{ flex: 1, marginTop: 0 }}>
+                      Cancelar
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  function renderDesktopSettings() {
+    return (
+      <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+        <div style={{ fontSize: 24, fontWeight: 900, color: "#1e1b4b", letterSpacing: "-0.5px" }}>
+          Configurações da Conta
+        </div>
+        {renderSettingsTabs()}
+      </div>
+    );
+  }
+
+  function renderDesktopMarket() {
+    if (showCalculator) {
+      return (
+        <div className="card" style={{ padding: 24, background: "#fff" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
+            <h3 style={{ fontSize: 18, fontWeight: 900, color: "#1e1b4b" }}>Criar Nova Oferta P2P</h3>
+            <button className="btn btn-o" style={{ width: "auto", margin: 0, padding: "8px 16px" }} onClick={() => setShowCalculator(false)}>
+              Voltar ao Mercado
+            </button>
+          </div>
+          <Calculator
+            onClose={() => setShowCalculator(false)}
+            onSubmit={handleCalcSubmit}
+            user={user}
+            config={config}
+            profile={profile}
+          />
+        </div>
+      );
+    }
+
+    if (selectedOrder) {
+      const isOwnOrder = selectedOrder.user_id === user.id;
+      return (
+        <div className="card" style={{ padding: 24, background: "#fff" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
+            <h3 style={{ fontSize: 18, fontWeight: 900, color: "#1e1b4b" }}>
+              Detalhes do Pedido P2P
+            </h3>
+            <button className="btn btn-o" style={{ width: "auto", margin: 0, padding: "8px 16px" }} onClick={() => setSelectedOrder(null)}>
+              Voltar ao Mercado
+            </button>
+          </div>
+          
+          <TransactionCenter
+            order={selectedOrder}
+            currentUserId={user?.id}
+            isCreator={isOwnOrder}
+            onBack={() => { setSelectedOrder(null); loadOrders(); }}
+            appliedRate={applied}
+            sb={sb}
+            toast={toast_}
+          />
+        </div>
+      );
+    }
+
+    return (
+      <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+        {/* Metric banner matching Airtm Dashboard center */}
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+          <div className="metric-card">
+            <div className="metric-icon-box green">
+              <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" strokeWidth="2.5">
+                <line x1="7" y1="17" x2="17" y2="7" />
+                <polyline points="7 7 17 7 17 17" />
+              </svg>
+            </div>
+            <div className="metric-content">
+              <div className="metric-label">Taxa de Hoje</div>
+              <div className="metric-value">
+                {applied.toFixed(2)} <span>AOA/USD</span>
+              </div>
+            </div>
+          </div>
+
+          <div className="metric-card">
+            <div className="metric-icon-box blue">
+              <Icon name="shield" size={22} color="#3b82f6" />
+            </div>
+            <div className="metric-content">
+              <div className="metric-label">Sua Confiança</div>
+              <div className="metric-value">
+                {userRating.total > 0 ? `${userRating.avg.toFixed(1)} ★` : "Sem avaliações"}
+              </div>
+              <div className="metric-bar-container">
+                <div className="metric-bar-fill" style={{ width: userRating.total > 0 ? `${(userRating.avg / 5) * 100}%` : "0%" }} />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Hero Card */}
+        <div className="purple-hero-card">
+          <div className="purple-hero-icon">
+            <Icon name="lock" size={20} color="#ffffff" />
+          </div>
+          <div className="purple-hero-text">
+            Suas trocas são 100% garantidas · Transacione com segurança absoluta
+          </div>
+        </div>
+
+        {/* Search & Actions Bar */}
+        <div style={{ display: "flex", gap: 16, alignItems: "center" }}>
+          <div className="search-container" style={{ flex: 1, marginBottom: 0 }}>
+            <div className="search-icon-box">
+              <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="11" cy="11" r="8" />
+                <line x1="21" y1="21" x2="16.65" y2="16.65" />
+              </svg>
+            </div>
+            <input
+              type="text"
+              className="search-input"
+              placeholder="Procurar ofertas de compra ou venda..."
+              value={searchQuery}
+              onChange={e => setSearchQuery(e.target.value)}
+            />
+          </div>
+
+          <button
+            onClick={() => {
+              if (!isKycComplete) {
+                setShowKycTrigger(true);
+              } else if (!hasActiveAccess) {
+                setShowActivationScreen(true);
+              } else {
+                resetFlow();
+                setShowCalculator(true);
+              }
+            }}
+            style={{
+              background: "linear-gradient(135deg,#6366f1,#8b5cf6)",
+              border: "none",
+              color: "#fff",
+              borderRadius: 14,
+              padding: "12px 24px",
+              fontSize: 13,
+              fontWeight: 800,
+              display: "flex",
+              alignItems: "center",
+              gap: 8,
+              cursor: "pointer",
+              boxShadow: "0 6px 16px rgba(99,102,241,0.2)"
+            }}
+          >
+            ➕ Criar Oferta
+          </button>
+        </div>
+
+        {/* Category selector tabs */}
+        <div style={{ display: "flex", gap: 8, background: "#f0efff", borderRadius: 13, padding: 6 }}>
+          {[
+            { id: "comprar", label: "Comprar USD" },
+            { id: "vender", label: "Vender USD" },
+            { id: "meus_pedidos", label: "Meus Pedidos P2P" }
+          ].map(c => (
+            <button
+              key={c.id}
+              onClick={() => setMarketCategory(c.id)}
+              style={{
+                flex: 1,
+                padding: "10px",
+                border: "none",
+                borderRadius: 10,
+                fontFamily: "inherit",
+                fontSize: 13,
+                fontWeight: 700,
+                cursor: "pointer",
+                transition: "all 0.2s",
+                background: marketCategory === c.id ? "white" : "transparent",
+                color: marketCategory === c.id ? "#1e1b4b" : "#6b7280",
+                boxShadow: marketCategory === c.id ? "0 2px 8px rgba(0,0,0,.08)" : "none"
+              }}
+            >
+              {c.label}
+            </button>
+          ))}
+        </div>
+
+        {/* Main listings */}
+        <div className="card" style={{ padding: 24, background: "#fff" }}>
+          <div style={{ fontWeight: 900, fontSize: 16, color: "#1e1b4b", marginBottom: 16 }}>
+            {marketCategory === "meus_pedidos" ? "Os Meus Pedidos Ativos" : "Ofertas P2P Disponíveis no Mercado"}
+          </div>
+          <OrderList
+            orders={orders.filter(o => {
+              if (marketCategory === "comprar" && (o.side || "buy") !== "sell") return false;
+              if (marketCategory === "vender" && (o.side || "buy") !== "buy") return false;
+
+              if (!searchQuery.trim()) return true;
+              const query = searchQuery.toLowerCase();
+              return (
+                o.destination_account?.toLowerCase().includes(query) ||
+                o.amount_usd?.toString().includes(query) ||
+                o.amount_aoa?.toString().includes(query) ||
+                (o.order_ref && o.order_ref.toLowerCase().includes(query))
+              );
+            })}
+            onCancel={handleCancelOrder}
+            currentUserId={user?.id}
+            onTransact={handleTransactOrder}
+            isMarket={marketCategory !== "meus_pedidos"}
+            onSelect={setSelectedOrder}
+          />
+        </div>
+      </div>
+    );
+  }
+
   if (showActivationScreen) {
     return (
       <div className="shell" style={{ position: "relative", minHeight: "100vh", display: "flex", flexDirection: "column" }}>
@@ -1018,17 +1690,136 @@ function ClientApp({ user, onLogout }) {
     );
   }
 
-  if (showKycTrigger) {
+  if (isDesktop) {
     return (
-      <div className="shell">
-        <div className="blob b1" /><div className="blob b2" />
+      <div className="app-layout">
+        <style>{`
+          body {
+            background: #f4f6f9;
+            overflow-x: hidden;
+          }
+        `}</style>
         <Toast toast={toast} />
-        <Header appliedRate={applied} rateAnim={rateAnim} user={user} onLogout={onLogout}
-          showOrders={showOrders} showProfile={showProfile}
-          onOrdersClick={handleOrdersClick}
-          onProfileClick={handleProfileClick}
-          avatarUrl={profile?.avatar_url} />
-        <KycOnboarding user={user} currentStep={kycStep} kycRecord={kycRecord} onLogout={onLogout} onBack={() => setShowKycTrigger(false)} />
+        
+        {/* Left Sidebar */}
+        <div className="sidebar">
+          <div className="sidebar-logo">
+            <div className="logo-mark">
+              <svg viewBox="185 -45 500 500" width="18" height="18">
+                <path d="M 230,300 C 230,170 310,120 375,120 C 420,120 445,160 445,210" fill="none" stroke="#fff" strokeWidth="36" strokeLinecap="butt" strokeLinejoin="round" />
+                <path d="M 425,210 C 425,160 450,120 495,120 C 560,120 640,170 640,300" fill="none" stroke="#fff" strokeWidth="36" strokeLinecap="butt" strokeLinejoin="round" />
+                <path d="M 375,120 C 375,170 350,260 350,300" fill="none" stroke="#fff" strokeWidth="36" strokeLinecap="butt" strokeLinejoin="round" />
+                <path d="M 362,210 C 390,190 410,165 445,150" fill="none" stroke="#fff" strokeWidth="36" strokeLinecap="butt" strokeLinejoin="round" />
+                <path d="M 362,210 C 390,230 435,260 490,300" fill="none" stroke="#fff" strokeWidth="36" strokeLinecap="round" strokeLinejoin="round" />
+                <path d="M 200,210 L 670,210" fill="none" stroke="#fff" strokeWidth="36" strokeLinecap="butt" strokeLinejoin="round" />
+              </svg>
+            </div>
+            <div>
+              <div className="logo-text">Bridge</div>
+              <div className="logo-sub">AOA / USD</div>
+            </div>
+          </div>
+          
+          <div className="sidebar-nav">
+            <button
+              className={`sidebar-link${activeTab === "mercado" ? " active" : ""}`}
+              onClick={() => {
+                setActiveTab("mercado");
+                setSelectedOrder(null);
+                setShowCalculator(false);
+              }}
+            >
+              <Icon name="globe" size={16} />
+              <span>Mercado</span>
+            </button>
+            
+            <button
+              className={`sidebar-link${activeTab === "perfil" ? " active" : ""}`}
+              onClick={() => {
+                setActiveTab("perfil");
+                setSelectedOrder(null);
+                setShowCalculator(false);
+              }}
+            >
+              <Icon name="settings" size={16} />
+              <span>Configurações</span>
+            </button>
+          </div>
+          
+          <div className="sidebar-footer">
+            <a
+              href="https://wa.me/244923000000"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="sidebar-link"
+              style={{ color: "#25D366" }}
+            >
+              <span>💬 Suporte (WhatsApp)</span>
+            </a>
+            
+            <button className="sidebar-link" style={{ color: "#ef4444" }} onClick={onLogout}>
+              <Icon name="loader" size={16} color="#ef4444" className="spin" />
+              <span>Sair</span>
+            </button>
+          </div>
+        </div>
+        
+        {/* Main desktop area */}
+        <div className="desktop-content">
+          <div className="desktop-topbar">
+            <div className="topbar-title">
+              {activeTab === "mercado" ? "MERCADO P2P" : "CONFIGURAÇÕES"}
+            </div>
+            
+            <div className="topbar-right">
+              <div className="rate-chip" style={{ marginRight: 8 }}>
+                <div className="live-dot" />
+                {parseFloat(applied).toLocaleString("pt-AO")} Kz/$
+              </div>
+              
+              <button
+                className="notification-bell"
+                onClick={() => toast_("Não tem novas notificações", "ok")}
+                title="Notificações"
+              >
+                <Icon name="bell" size={20} />
+                <span className="bell-badge" />
+              </button>
+              
+              <div className="user-avatar-btn">
+                <div className="user-avatar-circle">
+                  {profile.avatar_url ? (
+                    <img src={profile.avatar_url} alt="Avatar" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                  ) : (
+                    profile.full_name?.split(" ").map(n => n[0]).slice(0, 2).join("").toUpperCase() || "B"
+                  )}
+                </div>
+                <div className="user-info-text">
+                  <span className="user-name-label">{profile.full_name || "Parceiro P2P"}</span>
+                  <span className="user-email-label">{user.email}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <div style={{ padding: 32, flex: 1, overflowY: "auto" }}>
+            {activeTab === "mercado" ? (
+              renderDesktopMarket()
+            ) : (
+              renderDesktopSettings()
+            )}
+          </div>
+        </div>
+        
+        <ConfirmModal
+          isOpen={confirmState.isOpen}
+          title={confirmState.title}
+          message={confirmState.message}
+          confirmText={confirmState.confirmText}
+          cancelText={confirmState.cancelText}
+          onConfirm={confirmState.onConfirm}
+          onCancel={confirmState.onCancel}
+        />
       </div>
     );
   }
@@ -1049,295 +1840,9 @@ function ClientApp({ user, onLogout }) {
         {activeTab === "perfil" ? (
           <>
             <div style={{ fontWeight: 900, fontSize: 17, color: "#1e1b4b", letterSpacing: "-.4px", marginBottom: 12 }}>
-              O meu Perfil
+              Configurações
             </div>
-            
-            {/* Dados Pessoais Redesenhados e Premium */}
-            {!isEditingProfile ? (
-              <div className="card" style={{ padding: "20px 24px", marginBottom: 14, borderRadius: 16, background: "#fff", border: "1px solid #e2e8f0" }}>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 18 }}>
-                  <div style={{ fontSize: 15, fontWeight: 900, color: "#1e1b4b", letterSpacing: "-0.3px" }}>Dados Pessoais</div>
-                  <button onClick={() => setIsEditingProfile(true)} style={{ background: "rgba(99,102,241,0.08)", border: "none", color: "#6366f1", borderRadius: 8, padding: "6px 12px", fontSize: 12, fontWeight: 700, display: "flex", alignItems: "center", gap: 6, cursor: "pointer", transition: "all 0.2s" }} onMouseEnter={e => e.currentTarget.style.background = "rgba(99,102,241,0.15)"} onMouseLeave={e => e.currentTarget.style.background = "rgba(99,102,241,0.08)"}>
-                    <Icon name="edit" size={13} /> Editar
-                  </button>
-                </div>
-
-                {/* Premium Profile Photo Frame Upload Box */}
-                <div style={{ display: "flex", flexDirection: "column", alignItems: "center", marginBottom: 24, paddingBottom: 18, borderBottom: "1px solid #f1f5f9" }}>
-                  <div
-                    onClick={() => !avatarUploading && document.getElementById("avatar-upload-file").click()}
-                    style={{
-                      position: "relative",
-                      width: 80,
-                      height: 80,
-                      borderRadius: "50%",
-                      background: "linear-gradient(135deg,#6366f1,#8b5cf6)",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      cursor: "pointer",
-                      overflow: "hidden",
-                      boxShadow: "0 6px 16px rgba(99,102,241,0.18)",
-                      transition: "all 0.2s",
-                      border: "3px solid #fff"
-                    }}
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.transform = "scale(1.04)";
-                      const overlay = e.currentTarget.querySelector(".avatar-overlay");
-                      if (overlay) overlay.style.opacity = 1;
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.transform = "scale(1)";
-                      const overlay = e.currentTarget.querySelector(".avatar-overlay");
-                      if (overlay) overlay.style.opacity = 0;
-                    }}
-                  >
-                    {avatarUploading ? (
-                      <div style={{ color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", animation: "spin 1s linear infinite" }}>
-                        <Icon name="loader" size={24} />
-                      </div>
-                    ) : profile.avatar_url ? (
-                      <img
-                        src={profile.avatar_url}
-                        alt="Avatar"
-                        style={{ width: "100%", height: "100%", objectFit: "cover" }}
-                      />
-                    ) : (
-                      <div style={{ color: "#fff", fontSize: 24, fontWeight: 900 }}>
-                        {profile.full_name?.split(" ").map(n => n[0]).slice(0, 2).join("").toUpperCase() || "B"}
-                      </div>
-                    )}
-                    
-                    {/* Interactive Camera Hover Overlay */}
-                    <div 
-                      style={{
-                        position: "absolute",
-                        bottom: 0,
-                        left: 0,
-                        right: 0,
-                        background: "rgba(0,0,0,0.5)",
-                        color: "#fff",
-                        fontSize: 9,
-                        fontWeight: 800,
-                        padding: "4px 0",
-                        textAlign: "center",
-                        opacity: 0,
-                        transition: "opacity 0.2s",
-                        display: "flex",
-                        justifyContent: "center",
-                        alignItems: "center"
-                      }}
-                      className="avatar-overlay"
-                    >
-                      ALTERAR
-                    </div>
-                  </div>
-                  
-                  <input
-                    id="avatar-upload-file"
-                    type="file"
-                    style={{ display: "none" }}
-                    accept="image/*"
-                    onChange={handleAvatarUpload}
-                  />
-                  
-                  <div style={{ fontSize: 13, fontWeight: 900, color: "#1e1b4b", marginTop: 8 }}>
-                    {profile.full_name || "Utilizador"}
-                  </div>
-                  <div style={{ fontSize: 10, color: "#94a3b8", fontWeight: 700, marginTop: 2 }}>
-                    Clica no círculo para alterar a foto
-                  </div>
-                </div>
-
-                <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-                  {[
-                    { label: "Nome Completo", val: profile.full_name || "Não definido" },
-                    { label: "E-mail", val: user.email, isSecure: true },
-                    { label: "Endereço", val: profile.address || "Não definido" },
-                    { label: "Número de Telefone", val: profile.phone || "Não definido" },
-                    { label: "Data de Nascimento", val: profile.date_of_birth ? new Date(profile.date_of_birth).toLocaleDateString('pt-PT') : "Não definido" },
-                    { label: "Nacionalidade", val: profile.nationality || "Não definido" },
-                    { label: "WhatsApp", val: profile.whatsapp || "Não definido" },
-                  ].map((item, idx) => (
-                    <div key={idx} style={{ display: "flex", flexDirection: "column", paddingBottom: 10, borderBottom: idx < 6 ? "1px solid #f1f5f9" : "none" }}>
-                      <span style={{ fontSize: 11, color: "#94a3b8", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: 4 }}>{item.label}</span>
-                      <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                        <span style={{ fontSize: 13, color: "#1e1b4b", fontWeight: 600 }}>{item.val}</span>
-                        {item.isSecure && <Icon name="lock" size={12} color="#94a3b8" title="Verificado e Protegido" />}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-
-                {/* Active Payment Destinations Display */}
-                <div style={{ marginTop: 20, paddingTop: 16, borderTop: "1px solid #f1f5f9" }}>
-                  <div style={{ fontSize: 13, fontWeight: 900, color: "#1e1b4b", marginBottom: 12 }}>Métodos de Recebimento Ativos</div>
-                  {Object.entries(profile.payment_destinations || {}).filter(([_, info]) => info.active && info.value).length === 0 ? (
-                    <div style={{ fontSize: 11, color: "#64748b", background: "#f8fafc", padding: "10px 14px", borderRadius: 10, textAlign: "center", border: "1px dashed #cbd5e1" }}>
-                      Nenhum método configurado. Edita os teus dados para adicionar os teus destinos de recebimento!
-                    </div>
-                  ) : (
-                    <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                      {Object.entries(profile.payment_destinations || {}).filter(([_, info]) => info.active && info.value).map(([id, info]) => {
-                        const d = DESTS.find(x => x.id === id);
-                        if (!d) return null;
-                        return (
-                          <div key={id} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 14px", background: "#f8fafc", borderRadius: 12, border: "1px solid #e2e8f0" }}>
-                            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                              <div style={{ width: 28, height: 28, borderRadius: 8, background: d.bg, display: "flex", alignItems: "center", justifyContent: "center" }} dangerouslySetInnerHTML={{ __html: d.svg }} />
-                              <div>
-                                <div style={{ fontSize: 12, fontWeight: 800, color: "#1e1b4b" }}>{d.label}</div>
-                                <div style={{ fontSize: 11, color: "#64748b", fontFamily: "monospace", marginTop: 2 }}>{info.value}</div>
-                              </div>
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  )}
-                </div>
-              </div>
-            ) : (
-              <div className="card" style={{ padding: "20px 24px", marginBottom: 14, borderRadius: 16, background: "#fff", border: "1px solid #e2e8f0" }}>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 18 }}>
-                  <div style={{ fontSize: 15, fontWeight: 900, color: "#1e1b4b", letterSpacing: "-0.3px" }}>Editar Dados Pessoais</div>
-                </div>
-
-                <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-                  <div>
-                    <label className="lbl">Nome Completo</label>
-                    <input className="inp" type="text" placeholder="Nome Completo" value={profile.full_name} onChange={e => setProfile({ ...profile, full_name: e.target.value })} />
-                  </div>
-                  <div>
-                    <label className="lbl">E-mail (Seguro)</label>
-                    <input className="inp" type="text" disabled value={user.email} style={{ background: "#f8fafc", color: "#64748b", cursor: "not-allowed" }} />
-                  </div>
-                  <div>
-                    <label className="lbl">Endereço</label>
-                    <input className="inp" type="text" placeholder="Endereço" value={profile.address || ""} onChange={e => setProfile({ ...profile, address: e.target.value })} />
-                  </div>
-                  <div>
-                    <label className="lbl">Número de Telefone</label>
-                    <input className="inp" type="tel" placeholder="+244 9XX XXX XXX" value={profile.phone} onChange={e => setProfile({ ...profile, phone: e.target.value })} />
-                  </div>
-                  <div>
-                    <label className="lbl">Data de Nascimento</label>
-                    <input className="inp" type="date" value={profile.date_of_birth || ""} onChange={e => setProfile({ ...profile, date_of_birth: e.target.value })} />
-                  </div>
-                  <div>
-                    <label className="lbl">Nacionalidade</label>
-                    <input className="inp" type="text" placeholder="Nacionalidade" value={profile.address || ""} onChange={e => setProfile({ ...profile, nationality: e.target.value })} />
-                  </div>
-                  <div>
-                    <label className="lbl">WhatsApp</label>
-                    <input className="inp" type="tel" placeholder="WhatsApp" value={profile.whatsapp || ""} onChange={e => setProfile({ ...profile, whatsapp: e.target.value })} />
-                  </div>
-
-                  <div style={{ borderTop: "1px solid #e2e8f0", paddingTop: 14, marginTop: 10 }}>
-                    <div style={{ fontSize: 13, fontWeight: 900, color: "#1e1b4b", marginBottom: 10 }}>Os Meus Destinos de Recebimento</div>
-                    <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-                      {DESTS.map(d => {
-                        const active = !!profile.payment_destinations?.[d.id]?.active;
-                        const val = profile.payment_destinations?.[d.id]?.value || "";
-                        return (
-                          <div key={d.id} style={{ display: "flex", flexDirection: "column", gap: 6, padding: 10, background: "#f8fafc", borderRadius: 10, border: "1px solid #e2e8f0" }}>
-                            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                              <input
-                                type="checkbox"
-                                checked={active}
-                                onChange={e => {
-                                  const updated = {
-                                    ...profile.payment_destinations,
-                                    [d.id]: { active: e.target.checked, value: val }
-                                  };
-                                  setProfile({ ...profile, payment_destinations: updated });
-                                }}
-                              />
-                              <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
-                                <div style={{ width: 24, height: 24, borderRadius: 6, background: d.bg, display: "flex", alignItems: "center", justifyContent: "center" }} dangerouslySetInnerHTML={{ __html: d.svg }} fill="none" />
-                                <span style={{ fontSize: 12, fontWeight: 800, color: "#1e1b4b" }}>{d.label}</span>
-                              </div>
-                            </div>
-                            {active && (
-                              <input
-                                className="inp"
-                                style={{ padding: "6px 10px", fontSize: 11.5 }}
-                                type="text"
-                                placeholder={d.hint}
-                                value={val}
-                                onChange={e => {
-                                  const updated = {
-                                    ...profile.payment_destinations,
-                                    [d.id]: { active: true, value: e.target.value }
-                                  };
-                                  setProfile({ ...profile, payment_destinations: updated });
-                                }}
-                              />
-                            )}
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
-
-                  <div style={{ display: "flex", gap: 10, marginTop: 10 }}>
-                    <button className="btn btn-p" onClick={handleUpdateProfile} disabled={profileLoad} style={{ flex: 1 }}>
-                      {profileLoad ? "A guardar..." : "Guardar Alterações"}
-                    </button>
-                    <button className="btn btn-o" onClick={() => setIsEditingProfile(false)} disabled={profileLoad} style={{ flex: 1, marginTop: 0 }}>
-                      Cancelar
-                    </button>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* Verificação de Identidade */}
-            <div className="card" style={{ marginBottom: 14 }}>
-              <div style={{ fontSize: 14, fontWeight: 800, color: "#1e1b4b", marginBottom: 10 }}>Verificação de Identidade</div>
-              {isKycComplete ? (
-                <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "12px 14px", background: "#f0fdf4", border: "1px solid #bbf7d0", borderRadius: 12 }}>
-                  <div style={{ width: 30, height: 30, borderRadius: "50%", background: "#10b981", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                    <Icon name="check" size={16} />
-                  </div>
-                  <div>
-                    <div style={{ fontSize: 13, fontWeight: 800, color: "#16a34a" }}>Identidade Verificada (DIDIT)</div>
-                    <div style={{ fontSize: 11, color: "#15803d", fontWeight: 600, marginTop: 2 }}>A tua conta está totalmente validada e segura para transações.</div>
-                  </div>
-                </div>
-              ) : (
-                <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "12px 14px", background: "#fffbeb", border: "1px solid #fef3c7", borderRadius: 12 }}>
-                  <div style={{ width: 30, height: 30, borderRadius: "50%", background: "#f59e0b", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                    <Icon name="alertTriangle" size={16} />
-                  </div>
-                  <div style={{ flex: 1 }}>
-                    <div style={{ fontSize: 13, fontWeight: 800, color: "#d97706" }}>Identidade Não Verificada</div>
-                    <div style={{ fontSize: 11, color: "#b45309", fontWeight: 600, marginTop: 2 }}>Verifica a tua identidade para poderes criar pedidos e transacionar.</div>
-                  </div>
-                  <button className="btn btn-p" style={{ width: "auto", padding: "6px 12px", fontSize: 11, height: "auto" }} onClick={() => setShowKycTrigger(true)}>
-                    Verificar
-                  </button>
-                </div>
-              )}
-            </div>
-
-            {/* Segurança da Conta */}
-            <div className="card" style={{ marginBottom: 14 }}>
-              <div style={{ fontSize: 14, fontWeight: 800, color: "#1e1b4b", marginBottom: 10 }}>Segurança da Conta</div>
-              <div style={{ fontSize: 12, color: "#6b7280", marginBottom: 14, fontWeight: 500 }}>Define uma nova palavra-passe para a tua conta ({user.email}).</div>
-              <label className="lbl">Nova palavra-passe</label>
-              <input className="inp" style={{ marginBottom: 10 }} type="password" placeholder="Mínimo 6 caracteres" value={newPwd} onChange={e => setNewPwd(e.target.value)} />
-              <button className="btn btn-p" style={{ background: "#475569" }} onClick={handleUpdatePassword} disabled={pwdLoad}>
-                {pwdLoad ? "A guardar..." : "Guardar nova senha"}
-              </button>
-
-              <div style={{ marginTop: 24, paddingTop: 14, borderTop: "1px solid #e2e8f0" }}>
-                <div style={{ fontSize: 12, color: "#ef4444", marginBottom: 10, fontWeight: 600 }}>Zona de Perigo</div>
-                <button className="btn btn-o" style={{ color: "#ef4444", borderColor: "#fecaca", background: "#fef2f2" }} onClick={handleDeleteAccount} disabled={profileLoad}>
-                  <div style={{ display: "flex", alignItems: "center", gap: 6, justifyContent: "center" }}><Icon name="trash" size={14} /> Apagar conta permanentemente</div>
-                </button>
-              </div>
-            </div>
+            {renderSettingsTabs()}
           </>
         ) : (
           /* activeTab === "mercado" */

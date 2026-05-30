@@ -203,8 +203,9 @@ export function OrderList({ orders, onCancel, currentUserId, onTransact, isMarke
 
         // Dynamic but stable mock user details based on user_id to ensure a stunning visual flow
         const charCodeSum = o.user_id ? o.user_id.split("").reduce((acc, char) => acc + char.charCodeAt(0), 0) : 100;
-        const rating = 95 + (charCodeSum % 5); // 95 to 99%
-        const trocas = 30 + (charCodeSum % 170); // 30 to 200 trocas
+        const hasRating = o.creator_rating_count > 0;
+        const displayRating = hasRating ? `${o.creator_rating.toFixed(1)} ★` : "Sem avaliações";
+        const trocas = o.creator_rating_count || 0;
         const minutes = 5 + (charCodeSum % 16); // 5 to 20 min
         const creatorName = o.profiles?.full_name || `Parceiro P2P #${o.user_id.slice(0, 5).toUpperCase()}`;
         const creatorAvatar = o.profiles?.avatar_url;
@@ -235,10 +236,10 @@ export function OrderList({ orders, onCancel, currentUserId, onTransact, isMarke
                     {creatorName}
                   </div>
                   <div className="p2p-user-rating">
-                    ★ {rating}% Confiança
+                    {displayRating}
                   </div>
                   <div className="p2p-user-stats">
-                    <span className="p2p-stat-item">{trocas} trocas</span>
+                    <span className="p2p-stat-item">{trocas} {trocas === 1 ? "transação" : "transações"}</span>
                     <span>·</span>
                     <span className="p2p-stat-item">{minutes} min</span>
                   </div>
