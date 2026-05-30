@@ -891,20 +891,31 @@ function ClientApp({ user, onLogout }) {
 
   const handleProfileClick = () => {
     setSelectedOrder(null);
-    if (showProfile) {
+    setShowCalculator(false);
+    setShowActivationScreen(false);
+    if (activeTab === "perfil") {
+      setActiveTab("mercado");
+      setMarketCategory("comprar");
       setShowProfile(false);
       setShowO(false);
     } else {
+      setActiveTab("perfil");
       setShowProfile(true);
-      setShowO(true);
+      setShowO(false);
     }
   };
 
   const handleOrdersClick = () => {
     setSelectedOrder(null);
-    if (showOrders && !showProfile) {
+    setShowCalculator(false);
+    setShowActivationScreen(false);
+    if (activeTab === "mercado" && marketCategory === "meus_pedidos") {
+      setMarketCategory("comprar");
       setShowO(false);
+      setShowProfile(false);
     } else {
+      setActiveTab("mercado");
+      setMarketCategory("meus_pedidos");
       setShowO(true);
       setShowProfile(false);
       loadOrders();
@@ -930,9 +941,9 @@ function ClientApp({ user, onLogout }) {
         <div className="blob b1" /><div className="blob b2" />
         <Toast toast={toast} />
         <Header appliedRate={applied} rateAnim={rateAnim} user={user} onLogout={onLogout}
-          showOrders={false} showProfile={false}
-          onOrdersClick={() => {}}
-          onProfileClick={() => {}}
+          showOrders={showOrders} showProfile={showProfile}
+          onOrdersClick={handleOrdersClick}
+          onProfileClick={handleProfileClick}
           avatarUrl={profile?.avatar_url} />
         
         <div style={{ flex: 1, display: "flex", flexDirection: "column", justifyContent: "center", padding: "24px 20px" }}>
