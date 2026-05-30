@@ -1,9 +1,15 @@
 import { createClient } from "@supabase/supabase-js";
 
-const SUPABASE_URL = process.env.VITE_SUPABASE_URL || "https://gexlmuclvadddhlbmgkl.supabase.co";
-const SUPABASE_ANON_KEY = process.env.VITE_SUPABASE_ANON_KEY || "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdleGxtdWNsdmFkZGRobGJtZ2tsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzgwOTM2NjksImV4cCI6MjA5MzY2OTY2OX0.c4Bgf2C-QcTSsl_CzCvyBHzpFDmKVXVdQ0x34LywFTk";
+const SUPABASE_URL = process.env.VITE_SUPABASE_URL;
+const SUPABASE_ANON_KEY = process.env.VITE_SUPABASE_ANON_KEY;
 
-const sb = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+let sb = null;
+if (SUPABASE_URL && SUPABASE_ANON_KEY) {
+  sb = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+}
+
+// Limite de taxa em memória (max 3 por user por hora)
+const rateLimits = new Map();
 
 export default async function handler(req, res) {
   // CORS Headers
@@ -23,6 +29,11 @@ export default async function handler(req, res) {
 
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
+  }
+
+  if (!sb) {
+    console.error('❌ Supabase não configurado no servidor.');
+    return res.status(500).json({ error: 'Supabase não está configurado no servidor.' });
   }
 
   // 1. Validar autenticação JWT Supabase do utilizador
@@ -48,6 +59,19 @@ export default async function handler(req, res) {
   if (user_id !== user.id) {
     return res.status(403).json({ error: 'Acesso proibido. Não pode criar uma sessão de verificação para outro utilizador.' });
   }
+
+  // Rate Limiting: 3 pedidos por hora
+  const now = Date.now();
+  const oneHourAgo = now - 3600000;
+  let userRequests = rateLimits.get(user_id) || [];
+  userRequests = userRequests.filter(ts => ts > oneHourAgo);
+
+  if (userRequests.length >= 3) {
+    return res.status(429).json({ error: 'Limite de taxa excedido. Máximo de 3 sessões de verificação por hora.' });
+  }
+
+  userRequests.push(now);
+  rateLimits.set(user_id, userRequests);
 
   const DIDIT_API_KEY = process.env.DIDIT_API_KEY;
   if (!DIDIT_API_KEY) {

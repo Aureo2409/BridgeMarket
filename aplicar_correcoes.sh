@@ -24,8 +24,8 @@ echo "📁 Pasta raiz detectada: $ROOT"
 ENV_FILE="$ROOT/../.env"
 if [ ! -f "$ENV_FILE" ] && [ ! -f ".env" ]; then
   cat > .env << 'ENVEOF'
-VITE_SUPABASE_URL=https://gexlmuclvadddhlbmgkl.supabase.co
-VITE_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdleGxtdWNsdmFkZGRobGJtZ2tsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzgwOTM2NjksImV4cCI6MjA5MzY2OTY2OX0.c4Bgf2C-QcTSsl_CzCvyBHzpFDmKVXVdQ0x34LywFTk
+VITE_SUPABASE_URL=COLOQUE_AQUI_A_SUA_URL
+VITE_SUPABASE_ANON_KEY=COLOQUE_AQUI_A_SUA_ANON_KEY
 ENVEOF
   echo "✅ .env criado"
 fi

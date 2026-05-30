@@ -480,18 +480,21 @@ app.listen(port, '0.0.0.0', () => console.log(`🌐 Servidor web ativo na porta 
 
 // ── SUPABASE ──────────────────────────────────────────────────────────────────
 
-const supabaseUrl = process.env.VITE_SUPABASE_URL || "https://gexlmuclvadddhlbmgkl.supabase.co";
+const supabaseUrl = process.env.VITE_SUPABASE_URL;
 const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY
     ? process.env.SUPABASE_SERVICE_ROLE_KEY.trim()
     : null;
 
+if (!supabaseUrl) {
+    console.error("🚨 ERRO FATAL: Falta a variável VITE_SUPABASE_URL!");
+}
 if (!supabaseKey) {
     console.error("🚨 ERRO FATAL: Falta a variável SUPABASE_SERVICE_ROLE_KEY!");
 }
 
-const supabase = createClient(supabaseUrl, supabaseKey, {
+const supabase = (supabaseUrl && supabaseKey) ? createClient(supabaseUrl, supabaseKey, {
     realtime: { transport: WebSocket }
-});
+}) : null;
 
 // ── GEMINI AI ─────────────────────────────────────────────────────────────────
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);

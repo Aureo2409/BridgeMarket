@@ -16,6 +16,7 @@ export function TransactionCenter({ order, user, onBack, onCancel }) {
   const [showConfirmSentModal, setShowConfirmSentModal] = useState(false);
   const [showReleaseModal, setShowReleaseModal] = useState(false);
   const chatEndRef = useRef(null);
+  const [securityAlert, setSecurityAlert] = useState("");
 
   const destInfo = DESTS.find(d => d.id === currentOrder?.destination);
   const isCreator = user?.id === currentOrder?.user_id;
@@ -106,14 +107,27 @@ export function TransactionCenter({ order, user, onBack, onCancel }) {
 
   async function handleSendMessage(e) {
     e?.preventDefault();
-    if (!newMessage.trim()) return;
+    const text = newMessage.trim();
+    if (!text) return;
+
+    // Padrões de segurança: IBAN (AO06 ou PT\d{2}), Telefone angolano (+244 ou 9 dígitos começados por 9), Links externos (http, https, www)
+    const ibanPattern = /AO06|PT\d{2}/i;
+    const phonePattern = /(\+244|9\d{8})/i;
+    const linkPattern = /https?:\/\/[^\s]+|www\.[^\s]+/i;
+
+    if (ibanPattern.test(text) || phonePattern.test(text) || linkPattern.test(text)) {
+      setSecurityAlert("Por razões de segurança contra fraudes e spam, não podes enviar dados de pagamento (IBANs), números de telefone ou links de terceiros directamente no chat. Utiliza os destinos oficiais no painel do negócio.");
+      return;
+    }
+
+    setSecurityAlert(""); // Limpar alerta se passar
 
     const { error } = await sb.from("chat_messages").insert({
       order_id: currentOrder.id,
       user_id: currentOrder.user_id,
       sender_id: user.id,
       sender_role: isCreator ? "client" : "partner",
-      body: newMessage.trim()
+      body: text
     });
 
     if (!error) {
@@ -142,6 +156,18 @@ export function TransactionCenter({ order, user, onBack, onCancel }) {
       });
 
       if (!error) {
+        // Atualizar proof_uploaded na base de dados e estado local
+        const { error: proofError } = await sb
+          .from("orders")
+          .update({ proof_uploaded: true })
+          .eq("id", currentOrder.id);
+
+        if (!proofError) {
+          setCurrentOrder(prev => ({ ...prev, proof_uploaded: true }));
+        } else {
+          console.error("Erro ao atualizar proof_uploaded:", proofError);
+        }
+        
         fetchMessages();
       } else {
         alert("Erro ao enviar comprovativo: " + error.message);
@@ -459,8 +485,24 @@ export function TransactionCenter({ order, user, onBack, onCancel }) {
               </div>
             ) : (
               <div style={{ display: "flex", flexDirection: "column", height: 320 }}>
-                <div className="security-chat-warning">
-                  🛡️ Aviso de Segurança: Nunca partilhes dados de pagamento ou IBANs fora da plataforma. Não continues a negociação no WhatsApp.
+                <div style={{
+                  background: "linear-gradient(135deg, #fffbeb, #fef3c7)",
+                  border: "1px solid #f59e0b",
+                  borderRadius: 12,
+                  padding: "10px 12px",
+                  fontSize: 11,
+                  lineHeight: 1.4,
+                  color: "#b45309",
+                  fontWeight: 700,
+                  marginBottom: 10,
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 8,
+                  boxShadow: "0 2px 8px rgba(245, 158, 11, 0.08)",
+                  textAlign: "left"
+                }}>
+                  <span style={{ fontSize: 16 }}>🛡️</span>
+                  <span><strong>Aviso de Segurança:</strong> Nunca partilhes dados de pagamento, IBANs ou contactos no chat. O matching já foi feito de forma segura e automática!</span>
                 </div>
                 <div style={{ flex: 1, overflowY: "auto", paddingRight: 4, display: "flex", flexDirection: "column", gap: 10, marginBottom: 12 }}>
                   {messages.length === 0 ? (
@@ -517,6 +559,45 @@ export function TransactionCenter({ order, user, onBack, onCancel }) {
                   )}
                   <div ref={chatEndRef} />
                 </div>
+
+                {securityAlert && (
+                  <div style={{
+                    background: "rgba(239, 68, 68, 0.08)",
+                    border: "1px solid rgba(239, 68, 68, 0.2)",
+                    borderRadius: 12,
+                    padding: "8px 12px",
+                    margin: "4px 0 8px",
+                    color: "#ef4444",
+                    fontSize: 10.5,
+                    lineHeight: 1.5,
+                    fontWeight: 700,
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: 6
+                  }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
+                      <span>⚠️</span>
+                      <span>{securityAlert}</span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setSecurityAlert("")}
+                      style={{
+                        alignSelf: "flex-end",
+                        background: "rgba(239, 68, 68, 0.12)",
+                        border: "none",
+                        color: "#ef4444",
+                        padding: "3px 8px",
+                        borderRadius: 6,
+                        fontSize: 9,
+                        fontWeight: 800,
+                        cursor: "pointer"
+                      }}
+                    >
+                      Compreendo
+                    </button>
+                  </div>
+                )}
 
                 <form onSubmit={handleSendMessage} style={{ display: "flex", gap: 8, borderTop: "1px solid #f1f5f9", paddingTop: 10 }}>
                   <button
@@ -786,21 +867,28 @@ export function TransactionCenter({ order, user, onBack, onCancel }) {
                       </div>
                       <button
                         onClick={handleConfirmSent}
+                        disabled={!currentOrder.proof_uploaded}
                         style={{
                           width: "100%",
-                          background: "linear-gradient(135deg,#10b981,#059669)",
+                          background: currentOrder.proof_uploaded ? "linear-gradient(135deg,#10b981,#059669)" : "#94a3b8",
                           border: "none",
                           color: "#fff",
                           padding: "10px 14px",
                           borderRadius: 10,
                           fontSize: 12,
                           fontWeight: 800,
-                          cursor: "pointer",
-                          boxShadow: "0 4px 12px rgba(16,185,129,0.18)"
+                          cursor: currentOrder.proof_uploaded ? "pointer" : "not-allowed",
+                          boxShadow: currentOrder.proof_uploaded ? "0 4px 12px rgba(16,185,129,0.18)" : "none",
+                          opacity: currentOrder.proof_uploaded ? 1 : 0.65
                         }}
                       >
                         Já Enviei os Dólares (Confirmar Envio)
                       </button>
+                      {!currentOrder.proof_uploaded && (
+                        <div style={{ fontSize: 10.5, color: "#d97706", fontWeight: 700, marginTop: 8, textAlign: "center" }}>
+                          ⚠️ Deves carregar o comprovativo (ícone 📎) antes de confirmar.
+                        </div>
+                      )}
                     </>
                   )
                 )

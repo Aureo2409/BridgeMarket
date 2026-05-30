@@ -427,12 +427,13 @@ function ClientApp({ user, onLogout }) {
   const [profile, setProfile] = useState(() => {
     try {
       const cached = localStorage.getItem("bridge_profile");
-      return cached ? JSON.parse(cached) : { full_name: "", phone: "", date_of_birth: "", nationality: "", whatsapp: "", address: "", kyc_status: "", avatar_url: "", access_status: "inactive", access_expires_at: null, payment_destinations: {} };
+      return cached ? JSON.parse(cached) : { full_name: "", phone: "", date_of_birth: "", nationality: "", whatsapp: "", address: "", kyc_status: "", avatar_url: "", access_status: "inactive", access_expires_at: null, payment_destinations: {}, cancelled_count: 0, last_cancelled_at: null };
     } catch {
-      return { full_name: "", phone: "", date_of_birth: "", nationality: "", whatsapp: "", address: "", kyc_status: "", avatar_url: "", access_status: "inactive", access_expires_at: null, payment_destinations: {} };
+      return { full_name: "", phone: "", date_of_birth: "", nationality: "", whatsapp: "", address: "", kyc_status: "", avatar_url: "", access_status: "inactive", access_expires_at: null, payment_destinations: {}, cancelled_count: 0, last_cancelled_at: null };
     }
   });
   const [profileLoad, setProfileLoad] = useState(false);
+  const [showActivationScreen, setShowActivationScreen] = useState(false);
   const [avatarUploading, setAvatarUploading] = useState(false);
 
   const [confirmState, setConfirmState] = useState({
@@ -477,7 +478,7 @@ function ClientApp({ user, onLogout }) {
       localStorage.setItem("bridge_config", JSON.stringify(c));
     }).catch(() => { });
 
-    sb.from("profiles").select("full_name, phone, date_of_birth, nationality, whatsapp, address, kyc_status, avatar_url, access_status, access_expires_at, payment_destinations").eq("id", user.id).maybeSingle().then(({ data }) => {
+    sb.from("profiles").select("full_name, phone, date_of_birth, nationality, whatsapp, address, kyc_status, avatar_url, access_status, access_expires_at, payment_destinations, cancelled_count, last_cancelled_at").eq("id", user.id).maybeSingle().then(({ data }) => {
       if (data) {
         let currentStatus = data.access_status || "inactive";
         if (data.access_expires_at && new Date() > new Date(data.access_expires_at) && (currentStatus === "active" || currentStatus === "expiring_soon")) {
@@ -496,7 +497,9 @@ function ClientApp({ user, onLogout }) {
           avatar_url: data.avatar_url || "",
           access_status: currentStatus,
           access_expires_at: data.access_expires_at || null,
-          payment_destinations: data.payment_destinations || {}
+          payment_destinations: data.payment_destinations || {},
+          cancelled_count: data.cancelled_count || 0,
+          last_cancelled_at: data.last_cancelled_at || null
         };
         setProfile(p);
         localStorage.setItem("bridge_profile", JSON.stringify(p));
@@ -593,7 +596,44 @@ function ClientApp({ user, onLogout }) {
       return;
     }
 
+    const hasActiveAccess = profile?.access_status === "active" || profile?.access_status === "expiring_soon";
+    if (!hasActiveAccess) {
+      setShowActivationScreen(true);
+      return;
+    }
+
+    // Verificar suspensão por excesso de cancelamentos (>= 3 cancelamentos nos últimos 30 dias)
+    const cancelledCount = parseInt(profile?.cancelled_count || 0, 10);
+    if (cancelledCount >= 3 && profile?.last_cancelled_at) {
+      const lastCancel = new Date(profile.last_cancelled_at);
+      const daysDiff = (new Date() - lastCancel) / (1000 * 60 * 60 * 24);
+      if (daysDiff < 30) {
+        const remainingDays = Math.ceil(30 - daysDiff);
+        toast_(`A tua conta foi suspensa para novas ordens por 30 dias devido a cancelamentos repetidos. Restam ${remainingDays} dias.`, "err");
+        return;
+      }
+    }
+
     setOrdLoad(true);
+
+    // Verificar se o utilizador já tem um pedido ativo (limite de 1 por utilizador)
+    try {
+      const { count, error: countError } = await sb
+        .from("orders")
+        .select("*", { count: "exact", head: true })
+        .eq("user_id", user.id)
+        .in("status", ["awaiting_payment", "pending", "processing"]);
+
+      if (countError) {
+        console.error("Erro ao verificar limite de pedidos ativos:", countError);
+      } else if (count && count >= 1) {
+        toast_("Limitação de uso: Só podes ter 1 pedido ativo simultaneamente.", "err");
+        setOrdLoad(false);
+        return;
+      }
+    } catch (e) {
+      console.error(e);
+    }
 
     const timeoutPromise = (promise, ms) => {
       return new Promise((resolve, reject) => {
@@ -683,6 +723,25 @@ function ClientApp({ user, onLogout }) {
         if (error) { toast_("Erro ao cancelar: " + error.message, "err"); }
         else {
           toast_("Pedido cancelado.");
+
+          // Incrementar contador de cancelamentos no perfil
+          const currentCount = parseInt(profile?.cancelled_count || 0, 10);
+          const newCount = currentCount + 1;
+          const nowIso = new Date().toISOString();
+          
+          const { error: profileError } = await sb.from("profiles").update({
+            cancelled_count: newCount,
+            last_cancelled_at: nowIso
+          }).eq("id", user.id);
+
+          if (!profileError) {
+            const updatedP = { ...profile, cancelled_count: newCount, last_cancelled_at: nowIso };
+            setProfile(updatedP);
+            localStorage.setItem("bridge_profile", JSON.stringify(updatedP));
+          } else {
+            console.error("Erro ao atualizar contador de cancelamentos no perfil:", profileError);
+          }
+
           const oRef = (orders.find(o => o.id === orderId) || currentOrder)?.order_ref || `#${orderId.slice(0, 8).toUpperCase()}`;
           sb.from("admin_alerts").insert({
             type: "cancelled",
@@ -700,6 +759,11 @@ function ClientApp({ user, onLogout }) {
   }
 
   async function handleTransactOrder(orderId) {
+    const hasActiveAccess = profile?.access_status === "active" || profile?.access_status === "expiring_soon";
+    if (!hasActiveAccess) {
+      setShowActivationScreen(true);
+      return;
+    }
     triggerConfirm(
       "Iniciar Negociação P2P",
       "Confirmas que queres aceitar este pedido P2P e iniciar a correspondência com o comprador?",
@@ -860,7 +924,7 @@ function ClientApp({ user, onLogout }) {
   // SE KYC ESTÁ COMPLETO, MAS O ACESSO SEMANAL NÃO ESTÁ ACTIVO
   const hasActiveAccess = profile?.access_status === "active" || profile?.access_status === "expiring_soon";
 
-  if (isKycComplete && !hasActiveAccess) {
+  if (showActivationScreen) {
     return (
       <div className="shell" style={{ position: "relative", minHeight: "100vh", display: "flex", flexDirection: "column" }}>
         <div className="blob b1" /><div className="blob b2" />
@@ -917,12 +981,21 @@ function ClientApp({ user, onLogout }) {
                   const updatedP = { ...profile, access_status: "active", access_expires_at: expiryDate.toISOString() };
                   setProfile(updatedP);
                   localStorage.setItem("bridge_profile", JSON.stringify(updatedP));
+                  setShowActivationScreen(false);
                 }
               }}
               disabled={orderLoad}
               style={{ width: "100%", background: "linear-gradient(135deg,#6366f1,#8b5cf6)", boxShadow: "0 6px 16px rgba(99,102,241,0.2)" }}
             >
               {orderLoad ? "A processar..." : "Simular Pagamento e Activar"}
+            </button>
+
+            <button
+              className="btn"
+              onClick={() => setShowActivationScreen(false)}
+              style={{ width: "100%", marginTop: 12, background: "rgba(107, 114, 128, 0.08)", color: "#64748b", border: "1px solid rgba(148, 163, 184, 0.15)" }}
+            >
+              Voltar ao Mercado
             </button>
             
             <div style={{ fontSize: 10, color: "#94a3b8", fontWeight: 700, marginTop: 10 }}>
@@ -1443,6 +1516,8 @@ function ClientApp({ user, onLogout }) {
                                          kycRecord?.liveness_status === "passed");
                       if (!isKycComp) {
                         setShowKycTrigger(true);
+                      } else if (!hasActiveAccess) {
+                        setShowActivationScreen(true);
                       } else {
                         resetFlow();
                         setShowCalculator(true);

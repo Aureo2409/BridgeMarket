@@ -1,0 +1,444 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Bridge Market — Pendentes de Implementação</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;1,9..40,300&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:#07080f;--s1:#0d0f1c;--s2:#111320;--s3:#161928;
+  --border:#1d2035;--border2:#252840;
+  --purple:#7c6fff;--teal:#00e5c3;--gold:#f5c518;
+  --red:#ff4d6d;--blue:#60a5fa;--green:#22d3a5;--orange:#ff8c42;
+  --text:#e8eaf6;--muted:#555870;--mono:'IBM Plex Mono',monospace;
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+html{scroll-behavior:smooth;}
+body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;font-size:15px;line-height:1.7;overflow-x:hidden;}
+body::before{content:'';position:fixed;inset:0;background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.03'/%3E%3C/svg%3E");pointer-events:none;z-index:0;}
+
+.hero{position:relative;padding:72px 32px 56px;text-align:center;overflow:hidden;border-bottom:1px solid var(--border);}
+.hero::before{content:'';position:absolute;top:-120px;left:50%;transform:translateX(-50%);width:600px;height:600px;background:radial-gradient(ellipse,rgba(255,140,66,.1) 0%,transparent 65%);pointer-events:none;}
+.hero::after{content:'';position:absolute;bottom:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,var(--orange),var(--gold),transparent);}
+.hero-logo{display:inline-flex;align-items:center;gap:12px;margin-bottom:28px;padding:10px 20px;background:var(--s2);border:1px solid var(--border2);border-radius:50px;}
+.hero-logo-icon{width:32px;height:32px;background:linear-gradient(135deg,var(--orange),var(--gold));border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:16px;}
+.hero-logo-text{font-family:'Syne',sans-serif;font-size:14px;font-weight:700;letter-spacing:1px;}
+h1{font-family:'Syne',sans-serif;font-size:clamp(28px,5vw,50px);font-weight:800;line-height:1.08;letter-spacing:-1.5px;margin-bottom:16px;}
+h1 .o{background:linear-gradient(135deg,var(--orange),var(--gold));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
+.hero-sub{font-size:14px;color:var(--muted);max-width:540px;margin:0 auto 28px;line-height:1.8;}
+.hero-meta{display:flex;justify-content:center;gap:8px;flex-wrap:wrap;}
+.tag{padding:5px 14px;border-radius:20px;font-family:var(--mono);font-size:10px;font-weight:600;letter-spacing:.8px;text-transform:uppercase;border:1px solid;}
+.tag-orange{background:rgba(255,140,66,.08);color:var(--orange);border-color:rgba(255,140,66,.2);}
+.tag-gold{background:rgba(245,197,24,.08);color:var(--gold);border-color:rgba(245,197,24,.2);}
+.tag-red{background:rgba(255,77,109,.08);color:var(--red);border-color:rgba(255,77,109,.2);}
+.tag-blue{background:rgba(96,165,250,.08);color:var(--blue);border-color:rgba(96,165,250,.2);}
+.tag-purple{background:rgba(124,111,255,.08);color:var(--purple);border-color:rgba(124,111,255,.2);}
+.tag-green{background:rgba(34,211,165,.08);color:var(--green);border-color:rgba(34,211,165,.2);}
+
+.nav{position:sticky;top:0;z-index:100;background:rgba(7,8,15,.92);backdrop-filter:blur(12px);border-bottom:1px solid var(--border);padding:0 32px;display:flex;gap:0;overflow-x:auto;}
+.nav a{padding:14px 16px;font-family:var(--mono);font-size:10px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:var(--muted);text-decoration:none;white-space:nowrap;border-bottom:2px solid transparent;transition:all .2s;}
+.nav a:hover{color:var(--text);border-bottom-color:var(--orange);}
+
+.wrap{max-width:960px;margin:0 auto;padding:0 24px;}
+.content{padding:56px 0 100px;display:flex;flex-direction:column;gap:40px;}
+
+.sec{background:var(--s1);border:1px solid var(--border);border-radius:20px;overflow:hidden;}
+.sec-head{padding:20px 26px 16px;border-bottom:1px solid var(--border);display:flex;align-items:flex-start;gap:14px;position:relative;}
+.sec-head::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;}
+.sec-head.orange::before{background:linear-gradient(90deg,var(--orange),transparent);}
+.sec-head.red::before{background:linear-gradient(90deg,var(--red),transparent);}
+.sec-head.gold::before{background:linear-gradient(90deg,var(--gold),transparent);}
+.sec-head.blue::before{background:linear-gradient(90deg,var(--blue),transparent);}
+.sec-head.purple::before{background:linear-gradient(90deg,var(--purple),transparent);}
+.sec-icon{width:42px;height:42px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0;}
+.sec-num{font-family:var(--mono);font-size:9px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:3px;}
+.sec-title{font-family:'Syne',sans-serif;font-size:16px;font-weight:800;letter-spacing:-.3px;}
+.sec-sub{font-size:12px;color:var(--muted);margin-top:3px;}
+.sec-body{padding:24px 26px;display:flex;flex-direction:column;gap:20px;}
+
+p{font-size:14px;color:#b0b4cc;line-height:1.8;}
+strong{color:var(--text);font-weight:600;}
+code{font-family:var(--mono);font-size:11px;background:rgba(255,255,255,.06);padding:2px 6px;border-radius:4px;color:#a5b4fc;}
+
+.note{border-radius:12px;padding:14px 18px;font-size:13.5px;line-height:1.8;border-left:3px solid;}
+.note p{font-size:13.5px;}
+.note-orange{background:rgba(255,140,66,.07);border-color:var(--orange);}
+.note-red{background:rgba(255,77,109,.07);border-color:var(--red);}
+.note-gold{background:rgba(245,197,24,.07);border-color:var(--gold);}
+.note-blue{background:rgba(96,165,250,.07);border-color:var(--blue);}
+.note-purple{background:rgba(124,111,255,.07);border-color:var(--purple);}
+
+.tbl-wrap{overflow-x:auto;border-radius:12px;border:1px solid var(--border);}
+table{width:100%;border-collapse:collapse;}
+thead tr{background:var(--s3);}
+thead th{font-family:var(--mono);font-size:9.5px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);text-align:left;padding:11px 14px;border-bottom:1px solid var(--border2);white-space:nowrap;}
+tbody tr{border-bottom:1px solid rgba(29,32,53,.5);}
+tbody tr:last-child{border-bottom:none;}
+tbody tr:nth-child(even){background:rgba(17,19,32,.4);}
+tbody td{padding:11px 14px;font-size:13px;vertical-align:top;line-height:1.6;color:#c4c6d4;}
+tbody td:first-child{color:var(--text);font-weight:500;}
+
+.fix-list{display:flex;flex-direction:column;gap:12px;}
+.fix-item{display:flex;gap:14px;padding:16px 18px;background:var(--s2);border:1px solid var(--border);border-radius:14px;position:relative;overflow:hidden;}
+.fix-item::before{content:'';position:absolute;left:0;top:0;bottom:0;width:3px;}
+.fix-p1::before{background:var(--red);}
+.fix-p2::before{background:var(--orange);}
+.fix-p3::before{background:var(--gold);}
+.fix-p4::before{background:var(--blue);}
+.fix-p5::before{background:var(--purple);}
+.fix-num{font-family:'Syne',sans-serif;font-size:20px;font-weight:800;width:28px;flex-shrink:0;padding-top:2px;}
+.fix-title{font-family:'Syne',sans-serif;font-size:13px;font-weight:700;margin-bottom:5px;}
+.fix-desc{font-size:12.5px;color:#8b8fa8;line-height:1.65;}
+.fix-file{margin-top:7px;font-family:var(--mono);font-size:10px;padding:3px 9px;border-radius:4px;display:inline-block;}
+.fix-file-orange{background:rgba(255,140,66,.1);color:var(--orange);}
+.fix-file-red{background:rgba(255,77,109,.1);color:var(--red);}
+.fix-file-gold{background:rgba(245,197,24,.1);color:var(--gold);}
+.fix-file-blue{background:rgba(96,165,250,.1);color:var(--blue);}
+.fix-file-purple{background:rgba(124,111,255,.1);color:var(--purple);}
+
+.sql{background:#060710;border:1px solid #151829;border-radius:10px;padding:16px 18px;font-family:var(--mono);font-size:12px;line-height:1.9;overflow-x:auto;white-space:pre;color:#a5b4fc;}
+
+.phase-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:12px;}
+.phase-card{background:var(--s2);border:1px solid var(--border);border-radius:14px;padding:18px;position:relative;overflow:hidden;}
+.phase-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;}
+.p2::before{background:var(--teal);}
+.p3::before{background:var(--gold);}
+.p4::before{background:var(--green);}
+.phase-num{font-family:var(--mono);font-size:9px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:6px;}
+.phase-title{font-family:'Syne',sans-serif;font-size:14px;font-weight:800;margin-bottom:3px;}
+.phase-users{font-family:var(--mono);font-size:11px;color:var(--muted);margin-bottom:12px;}
+.phase-items{display:flex;flex-direction:column;gap:5px;}
+.phase-item{font-size:12px;color:#8b8fa8;display:flex;gap:6px;line-height:1.5;}
+.phase-item::before{content:'—';color:var(--border2);flex-shrink:0;}
+
+.done-sec{background:rgba(34,211,165,.04);border:1px solid rgba(34,211,165,.15);border-radius:16px;padding:20px 24px;}
+.done-title{font-family:'Syne',sans-serif;font-size:14px;font-weight:700;color:var(--green);margin-bottom:12px;display:flex;align-items:center;gap:8px;}
+.done-grid{display:flex;flex-direction:column;gap:7px;}
+.done-item{display:flex;align-items:flex-start;gap:10px;font-size:13px;color:#6b7280;line-height:1.5;}
+.done-item::before{content:'✓';color:var(--green);font-weight:700;flex-shrink:0;margin-top:1px;}
+.done-item s{text-decoration:line-through;color:#4b5563;}
+
+.final{background:linear-gradient(135deg,#0d0f1e,#121528);border:1px solid rgba(255,140,66,.2);border-radius:20px;padding:36px 32px;position:relative;overflow:hidden;text-align:center;}
+.final::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,var(--orange),var(--gold),var(--purple));}
+.final-title{font-family:'Syne',sans-serif;font-size:26px;font-weight:800;letter-spacing:-1px;margin-bottom:12px;}
+.final-sub{font-size:14px;color:#8b8fa8;max-width:520px;margin:0 auto 24px;line-height:1.8;}
+.final-tags{display:flex;justify-content:center;gap:8px;flex-wrap:wrap;}
+
+@media(max-width:600px){.hero{padding:48px 20px 40px;}.wrap{padding:0 16px;}.sec-body,.sec-head{padding:16px 16px;}.phase-grid{grid-template-columns:1fr;}}
+</style>
+</head>
+<body>
+
+<div class="hero">
+  <div class="hero-logo">
+    <div class="hero-logo-icon">⏳</div>
+    <span class="hero-logo-text">BRIDGE MARKET — PENDENTES</span>
+  </div>
+  <h1>O que ainda<br>falta <span class="o">implementar</span></h1>
+  <p class="hero-sub">Documento actualizado após a Fase 1. Tudo o que já foi feito foi removido. O que está aqui são os próximos passos reais.</p>
+  <div class="hero-meta">
+    <span class="tag tag-green">Fase 1 Concluída ✓</span>
+    <span class="tag tag-orange">4 Pendentes Críticos</span>
+    <span class="tag tag-gold">3 Próximo Mês</span>
+    <span class="tag tag-blue">Fase 2 — 500 util.</span>
+    <span class="tag tag-purple">Convénio BAI — Fase 3</span>
+  </div>
+</div>
+
+<nav class="nav">
+  <a href="#feito">Já Feito</a>
+  <a href="#criticos">Críticos</a>
+  <a href="#importante">Importantes</a>
+  <a href="#proximo">Próx. Mês</a>
+  <a href="#fases">Fases 2–4</a>
+</nav>
+
+<div class="wrap"><div class="content">
+
+<!-- O QUE JÁ FOI FEITO -->
+<div class="done-sec" id="feito">
+  <div class="done-title">✓ Fase 1 — Implementado e Concluído</div>
+  <div class="done-grid">
+    <div class="done-item"><s>Colunas access_status e access_expires_at adicionadas à tabela profiles (setup_weekly_access.sql)</s></div>
+    <div class="done-item"><s>Coluna payment_destinations (JSONB) adicionada à tabela profiles</s></div>
+    <div class="done-item"><s>Ecrã de Acesso Semanal Pré-pago de 500 Kz implementado em App.jsx com dados BAI e simulador de activação</s></div>
+    <div class="done-item"><s>Lógica de access_status (active / expired / inactive) implementada em App.jsx com verificação automática de expiração</s></div>
+    <div class="done-item"><s>Secção de destinos de pagamento estruturada no perfil — utilizador configura múltiplos destinos simultâneos</s></div>
+    <div class="done-item"><s>Card de destinos do comprador exibido no chat após matching (TransactionCenter.jsx)</s></div>
+    <div class="done-item"><s>Vendedor selecciona o método de recebimento a partir dos destinos configurados pelo comprador</s></div>
+    <div class="done-item"><s>Vídeo biométrico P2P estendido para 6 segundos em OrderList.jsx</s></div>
+    <div class="done-item"><s>ConfirmModal customizado substituiu window.confirm() em TransactionCenter.jsx</s></div>
+    <div class="done-item"><s>Chave DIDIt API movida para process.env.DIDIT_API_KEY em api/didit-session.js e bot.js</s></div>
+    <div class="done-item"><s>workflow_id e callback_url via variáveis de ambiente com fallbacks</s></div>
+    <div class="done-item"><s>constants.js actualizado com 10 destinos oficiais da Fase 1 com cores HSL e SVGs</s></div>
+    <div class="done-item"><s>npm run build executado com sucesso — sem dependências quebradas</s></div>
+  </div>
+</div>
+
+<!-- CRÍTICOS -->
+<div class="sec" id="criticos">
+  <div class="sec-head red">
+    <div class="sec-icon" style="background:rgba(255,77,109,.1);">🔴</div>
+    <div>
+      <div class="sec-num">Pendentes Críticos</div>
+      <div class="sec-title">Corrigir Esta Semana</div>
+      <div class="sec-sub">Estes pontos afectam directamente a segurança e o funcionamento da plataforma em produção</div>
+    </div>
+  </div>
+  <div class="sec-body">
+    <div class="fix-list">
+
+      <div class="fix-item fix-p1">
+        <div class="fix-num" style="color:var(--red);">01</div>
+        <div>
+          <div class="fix-title">Remover fallbacks hardcoded do vite.config.js e .env.example</div>
+          <div class="fix-desc">
+            A Supabase Anon Key e a URL do projecto continuam hardcoded no <code>vite.config.js</code> como fallback — o que as injeta directamente no bundle JavaScript público da Vercel. Qualquer visitante abre o DevTools e vê a chave.<br><br>
+            O <code>.env.example</code> também ainda tem a chave real em vez de <code>SUA_CHAVE_AQUI</code>.<br><br>
+            <strong>Fix:</strong> Remover completamente os fallbacks do vite.config.js. As variáveis devem existir <em>apenas</em> no painel da Vercel. Se não estiverem configuradas, a app deve mostrar erro — isso é preferível a ter chaves reais no código.
+          </div>
+          <span class="fix-file fix-file-red">vite.config.js — remover define{} com fallbacks</span>
+          <span class="fix-file fix-file-red">.env.example — substituir valores reais por placeholders</span>
+        </div>
+      </div>
+
+      <div class="fix-item fix-p1">
+        <div class="fix-num" style="color:var(--red);">02</div>
+        <div>
+          <div class="fix-title">Adicionar autenticação JWT à endpoint /api/didit-session</div>
+          <div class="fix-desc">
+            A chave DIDIt já está em variável de ambiente — mas a endpoint ainda não verifica se o pedido vem de um utilizador autenticado. Aceita qualquer <code>user_id</code> enviado sem verificar se existe sessão válida.<br><br>
+            Um atacante pode fazer chamadas em loop para a endpoint e esgotar os créditos DIDIt gerando custos sem que nenhum utilizador real seja verificado.<br><br>
+            <strong>Fix:</strong> Extrair o JWT do header Authorization, verificar com o Supabase Admin que o utilizador existe e está autenticado, só então criar a sessão DIDIt. Adicionar rate limit de 3 sessões por user_id por hora.
+          </div>
+          <span class="fix-file fix-file-red">api/didit-session.js — adicionar verificação de JWT + rate limit</span>
+        </div>
+      </div>
+
+      <div class="fix-item fix-p2">
+        <div class="fix-num" style="color:var(--orange);">03</div>
+        <div>
+          <div class="fix-title">Confirmar RLS activo em todas as tabelas do Supabase</div>
+          <div class="fix-desc">
+            Com a Supabase Anon Key acessível no bundle público, qualquer pessoa pode fazer chamadas directas à API REST do Supabase. Se o Row Level Security não estiver correctamente configurado, consegue ler pedidos, mensagens e dados de outros utilizadores.<br><br>
+            <strong>Fix:</strong> No Supabase Dashboard → Authentication → Policies, verificar que todas as tabelas têm RLS activo com políticas correctas. A política para <code>orders</code> deve garantir que <code>user_id = auth.uid()</code> para SELECT.
+          </div>
+          <span class="fix-file fix-file-orange">Supabase Dashboard → Table Editor → RLS Policies</span>
+        </div>
+      </div>
+
+      <div class="fix-item fix-p2">
+        <div class="fix-num" style="color:var(--orange);">04</div>
+        <div>
+          <div class="fix-title">Ecrã de 500 Kz: mover trigger do login para o botão "Criar Pedido"</div>
+          <div class="fix-desc">
+            O ecrã de Acesso Semanal Pré-pago está implementado, mas actualmente bloqueia o acesso assim que o utilizador entra — antes de explorar a plataforma. A decisão estratégica é que o utilizador deve ver o mercado primeiro, criar confiança, e só então ver o ecrã de pagamento quando clicar em "Criar Pedido".<br><br>
+            <strong>Fix:</strong> Em vez de verificar <code>hasActiveAccess</code> na renderização principal, mover essa verificação para dentro de <code>handleCreateOrder()</code>. Se o acesso não estiver activo nesse momento, aí sim mostrar o ecrã dos 500 Kz.
+          </div>
+          <span class="fix-file fix-file-orange">App.jsx — mover hasActiveAccess para handleCreateOrder()</span>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- IMPORTANTES -->
+<div class="sec" id="importante">
+  <div class="sec-head gold">
+    <div class="sec-icon" style="background:rgba(245,197,24,.1);">🟡</div>
+    <div>
+      <div class="sec-num">Pendentes Importantes</div>
+      <div class="sec-title">Próximas 2 Semanas</div>
+      <div class="sec-sub">Melhoram a confiança, a protecção contra burlas e a experiência do utilizador</div>
+    </div>
+  </div>
+  <div class="sec-body">
+    <div class="fix-list">
+
+      <div class="fix-item fix-p3">
+        <div class="fix-num" style="color:var(--gold);">05</div>
+        <div>
+          <div class="fix-title">Aviso de segurança fixo no chat — detecção de IBAN e números</div>
+          <div class="fix-desc">
+            O card de destinos já está no chat, mas ainda falta o aviso de segurança permanente no topo ou fundo do chat: "Nunca partilhes dados de pagamento fora desta plataforma."<br><br>
+            Também falta detectar quando são partilhados padrões de IBAN, número de telefone ou links externos no chat e mostrar um alerta ao utilizador em tempo real.<br><br>
+            <strong>Fix:</strong> Adicionar banner fixo no TransactionCenter. Adicionar função de regex no handleSendMessage() que detecta padrões <code>PT\d{2}</code>, <code>+244</code>, <code>http</code> e mostra aviso antes de enviar.
+          </div>
+          <span class="fix-file fix-file-gold">TransactionCenter.jsx — banner + regex detector no chat</span>
+        </div>
+      </div>
+
+      <div class="fix-item fix-p3">
+        <div class="fix-num" style="color:var(--gold);">06</div>
+        <div>
+          <div class="fix-title">Comprovativo obrigatório antes do botão "Já Enviei" ficar activo</div>
+          <div class="fix-desc">
+            Actualmente o vendedor pode clicar "Já Enviei os Dólares" sem fazer upload de nenhum comprovativo. O comprovativo pode ser falsificado, mas a sua ausência remove completamente qualquer registo da transacção.<br><br>
+            <strong>Fix:</strong> Tornar o botão "Já Enviei" inactivo (disabled + tooltip explicativo) até o vendedor ter feito upload de pelo menos um ficheiro de comprovativo via ProofUpload. O ProofUpload.jsx já existe e está funcional.
+          </div>
+          <span class="fix-file fix-file-gold">TransactionCenter.jsx — condicionar botão a proof_uploaded = true</span>
+        </div>
+      </div>
+
+      <div class="fix-item fix-p3">
+        <div class="fix-num" style="color:var(--gold);">07</div>
+        <div>
+          <div class="fix-title">Limite de 1 pedido activo por utilizador + penalização por cancelamentos</div>
+          <div class="fix-desc">
+            Sem este limite, um concorrente malicioso pode criar 20–30 contas verificadas e inundar o mercado P2P com pedidos falsos que nunca pretende completar — degradando a experiência de todos.<br><br>
+            <strong>Fix:</strong> Em <code>handleCreateOrder()</code>, antes de criar o pedido, fazer query ao Supabase para contar pedidos activos do utilizador. Se <code>count >= 1</code>, mostrar mensagem de erro. Adicionar campo <code>cancelled_count</code> ao perfil e bloquear criação de novos pedidos quando <code>cancelled_count >= 3</code> em 30 dias.
+          </div>
+          <span class="fix-file fix-file-gold">App.jsx — handleCreateOrder() + Supabase RLS</span>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- PRÓXIMO MÊS -->
+<div class="sec" id="proximo">
+  <div class="sec-head blue">
+    <div class="sec-icon" style="background:rgba(96,165,250,.1);">🔵</div>
+    <div>
+      <div class="sec-num">Próximo Mês</div>
+      <div class="sec-title">Crescimento e Reputação</div>
+      <div class="sec-sub">Funcionalidades que escalam a confiança e o volume da plataforma</div>
+    </div>
+  </div>
+  <div class="sec-body">
+    <div class="fix-list">
+
+      <div class="fix-item fix-p4">
+        <div class="fix-num" style="color:var(--blue);">08</div>
+        <div>
+          <div class="fix-title">Sistema de avaliação pós-transacção (1–5 estrelas) visível no mercado</div>
+          <div class="fix-desc">
+            O campo <code>rating</code> já existe no código do TransactionCenter mas não está implementado visualmente como fluxo pós-transacção. Após o estado <code>completed</code>, deve aparecer um ecrã de avaliação para ambas as partes.<br><br>
+            A avaliação deve ser visível na listagem do mercado P2P junto ao nome do vendedor — isso cria incentivo para bom comportamento e penalização natural para quem falha.
+          </div>
+          <span class="fix-file fix-file-blue">TransactionCenter.jsx + OrderList.jsx — RatingModal pós-completed</span>
+        </div>
+      </div>
+
+      <div class="fix-item fix-p4">
+        <div class="fix-num" style="color:var(--blue);">09</div>
+        <div>
+          <div class="fix-title">Automação da aprovação KYC para scores altos do DIDIt</div>
+          <div class="fix-desc">
+            Actualmente toda a aprovação KYC é manual pelo admin. Quando o DIDIt retorna um score de confiança alto (acima de 95%), a aprovação pode ser automática. Isso reduz o tempo de activação de conta de horas para minutos — especialmente importante quando a plataforma tiver centenas de novos registos por semana.
+          </div>
+          <span class="fix-file fix-file-blue">bot.js — webhook DIDIt, lógica de auto-aprovação por score</span>
+        </div>
+      </div>
+
+      <div class="fix-item fix-p4">
+        <div class="fix-num" style="color:var(--blue);">10</div>
+        <div>
+          <div class="fix-title">Dark mode por variáveis CSS em vez de filtro invert()</div>
+          <div class="fix-desc">
+            O modo escuro actual usa <code>filter: invert(1) hue-rotate(180deg)</code>. Funciona mas distorce imagens, logos e vídeos — incluindo o vídeo biométrico e os avatares dos utilizadores. Um sistema de variáveis CSS (<code>--bg</code>, <code>--text</code>, <code>--surface</code>) dá um dark mode limpo sem efeitos secundários visuais.
+          </div>
+          <span class="fix-file fix-file-blue">App.jsx + constants.js — sistema de CSS variables para tema</span>
+        </div>
+      </div>
+
+    </div>
+
+    <div class="note note-orange">
+      <p><strong style="color:var(--orange);">SQL a executar no Supabase para suportar os pendentes:</strong></p>
+    </div>
+
+    <div class="sql"><span style="color:#374151;">-- Suporte a contagem de cancelamentos (pendente 07)</span>
+<span style="color:#f472b6;">ALTER TABLE</span> profiles
+  <span style="color:#f472b6;">ADD COLUMN IF NOT EXISTS</span> cancelled_count    <span style="color:#86efac;">INT</span> <span style="color:#f472b6;">DEFAULT</span> <span style="color:#86efac;">0</span>,
+  <span style="color:#f472b6;">ADD COLUMN IF NOT EXISTS</span> last_cancelled_at  <span style="color:#86efac;">TIMESTAMPTZ</span>;
+
+<span style="color:#374151;">-- Suporte a comprovativo obrigatório (pendente 06)</span>
+<span style="color:#f472b6;">ALTER TABLE</span> orders
+  <span style="color:#f472b6;">ADD COLUMN IF NOT EXISTS</span> proof_uploaded     <span style="color:#86efac;">BOOLEAN</span> <span style="color:#f472b6;">DEFAULT</span> <span style="color:#86efac;">false</span>;
+
+<span style="color:#374151;">-- Suporte a avaliações (pendente 08)</span>
+<span style="color:#f472b6;">ALTER TABLE</span> orders
+  <span style="color:#f472b6;">ADD COLUMN IF NOT EXISTS</span> buyer_rating       <span style="color:#86efac;">INT</span>,
+  <span style="color:#f472b6;">ADD COLUMN IF NOT EXISTS</span> seller_rating      <span style="color:#86efac;">INT</span>,
+  <span style="color:#f472b6;">ADD COLUMN IF NOT EXISTS</span> rating_done        <span style="color:#86efac;">BOOLEAN</span> <span style="color:#f472b6;">DEFAULT</span> <span style="color:#86efac;">false</span>;</div>
+  </div>
+</div>
+
+<!-- FASES 2–4 -->
+<div class="sec" id="fases">
+  <div class="sec-head purple">
+    <div class="sec-icon" style="background:rgba(124,111,255,.1);">🚀</div>
+    <div>
+      <div class="sec-num">Roadmap</div>
+      <div class="sec-title">Fases 2, 3 e 4 — Crescimento até ao Convénio BAI</div>
+      <div class="sec-sub">A Fase 1 está concluída. O que vem a seguir.</div>
+    </div>
+  </div>
+  <div class="sec-body">
+    <div class="phase-grid">
+      <div class="phase-card p2">
+        <div class="phase-num">Fase 02 — 3–6 meses</div>
+        <div class="phase-title" style="color:var(--teal);">Expansão</div>
+        <div class="phase-users">200 → 500 utilizadores</div>
+        <div class="phase-items">
+          <div class="phase-item">Visa Dubai + Mastercard Virtual</div>
+          <div class="phase-item">Remitly + WorldRemit</div>
+          <div class="phase-item">Sistema de reputação visível no mercado</div>
+          <div class="phase-item">App mobile iOS e Android</div>
+          <div class="phase-item">Planos mensal (2.000 Kz) e anual (24.000 Kz)</div>
+          <div class="phase-item">Primeira reunião com BAI com dados de volume</div>
+        </div>
+      </div>
+      <div class="phase-card p3">
+        <div class="phase-num">Fase 03 — 6–18 meses</div>
+        <div class="phase-title" style="color:var(--gold);">Escala</div>
+        <div class="phase-users">500 → 1.000 utilizadores</div>
+        <div class="phase-items">
+          <div class="phase-item">API B2B para empresas importadoras</div>
+          <div class="phase-item">Licença BNA — operador de câmbio digital</div>
+          <div class="phase-item">Auto-aprovação KYC por score DIDIt</div>
+          <div class="phase-item">Negociação formal convénio BAI e BFA</div>
+          <div class="phase-item">Receita anual: 24M Kz (~$21K USD)</div>
+        </div>
+      </div>
+      <div class="phase-card p4">
+        <div class="phase-num">Fase 04 — 18+ meses</div>
+        <div class="phase-title" style="color:var(--green);">Liderança</div>
+        <div class="phase-users">1.000+ utilizadores</div>
+        <div class="phase-items">
+          <div class="phase-item">Visa BAI emitido directamente via Bridge</div>
+          <div class="phase-item">Integração API bancária directa (MULTICAIXA)</div>
+          <div class="phase-item">Expansão PALOP — Moçambique, Cabo Verde</div>
+          <div class="phase-item">Captação de investimento Seed externo</div>
+          <div class="phase-item">Bridge como infra-estrutura financeira Angola</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="note note-purple">
+      <p><strong style="color:var(--purple);">Sobre o convénio com o BAI:</strong> Não vais ao BAI pedir um convénio agora. Vais quando tiveres 500+ utilizadores activos e volume documentado mês a mês. Os bancos não fazem convénios com ideias — fazem com produtos que já provaram tracção. Quando o BAI vir o volume de cartões BAI Visa movimentados via Bridge, vai querer estar dentro.</p>
+    </div>
+  </div>
+</div>
+
+<!-- FINAL -->
+<div class="final">
+  <div class="final-title">Fase 1 concluída.<br>Próximo: os 10 pendentes.</div>
+  <p class="final-sub">4 críticos esta semana, 3 importantes em 2 semanas, 3 no próximo mês. Depois disso a plataforma está pronta para escalar para a Fase 2.</p>
+  <div class="final-tags">
+    <span class="tag tag-red">01 + 02 — Segurança hoje</span>
+    <span class="tag tag-orange">03 + 04 — RLS + trigger</span>
+    <span class="tag tag-gold">05 + 06 + 07 — Protecção</span>
+    <span class="tag tag-blue">08 + 09 + 10 — Crescimento</span>
+    <span class="tag tag-purple">Fase 2 → BAI</span>
+  </div>
+</div>
+
+</div></div>
+</body>
+</html>
