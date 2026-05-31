@@ -1992,9 +1992,11 @@ function ClientApp({ user, onLogout }) {
                 </div>
                 <div className="metric-content">
                   <div className="metric-label">Sua Confiança</div>
-                  <div className="metric-value">98%</div>
+                  <div className="metric-value">
+                    {userRating.total > 0 ? `${userRating.avg.toFixed(1)} ★` : "Sem avaliações"}
+                  </div>
                   <div className="metric-bar-container">
-                    <div className="metric-bar-fill" style={{ width: "98%" }} />
+                    <div className="metric-bar-fill" style={{ width: userRating.total > 0 ? `${(userRating.avg / 5) * 100}%` : "0%" }} />
                   </div>
                 </div>
               </div>
