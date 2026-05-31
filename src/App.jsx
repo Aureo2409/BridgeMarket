@@ -72,6 +72,20 @@ function AuthScreen() {
     setLoad(false);
   }
 
+  async function handleSocialLogin(providerName) {
+    setLoad(true); setErr("");
+    const { error } = await sb.auth.signInWithOAuth({
+      provider: providerName,
+      options: {
+        redirectTo: window.location.origin
+      }
+    });
+    if (error) {
+      setErr("err:Erro ao ligar: " + error.message);
+      setLoad(false);
+    }
+  }
+
   return (
     <div className="shell">
       <style>{`.spin { animation: spin 1s linear infinite; } @keyframes spin { 100% { transform: rotate(360deg); } }`}</style>
@@ -161,6 +175,41 @@ function AuthScreen() {
           <button className="btn btn-p" onClick={submit} disabled={load}>
             {load ? "A processar..." : mode === "login" ? <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>Entrar <Icon name="arrowRight" size={16} /></div> : mode === "register" ? <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>Criar conta <Icon name="arrowRight" size={16} /></div> : "Receber link no email"}
           </button>
+
+          {mode !== "reset" && (
+            <>
+              <div style={{ display: "flex", alignItems: "center", margin: "20px 0 16px", color: "#94a3b8", fontSize: 11, fontWeight: 700, letterSpacing: 0.5 }}>
+                <div style={{ flex: 1, height: 1, background: "#e2e8f0" }}></div>
+                <span style={{ padding: "0 12px" }}>OU ENTRAR COM</span>
+                <div style={{ flex: 1, height: 1, background: "#e2e8f0" }}></div>
+              </div>
+
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+                <button onClick={() => handleSocialLogin("google")} disabled={load}
+                  style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, padding: "10px", border: "1px solid #e2e8f0", borderRadius: 10, background: "#ffffff", cursor: "pointer", transition: "all 0.2s", fontFamily: "inherit", fontSize: 12, fontWeight: 700, color: "#1e1b4b" }}
+                  onMouseEnter={e => { e.currentTarget.style.background = "#f8fafc"; e.currentTarget.style.borderColor = "#cbd5e1"; }}
+                  onMouseLeave={e => { e.currentTarget.style.background = "#ffffff"; e.currentTarget.style.borderColor = "#e2e8f0"; }}>
+                  <svg width="18" height="18" viewBox="0 0 24 24">
+                    <path fill="#ea4335" d="M12 5.04c1.7 0 3.2.6 4.4 1.7l3.3-3.3C17.7 1.6 15 1 12 1 7.3 1 3.3 3.7 1.4 7.6l3.9 3c.9-2.6 3.4-4.56 6.7-4.56z"/>
+                    <path fill="#4285f4" d="M23.5 12.3c0-.8-.1-1.6-.2-2.3H12v4.4h6.5c-.3 1.5-1.1 2.8-2.4 3.7l3.7 2.9c2.1-2 3.7-4.9 3.7-8.7z"/>
+                    <path fill="#fbbc05" d="M5.3 14.6c-.2-.6-.3-1.3-.3-2s.1-1.4.3-2L1.4 7.6C.5 9.4 0 11.4 0 13.5s.5 4.1 1.4 5.9l3.9-3z"/>
+                    <path fill="#34a853" d="M12 18.96c-3.3 0-5.8-2-6.7-4.6l-3.9 3C3.3 21.3 7.3 24 12 24c3.2 0 5.9-1.1 7.9-2.9l-3.7-2.9c-1.1.7-2.6 1.16-4.2 1.16z"/>
+                  </svg>
+                  Google
+                </button>
+
+                <button onClick={() => handleSocialLogin("apple")} disabled={load}
+                  style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, padding: "10px", border: "1px solid #1e1b4b", borderRadius: 10, background: "#1e1b4b", cursor: "pointer", transition: "all 0.2s", fontFamily: "inherit", fontSize: 12, fontWeight: 700, color: "#ffffff" }}
+                  onMouseEnter={e => { e.currentTarget.style.background = "#0f172a"; }}
+                  onMouseLeave={e => { e.currentTarget.style.background = "#1e1b4b"; }}>
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.81-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M15.97 4.17c.66-.81 1.11-1.93.99-3.06-1 .04-2.17.67-2.88 1.48-.61.71-1.14 1.85-1 2.96 1.1.09 2.23-.57 2.89-1.38z"/>
+                  </svg>
+                  Apple
+                </button>
+              </div>
+            </>
+          )}
 
           {mode === "reset" && (
             <button className="btn btn-o" style={{ marginTop: 8 }} onClick={() => { setMode("login"); setErr(""); }}>
