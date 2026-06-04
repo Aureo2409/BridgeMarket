@@ -424,7 +424,8 @@ export function OrderList({ orders, onCancel, currentUserId, onTransact, isMarke
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
-                        setActiveTxId(o.id);
+                        // Redirecionar directamente para o chat via onTransact
+                        if (onTransact) onTransact(o.id);
                       }}
                       className="p2p-negotiate-btn"
                     >

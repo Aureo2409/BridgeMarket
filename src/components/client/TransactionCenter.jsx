@@ -17,6 +17,9 @@ export function TransactionCenter({ order, user, onBack, onCancel }) {
   const [showReleaseModal, setShowReleaseModal] = useState(false);
   const chatEndRef = useRef(null);
   const [securityAlert, setSecurityAlert] = useState("");
+  // Onboarding de segurança — ambas as partes devem confirmar antes do chat
+  const [chatOnboardingDone, setChatOnboardingDone] = useState(false);
+  const [onboardingConfirmed, setOnboardingConfirmed] = useState(false);
 
   const destInfo = DESTS.find(d => d.id === currentOrder?.destination);
   const isCreator = user?.id === currentOrder?.user_id;
@@ -288,6 +291,114 @@ export function TransactionCenter({ order, user, onBack, onCancel }) {
   if (currentOrder.status === "completed") activeStep = 3;
 
   const STEPS = ["Solicitar envio", "Correspondência de parceiro", "Enviar fundos", "Transação concluída"];
+
+  // ── ONBOARDING DE SEGURANÇA ─────────────────────────────────────────────────
+  // Mostrar apenas quando a transacção está em processamento (parceiro encontrado)
+  // e o utilizador ainda não confirmou o onboarding nesta sessão
+  const isProcessing = currentOrder.status === "processing" || currentOrder.status === "payment_received";
+  if (isProcessing && !chatOnboardingDone) {
+    const isBuyer = currentOrder.user_id === (user?.id || "");
+    const destInfo = (currentOrder.payment_destinations || {})[currentOrder.destination] || {};
+    const motivos = {
+      IM: "Importação de mercadoria", SP: "Pagamento de serviços/propinas",
+      RF: "Remessa familiar", PS: "Prestação de serviços recebida",
+      VI: "Viagem internacional", IN: "Investimento / poupança", OU: "Outro"
+    };
+    return (
+      <div style={{ animation: "fadeIn 0.3s ease-out" }}>
+        {/* Header voltar */}
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
+          <button onClick={onBack} style={{ background: "none", border: "none", color: "#6366f1", fontSize: 12, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", gap: 6 }}>
+            <Icon name="arrowLeft" size={14} /> Voltar
+          </button>
+        </div>
+
+        {/* Card de onboarding */}
+        <div style={{ background: "#fff", borderRadius: 20, border: "1px solid #e2e8f0", overflow: "hidden", boxShadow: "0 4px 24px rgba(99,102,241,0.08)" }}>
+          
+          {/* Header */}
+          <div style={{ background: "linear-gradient(135deg, #1e1b4b, #312e81)", padding: "20px 22px" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 8 }}>
+              <div style={{ width: 40, height: 40, borderRadius: "50%", background: "rgba(99,102,241,0.3)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20 }}>🛡️</div>
+              <div>
+                <div style={{ fontSize: 15, fontWeight: 900, color: "#fff" }}>Verificação de Segurança</div>
+                <div style={{ fontSize: 11, color: "#a5b4fc" }}>Pedido #{currentOrder.order_ref || currentOrder.id?.slice(0,8).toUpperCase()}</div>
+              </div>
+            </div>
+          </div>
+
+          {/* Resumo da transacção */}
+          <div style={{ padding: "18px 22px", borderBottom: "1px solid #f1f5f9" }}>
+            <div style={{ fontSize: 11, fontWeight: 700, color: "#64748b", textTransform: "uppercase", letterSpacing: 1, marginBottom: 12 }}>Detalhes da Transacção</div>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+              {[
+                { label: "Valor USD", val: `$${parseFloat(currentOrder.amount_usd).toFixed(2)}`, icon: "💵", color: "#059669" },
+                { label: "Valor AOA", val: `${parseFloat(currentOrder.amount_aoa).toLocaleString("pt-AO")} Kz`, icon: "🇦🇴", color: "#1e1b4b" },
+                { label: "Taxa Aplicada", val: `${currentOrder.rate_applied} AOA/$`, icon: "📊", color: "#6366f1" },
+                { label: "Motivo Cambial", val: motivos[currentOrder.exchange_reason] || "Não especificado", icon: "📋", color: "#d97706" },
+              ].map((item, i) => (
+                <div key={i} style={{ background: "#f8fafc", borderRadius: 10, padding: "10px 12px", border: "1px solid #e2e8f0" }}>
+                  <div style={{ fontSize: 10, color: "#94a3b8", marginBottom: 3 }}>{item.icon} {item.label}</div>
+                  <div style={{ fontSize: 12, fontWeight: 700, color: item.color }}>{item.val}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Destino */}
+          <div style={{ padding: "14px 22px", borderBottom: "1px solid #f1f5f9" }}>
+            <div style={{ fontSize: 11, fontWeight: 700, color: "#64748b", textTransform: "uppercase", letterSpacing: 1, marginBottom: 10 }}>💳 Destino de Recebimento</div>
+            <div style={{ background: "#f0fdf4", border: "1px solid #bbf7d0", borderRadius: 10, padding: "10px 14px" }}>
+              <div style={{ fontSize: 12, fontWeight: 700, color: "#065f46" }}>{currentOrder.destination?.toUpperCase?.() || "—"}</div>
+              <div style={{ fontSize: 11, color: "#047857", fontFamily: "monospace", marginTop: 2 }}>{currentOrder.destination_account || "—"}</div>
+            </div>
+          </div>
+
+          {/* Regras de segurança */}
+          <div style={{ padding: "16px 22px", borderBottom: "1px solid #f1f5f9" }}>
+            <div style={{ fontSize: 11, fontWeight: 700, color: "#64748b", textTransform: "uppercase", letterSpacing: 1, marginBottom: 12 }}>⚠️ Regras Obrigatórias</div>
+            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+              {[
+                { icon: "🔒", text: "Nunca comuniques fora desta plataforma. Qualquer pedido para continuar no WhatsApp ou outro canal é uma tentativa de burla.", color: "#dc2626", bg: "#fef2f2", border: "#fecaca" },
+                { icon: "✅", text: isBuyer ? "Só confirma o recebimento depois de verificares que o saldo está DISPONÍVEL na tua conta — não retido ou pendente." : "Só marques como enviado depois de a transferência estar efectivamente concluída. Faz upload do comprovativo.", color: "#059669", bg: "#f0fdf4", border: "#bbf7d0" },
+                { icon: "📸", text: "Este chat é rastreado e gravado. Toda a comunicação fica registada e pode ser consultada pelo administrador e autoridades.", color: "#6366f1", bg: "#eef2ff", border: "#c7d2fe" },
+                { icon: "🏛️", text: "Esta transacção está sujeita à Lei Cambial de Angola e aos Avisos do BNA. Os dados da operação são reportados à UIF se necessário.", color: "#d97706", bg: "#fffbeb", border: "#fde68a" },
+              ].map((r, i) => (
+                <div key={i} style={{ display: "flex", gap: 10, background: r.bg, border: `1px solid ${r.border}`, borderRadius: 10, padding: "10px 12px", alignItems: "flex-start" }}>
+                  <span style={{ fontSize: 16, flexShrink: 0 }}>{r.icon}</span>
+                  <span style={{ fontSize: 12, color: r.color, lineHeight: 1.5, fontWeight: 500 }}>{r.text}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Confirmação */}
+          <div style={{ padding: "16px 22px" }}>
+            <label style={{ display: "flex", gap: 12, alignItems: "flex-start", cursor: "pointer", marginBottom: 16 }}>
+              <input type="checkbox" checked={onboardingConfirmed} onChange={e => setOnboardingConfirmed(e.target.checked)}
+                style={{ width: 18, height: 18, marginTop: 1, accentColor: "#6366f1", cursor: "pointer" }} />
+              <span style={{ fontSize: 12.5, color: "#374151", lineHeight: 1.6 }}>
+                <strong>Li e compreendi</strong> todas as regras de segurança acima. Confirmo que a minha identidade foi verificada e que vou agir de boa-fé nesta transacção.
+              </span>
+            </label>
+            <button
+              onClick={() => { if (onboardingConfirmed) setChatOnboardingDone(true); }}
+              disabled={!onboardingConfirmed}
+              style={{
+                width: "100%", padding: "14px", borderRadius: 12, border: "none",
+                background: onboardingConfirmed ? "linear-gradient(135deg, #6366f1, #4f46e5)" : "#e2e8f0",
+                color: onboardingConfirmed ? "#fff" : "#94a3b8",
+                fontSize: 14, fontWeight: 800, cursor: onboardingConfirmed ? "pointer" : "not-allowed",
+                transition: "all 0.2s"
+              }}
+            >
+              {onboardingConfirmed ? "Entendi — Entrar no Chat ▶" : "Confirma as regras para continuar"}
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div style={{ animation: "fadeIn 0.25s ease-out" }}>
