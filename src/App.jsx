@@ -8,6 +8,7 @@ import { OrderList } from "./components/client/OrderList.jsx";
 import { TransactionCenter } from "./components/client/TransactionCenter.jsx";
 import { AdminPanel } from "./components/admin/AdminPanel.jsx";
 
+const API_URL = import.meta.env.VITE_API_URL || window.location.origin;
 
 // ── AUTH ──────────────────────────────────────────────────────────────────────
 function AuthScreen() {
@@ -220,7 +221,7 @@ function KycOnboarding({ user, currentStep, kycRecord, onLogout, onBack }) {
   useEffect(() => {
     sb.auth.getSession().then(({ data: sessionData }) => {
       const token = sessionData.session?.access_token;
-      fetch("/api/didit-session", {
+      fetch(`${API_URL}/api/didit-session`, {
         method: "POST",
         headers: { 
           "Content-Type": "application/json",
@@ -262,7 +263,7 @@ function KycOnboarding({ user, currentStep, kycRecord, onLogout, onBack }) {
       const { data: sessionData } = await sb.auth.getSession();
       const token = sessionData.session?.access_token;
 
-      const res = await fetch("/api/didit-session", {
+      const res = await fetch(`${API_URL}/api/didit-session`, {
         method: "POST",
         headers: { 
           "Content-Type": "application/json",
@@ -1544,6 +1545,10 @@ function ClientApp({ user, onLogout }) {
             user={user}
             config={config}
             profile={profile}
+            appliedRate={applied}
+            rate={rate}
+            loading={orderLoad}
+            kycStep={kycStep}
           />
         </div>
       );

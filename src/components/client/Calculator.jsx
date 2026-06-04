@@ -367,83 +367,100 @@ export function Calculator({ appliedRate, rate, onSubmit, loading, user, kycStep
       </div>
 
       <div className="card" style={{ padding: "18px 20px" }}>
-        {/* Sleek Selector Box 1 (USD Wallet) */}
-        <div>
-          <span className="slbl">{opType === "buy" ? "1. Carteira de Destino (USD)" : "1. Carteira de Origem (USD)"}</span>
-          <div 
-            onClick={() => setShowWalletModal(true)}
-            style={{
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "space-between",
-              background: "#f8fafc",
-              border: "1.5px solid #e0e7ff",
-              borderRadius: 16,
-              padding: "12px 16px",
-              cursor: "pointer",
-              transition: "all 0.2s",
-              marginBottom: 14
-            }}
-            onMouseEnter={e => {
-              e.currentTarget.style.borderColor = "#6366f1";
-              e.currentTarget.style.background = "#fff";
-            }}
-            onMouseLeave={e => {
-              e.currentTarget.style.borderColor = "#e0e7ff";
-              e.currentTarget.style.background = "#f8fafc";
-            }}
-          >
-            <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-              <div 
-                style={{ width: 36, height: 36, flexShrink: 0, borderRadius: 8, overflow: "hidden" }} 
-                dangerouslySetInnerHTML={{ __html: destInfo?.svg }} 
-              />
-              <div>
-                <div style={{ fontSize: 13, fontWeight: 800, color: "#1e1b4b" }}>{destInfo?.label}</div>
-                <div style={{ fontSize: 9.5, color: "#8b92a9", fontWeight: 600, marginTop: 1 }}>{destInfo?.desc}</div>
-              </div>
-            </div>
-            <div style={{ color: "#6366f1", fontSize: 11, fontWeight: 900 }}>▼</div>
-          </div>
-        </div>
+        {/* Caixa de Métodos de Pagamento unificada */}
+        <div style={{
+          border: "1.5px solid #e0e7ff",
+          borderRadius: 20,
+          padding: "16px",
+          background: "rgba(99, 102, 241, 0.02)",
+          marginBottom: 16
+        }}>
+          <span className="slbl" style={{ color: "#6366f1", fontSize: 10.5, fontWeight: 900, marginBottom: 14, display: "block", textTransform: "uppercase", letterSpacing: "0.5px" }}>
+            Métodos de pagamento (carteiras digitais, bancos)
+          </span>
 
-        {/* Sleek Selector Box 2 (Angolan Bank) - ALWAYS shown for a highly professional flow */}
-        <div>
-          <span className="slbl">{opType === "buy" ? "2. Banco de Pagamento (AOA)" : "2. Banco de Recebimento (AOA)"}</span>
-          <div 
-            onClick={() => setShowBankModal(true)}
-            style={{
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "space-between",
-              background: "#f8fafc",
-              border: "1.5px solid #e0e7ff",
-              borderRadius: 16,
-              padding: "12px 16px",
-              cursor: "pointer",
-              transition: "all 0.2s",
-              marginBottom: 14
-            }}
-            onMouseEnter={e => {
-              e.currentTarget.style.borderColor = "#6366f1";
-              e.currentTarget.style.background = "#fff";
-            }}
-            onMouseLeave={e => {
-              e.currentTarget.style.borderColor = "#e0e7ff";
-              e.currentTarget.style.background = "#f8fafc";
-            }}
-          >
-            <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+          <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+            {/* Sleek Selector Box 1 (USD Wallet) */}
+            <div style={{ display: "flex", flexDirection: "column" }}>
+              <span className="slbl" style={{ fontSize: 9, color: "#94a3b8", fontWeight: 800, marginBottom: 6, display: "block" }}>
+                {opType === "buy" ? "Carteira de Destino (USD)" : "Carteira de Origem (USD)"}
+              </span>
               <div 
-                style={{ width: 36, height: 36, flexShrink: 0, borderRadius: 8, overflow: "hidden" }} 
-                dangerouslySetInnerHTML={{ __html: BANK_LOGOS[selectedBank] }} 
-              />
-              <div>
-                <div style={{ fontSize: 13, fontWeight: 800, color: "#1e1b4b" }}>{bInfo?.label}</div>
-                <div style={{ fontSize: 9.5, color: "#8b92a9", fontWeight: 600, marginTop: 1 }}>{bInfo?.desc}</div>
+                onClick={() => setShowWalletModal(true)}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  background: "#ffffff",
+                  border: "1.5px solid #e2e8f0",
+                  borderRadius: 14,
+                  padding: "12px 14px",
+                  cursor: "pointer",
+                  transition: "all 0.2s"
+                }}
+                onMouseEnter={e => {
+                  e.currentTarget.style.borderColor = "#6366f1";
+                  e.currentTarget.style.boxShadow = "0 4px 12px rgba(99,102,241,0.05)";
+                }}
+                onMouseLeave={e => {
+                  e.currentTarget.style.borderColor = "#e2e8f0";
+                  e.currentTarget.style.boxShadow = "none";
+                }}
+              >
+                <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                  <div 
+                    style={{ width: 36, height: 36, flexShrink: 0, borderRadius: 8, overflow: "hidden" }} 
+                    dangerouslySetInnerHTML={{ __html: destInfo?.svg }} 
+                  />
+                  <div>
+                    <div style={{ fontSize: 13, fontWeight: 800, color: "#1e1b4b" }}>{destInfo?.label}</div>
+                    <div style={{ fontSize: 9.5, color: "#8b92a9", fontWeight: 600, marginTop: 1 }}>{destInfo?.desc}</div>
+                  </div>
+                </div>
+                <div style={{ color: "#6366f1", fontSize: 11, fontWeight: 900 }}>▼</div>
               </div>
             </div>
-            <div style={{ color: "#6366f1", fontSize: 11, fontWeight: 900 }}>▼</div>
+
+            {/* Sleek Selector Box 2 (Angolan Bank) */}
+            <div style={{ display: "flex", flexDirection: "column" }}>
+              <span className="slbl" style={{ fontSize: 9, color: "#94a3b8", fontWeight: 800, marginBottom: 6, display: "block" }}>
+                {opType === "buy" ? "Banco de Pagamento (AOA)" : "Banco de Recebimento (AOA)"}
+              </span>
+              <div 
+                onClick={() => setShowBankModal(true)}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  background: "#ffffff",
+                  border: "1.5px solid #e2e8f0",
+                  borderRadius: 14,
+                  padding: "12px 14px",
+                  cursor: "pointer",
+                  transition: "all 0.2s"
+                }}
+                onMouseEnter={e => {
+                  e.currentTarget.style.borderColor = "#6366f1";
+                  e.currentTarget.style.boxShadow = "0 4px 12px rgba(99,102,241,0.05)";
+                }}
+                onMouseLeave={e => {
+                  e.currentTarget.style.borderColor = "#e2e8f0";
+                  e.currentTarget.style.boxShadow = "none";
+                }}
+              >
+                <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                  <div 
+                    style={{ width: 36, height: 36, flexShrink: 0, borderRadius: 8, overflow: "hidden" }} 
+                    dangerouslySetInnerHTML={{ __html: BANK_LOGOS[selectedBank] }} 
+                  />
+                  <div>
+                    <div style={{ fontSize: 13, fontWeight: 800, color: "#1e1b4b" }}>{bInfo?.label}</div>
+                    <div style={{ fontSize: 9.5, color: "#8b92a9", fontWeight: 600, marginTop: 1 }}>{bInfo?.desc}</div>
+                  </div>
+                </div>
+                <div style={{ color: "#6366f1", fontSize: 11, fontWeight: 900 }}>▼</div>
+              </div>
+            </div>
           </div>
         </div>
 

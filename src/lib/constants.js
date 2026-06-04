@@ -40,6 +40,52 @@ export const DESTS = [
     </svg>`,
   },
   {
+    id:    "airtm",
+    label: "Airtm",
+    color: "#0052FF",
+    bg:    "#eef2ff",
+    desc:  "Carteira digital Airtm",
+    hint:  "E-mail da conta Airtm (ex: conta@airtm.com)",
+    svg: `<svg viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <rect width="40" height="40" rx="10" fill="#0052FF"/>
+      <path d="M20 11L11 27h5.5l3.5-7 3.5 7H29l-9-16z" fill="white"/>
+      <path d="M20 20l-2 4h4l-2-4z" fill="#0052FF" opacity="0.8"/>
+      <text x="20" y="34" font-family="system-ui, sans-serif" font-size="7" font-weight="900" fill="white" text-anchor="middle" letter-spacing="0.5">AIRTM</text>
+    </svg>`,
+  },
+  {
+    id:    "redotpay",
+    label: "RedotPay",
+    color: "#FF334B",
+    bg:    "#fff0f2",
+    desc:  "Carteira digital RedotPay",
+    hint:  "ID de utilizador RedotPay (ex: 8 dígitos)",
+    svg: `<svg viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <rect width="40" height="40" rx="10" fill="#111111"/>
+      <circle cx="20" cy="20" r="16" fill="#111111" stroke="#FF334B" stroke-width="1.5"/>
+      <path d="M14 13h7a4.5 4.5 0 010 9h-7v5h-2.5V13zm2.5 2.5v4h4.5a2 2 0 000-4h-4.5z" fill="#FF334B"/>
+      <path d="M18.5 22.5L24 27h3.5l-6-5h-2.5z" fill="#FF334B"/>
+      <circle cx="20.5" cy="17" r="1.5" fill="white"/>
+    </svg>`,
+  },
+  {
+    id:    "binance",
+    label: "Binance",
+    color: "#F3BA2F",
+    bg:    "#fffdf0",
+    desc:  "Carteira / Binance Pay",
+    hint:  "Binance Pay ID ou Email/Telefone da conta",
+    svg: `<svg viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <rect width="40" height="40" rx="10" fill="#12161A"/>
+      <path d="M20 7l-4.5 4.5 2 2L20 11l2.5 2.5 2-2L20 7z" fill="#F3BA2F"/>
+      <path d="M12.5 14.5l-2 2L20 26l9.5-9.5-2-2L20 22l-7.5-7.5z" fill="#F3BA2F"/>
+      <path d="M20 14.5l-3.5 3.5 3.5 3.5 3.5-3.5-3.5-3.5z" fill="#F3BA2F"/>
+      <path d="M10.5 16.5l-3.5 3.5 3.5 3.5 1.5-1.5L10 20l2-2-1.5-1.5z" fill="#F3BA2F"/>
+      <path d="M29.5 16.5l-1.5 1.5 2 2-2 2 1.5 1.5 3.5-3.5-3.5-3.5z" fill="#F3BA2F"/>
+      <text x="20" y="34" font-family="system-ui, sans-serif" font-size="7" font-weight="900" fill="#F3BA2F" text-anchor="middle" letter-spacing="0.5">BINANCE</text>
+    </svg>`,
+  },
+  {
     id:    "paypal",
     label: "PayPal",
     color: "#003087",
