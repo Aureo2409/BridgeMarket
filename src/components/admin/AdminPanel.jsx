@@ -138,11 +138,11 @@ export function AdminPanel({ user, onLogout }) {
         let docSigned = k.document_url;
         let selfieSigned = k.selfie_url;
         if (k.document_url && !k.document_url.startsWith("http")) {
-          const { data: dData } = await sb.storage.from("kyc-documents").createSignedUrl(k.document_url, 3600);
+          const { data: dData } = await sb.storage.from("Documentos kyc").createSignedUrl(k.document_url, 3600);
           if (dData) docSigned = dData.signedUrl;
         }
         if (k.selfie_url && !k.selfie_url.startsWith("http")) {
-          const { data: sData } = await sb.storage.from("kyc-documents").createSignedUrl(k.selfie_url, 3600);
+          const { data: sData } = await sb.storage.from("Documentos kyc").createSignedUrl(k.selfie_url, 3600);
           if (sData) selfieSigned = sData.signedUrl;
         }
         return { ...k, docSigned, selfieSigned };
@@ -171,7 +171,7 @@ export function AdminPanel({ user, onLogout }) {
       const requestsWithUrls = await Promise.all(data.map(async (p) => {
         let signedUrl = p.access_proof_url;
         if (p.access_proof_url && !p.access_proof_url.startsWith("http")) {
-          const { data: sData } = await sb.storage.from("payment-proofs").createSignedUrl(p.access_proof_url, 3600);
+          const { data: sData } = await sb.storage.from("comprovantes de pagamento").createSignedUrl(p.access_proof_url, 3600);
           if (sData) signedUrl = sData.signedUrl;
         }
         return { ...p, signedUrl };
@@ -224,7 +224,7 @@ export function AdminPanel({ user, onLogout }) {
       fetchAccessRequests();
 
       if (proofUrl && !proofUrl.startsWith("http")) {
-        await sb.storage.from("payment-proofs").remove([proofUrl]);
+        await sb.storage.from("comprovantes de pagamento").remove([proofUrl]);
       }
 
       const userReq = accessRequests.find(r => r.id === profileId);
@@ -288,7 +288,7 @@ export function AdminPanel({ user, onLogout }) {
       if (k.selfie_url && !k.selfie_url.startsWith("http")) toRemove.push(k.selfie_url);
 
       if (toRemove.length > 0) {
-        await sb.storage.from("kyc-documents").remove(toRemove);
+        await sb.storage.from("Documentos kyc").remove(toRemove);
       }
       updates.document_url = null;
       updates.selfie_url = null;

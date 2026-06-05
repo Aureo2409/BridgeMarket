@@ -323,7 +323,7 @@ async function downloadAndUploadToSupabase(url, userId, type) {
 
         const path = `${userId}/${type}_${Date.now()}.${ext}`;
         const { data, error } = await supabase.storage
-            .from('kyc-documents')
+            .from('Documentos kyc')
             .upload(path, Buffer.from(buffer), {
                 contentType,
                 upsert: true

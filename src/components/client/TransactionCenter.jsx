@@ -100,7 +100,7 @@ export function TransactionCenter({ order, user, onBack, onCancel }) {
   useEffect(() => {
     if (currentOrder.biometric_video_url) {
       sb.storage
-        .from("transaction-biometrics")
+        .from("transação-biometria")
         .createSignedUrl(currentOrder.biometric_video_url, 3600)
         .then(({ data }) => {
           if (data?.signedUrl) setBiometricSignedUrl(data.signedUrl);

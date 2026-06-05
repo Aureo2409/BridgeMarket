@@ -40,13 +40,13 @@ export async function uploadProof(userId, orderId, file) {
   const path = `${userId}/${orderId}/${Date.now()}.${ext}`;
 
   const { error } = await sb.storage
-    .from("payment-proofs")
+    .from("comprovantes de pagamento")
     .upload(path, file, { cacheControl: "3600", contentType: file.type });
 
   if (error) throw error;
 
   const { data } = await sb.storage
-    .from("payment-proofs")
+    .from("comprovantes de pagamento")
     .createSignedUrl(path, 3600);
 
   return { path, signedUrl: data?.signedUrl ?? null };
@@ -57,7 +57,7 @@ export async function uploadKycDocument(userId, file, type) {
   const path = `${userId}/${type}_${Date.now()}.${ext}`;
 
   const { error } = await sb.storage
-    .from("kyc-documents")
+    .from("Documentos kyc")
     .upload(path, file, { cacheControl: "3600", contentType: file.type });
 
   if (error) throw error;
@@ -70,13 +70,13 @@ export async function uploadAvatar(userId, file) {
   const path = `avatars/${userId}.${ext}`;
 
   const { error } = await sb.storage
-    .from("payment-proofs")
+    .from("comprovantes de pagamento")
     .upload(path, file, { cacheControl: "3600", contentType: file.type, upsert: true });
 
   if (error) throw error;
 
   const { data } = await sb.storage
-    .from("payment-proofs")
+    .from("comprovantes de pagamento")
     .createSignedUrl(path, 31536000); // 1 year signed url
 
   return { path, signedUrl: data?.signedUrl ?? null };
@@ -85,7 +85,7 @@ export async function uploadAvatar(userId, file) {
 export async function uploadBiometricVideo(userId, orderId, videoBlob) {
   const path = `biometric/${orderId}/${userId}_${Date.now()}.webm`;
   const { error } = await sb.storage
-    .from("transaction-biometrics")
+    .from("transação-biometria")
     .upload(path, videoBlob, { cacheControl: "3600", contentType: "video/webm" });
 
   if (error) throw error;
@@ -109,7 +109,7 @@ export async function uploadAccessProof(userId, file) {
   const path = `weekly_access/${userId}/${Date.now()}.${ext}`;
 
   const { error } = await sb.storage
-    .from("payment-proofs")
+    .from("comprovantes de pagamento")
     .upload(path, file, { cacheControl: "3600", contentType: file.type });
 
   if (error) throw error;
