@@ -21,13 +21,33 @@ export const ANGOLAN_BANKS = [
 
 const BANK_LOGOS = {
   bai: `<svg width="100%" height="100%" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
-    <rect width="40" height="40" rx="8" fill="#002147"/>
-    <circle cx="20" cy="20" r="9" stroke="#00AEEF" stroke-width="1.2" fill="none" opacity="0.8"/>
-    <ellipse cx="20" cy="20" rx="9" ry="4" stroke="#00AEEF" stroke-width="1.2" fill="none" opacity="0.8"/>
-    <ellipse cx="20" cy="20" rx="4" ry="9" stroke="#00AEEF" stroke-width="1.2" fill="none" opacity="0.8"/>
-    <line x1="20" y1="11" x2="20" y2="29" stroke="#00AEEF" stroke-width="1.2" opacity="0.8"/>
-    <line x1="11" y1="20" x2="29" y2="20" stroke="#00AEEF" stroke-width="1.2" opacity="0.8"/>
-    <circle cx="20" cy="20" r="11" stroke="#FFFFFF" stroke-width="1" fill="none" opacity="0.15"/>
+    <defs>
+      <linearGradient id="bai-bg-grad" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%" stop-color="#5290D5"/>
+        <stop offset="100%" stop-color="#184F8D"/>
+      </linearGradient>
+      <radialGradient id="bai-globe-grad" cx="35%" cy="35%" r="65%">
+        <stop offset="0%" stop-color="#4ea2e3" />
+        <stop offset="100%" stop-color="#0b2c5e" />
+      </radialGradient>
+      <pattern id="bai-dot-grid" width="1.4" height="1.4" patternUnits="userSpaceOnUse">
+        <circle cx="0.7" cy="0.7" r="0.4" fill="#ffffff" opacity="0.95" />
+      </pattern>
+      <clipPath id="bai-globe-clip">
+        <circle cx="20" cy="20" r="11" />
+      </clipPath>
+      <radialGradient id="bai-globe-gloss" cx="30%" cy="30%" r="50%">
+        <stop offset="0%" stop-color="#ffffff"/>
+        <stop offset="100%" stop-color="#ffffff" stop-opacity="0"/>
+      </radialGradient>
+    </defs>
+    <rect width="40" height="40" rx="8" fill="url(#bai-bg-grad)"/>
+    <rect x="0.5" y="0.5" width="39" height="39" rx="7.5" stroke="rgba(255, 255, 255, 0.12)" stroke-width="1" fill="none"/>
+    <circle cx="20" cy="20" r="11" fill="url(#bai-globe-grad)"/>
+    <g clip-path="url(#bai-globe-clip)">
+      <path d="M12 11 C13 9, 15 9, 17 11 C16 13, 15 14, 13 16 Z M18 8 L20 10 L17 10 Z M13 16 C16 19, 16 21, 14 28 C11 23, 12 20, 13 16 Z M21 10 H24 L23 14 L21 12 Z M20 14 C24 14, 25 17, 23 25 C19 18, 20 16, 20 14 Z M24 11 H30 L32 14 L28 18 Z" fill="url(#bai-dot-grid)"/>
+    </g>
+    <circle cx="20" cy="20" r="11" fill="url(#bai-globe-gloss)" opacity="0.15" pointer-events="none"/>
   </svg>`,
   bfa: `<svg width="100%" height="100%" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
     <rect width="40" height="40" rx="8" fill="#FF6600"/>

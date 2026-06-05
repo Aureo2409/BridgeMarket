@@ -28,10 +28,27 @@ export const DESTS = [
     logo:  "https://upload.wikimedia.org/wikipedia/commons/thumb/2/2b/Unitel_Angola_logo.svg/320px-Unitel_Angola_logo.svg.png",
     logoBg: "#FF6B00",
     svg: `<svg width="100%" height="100%" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <rect width="40" height="40" rx="8" fill="#FF7A00"/>
-      <rect x="13" y="10" width="14" height="20" rx="3" stroke="white" stroke-width="2.5" fill="none"/>
-      <circle cx="20" cy="26" r="1.5" fill="white"/>
-      <path d="M17 15h6M19 19v4M18 20h4" stroke="white" stroke-width="2" stroke-linecap="round"/>
+      <defs>
+        <linearGradient id="unitel-bg-grad" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="#0E6EB8"/>
+          <stop offset="100%" stop-color="#0A4D85"/>
+        </linearGradient>
+      </defs>
+      <rect width="40" height="40" rx="9" fill="url(#unitel-bg-grad)"/>
+      <rect x="0.5" y="0.5" width="39" height="39" rx="8.5" stroke="rgba(255, 255, 255, 0.08)" stroke-width="1" fill="none"/>
+      <text x="3.5" y="24" fill="#FFFFFF" font-family="system-ui, -apple-system, sans-serif" font-weight="900" font-size="10.5" letter-spacing="-0.3">MO</text>
+      <rect x="17.2" y="15" width="1.5" height="8" fill="#FF5E00" rx="0.3"/>
+      <path d="M 18.7 15 L 21.8 21.5 L 21.8 23 L 18.7 17 Z" fill="#FF5E00"/>
+      <rect x="21.8" y="12" width="5.5" height="13.5" rx="1" stroke="#FF5E00" stroke-width="1.2" fill="none"/>
+      <rect x="21.8" y="19.5" width="5.5" height="6" fill="#FF5E00" rx="0.5"/>
+      <rect x="22.6" y="20.5" width="1.5" height="0.8" fill="#FFFFFF" rx="0.2"/>
+      <rect x="24.7" y="20.5" width="1.5" height="0.8" fill="#FFFFFF" rx="0.2"/>
+      <rect x="22.6" y="22" width="1.5" height="0.8" fill="#FFFFFF" rx="0.2"/>
+      <rect x="24.7" y="22" width="1.5" height="0.8" fill="#FFFFFF" rx="0.2"/>
+      <rect x="22.6" y="23.5" width="1.5" height="0.8" fill="#FFFFFF" rx="0.2"/>
+      <rect x="24.7" y="23.5" width="1.5" height="0.8" fill="#FFFFFF" rx="0.2"/>
+      <circle cx="24.55" cy="13.5" r="0.5" fill="#FFFFFF"/>
+      <text x="28.8" y="24" fill="#FFFFFF" font-family="system-ui, -apple-system, sans-serif" font-weight="900" font-size="10.5" letter-spacing="-0.3">EY</text>
     </svg>`,
   },
 
@@ -46,11 +63,34 @@ export const DESTS = [
     logo:  "https://upload.wikimedia.org/wikipedia/commons/thumb/5/5c/BAI_Logo.png/320px-BAI_Logo.png",
     logoBg: "#003DA5",
     svg: `<svg width="100%" height="100%" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <rect width="40" height="40" rx="8" fill="#002147"/>
-      <circle cx="12" cy="13" r="4.5" stroke="#00AEEF" stroke-width="0.8" fill="none"/>
-      <ellipse cx="12" cy="13" rx="4.5" ry="2" stroke="#00AEEF" stroke-width="0.8" fill="none"/>
-      <ellipse cx="12" cy="13" rx="2" ry="4.5" stroke="#00AEEF" stroke-width="0.8" fill="none"/>
-      <path d="M22 28h1.8l1.1-7H23.1l-1.1 7zm7.5-6.8c-.3-.2-.8-.4-1.4-.4-1.4 0-2.4.8-2.4 1.8 0 .8.7 1.2 1.3 1.5.5.3.7.4.7.7 0 .4-.5.6-1 .6-.7 0-1.1-.1-1.6-.3l-.2-.1-.2 1.5c.4.2 1.1.4 1.9.4 1.5 0 2.5-.8 2.5-2 0-.7-.4-1.2-1.3-1.6-.5-.3-.9-.4-.9-.7 0-.3.3-.5.8-.5.5 0 .9.1 1.2.3l.1.1.2-1.7zm-4.7-.2h-1.4c-.4 0-.8.2-.9.6l-2.7 6.4h1.9l.4-1h2.3l.2 1h1.7l-1.5-7zm-2 4.2l.6-1.7.4 1.7h-1zm-4.3-4.2l-1.5 4.8-.2-1c-.3-1-.9-2-1.8-2.5h3.5z" fill="#FFF"/>
+      <defs>
+        <linearGradient id="visa-bg-grad" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="#0E2452"/>
+          <stop offset="100%" stop-color="#051028"/>
+        </linearGradient>
+        <radialGradient id="visa-globe-grad" cx="35%" cy="35%" r="65%">
+          <stop offset="0%" stop-color="#4e8fd4" />
+          <stop offset="100%" stop-color="#0b2347" />
+        </radialGradient>
+        <pattern id="visa-dot-grid" width="1.4" height="1.4" patternUnits="userSpaceOnUse">
+          <circle cx="0.7" cy="0.7" r="0.4" fill="#ffffff" opacity="0.95" />
+        </pattern>
+        <clipPath id="visa-globe-clip">
+          <circle cx="14" cy="16" r="6" />
+        </clipPath>
+      </defs>
+      <rect width="40" height="40" rx="8" fill="url(#visa-bg-grad)"/>
+      <rect x="0.5" y="0.5" width="39" height="39" rx="7.5" stroke="rgba(255, 255, 255, 0.08)" stroke-width="1" fill="none"/>
+      <circle cx="14" cy="16" r="6" fill="url(#visa-globe-grad)"/>
+      <g clip-path="url(#visa-globe-clip)">
+        <path d="M9 12 C10 10, 12 10, 14 12 C13 14, 12 15, 10 17 Z M14 9 L16 11 L13 11 Z M10 17 C13 20, 13 22, 11 29 C8 24, 9 21, 10 17 Z M17 10 H20 L19 14 L17 12 Z M16 14 C20 14, 21 17, 19 25 C15 18, 16 16, 16 14 Z M20 11 H26 L28 14 L24 18 Z" transform="translate(4.4, 4) scale(0.6)" fill="url(#visa-dot-grid)"/>
+      </g>
+      <g transform="translate(22, 26) scale(0.35)">
+        <path d="M 0 0 L 2.8 8 L 5.6 0 H 3.8 L 2.8 6 L 1.8 0 Z" fill="#ffffff"/>
+        <path d="M 6.8 0 L 6.8 8 H 8.4 L 8.4 0 Z" fill="#ffffff"/>
+        <path d="M 11.5 2 C 11.5 0.8 12.5 0.5 13.5 0.5 C 14.8 0.5 15.5 1 15.5 2 H 14 C 14 1.5 13.7 1.2 13.2 1.2 C 12.7 1.2 12.5 1.4 12.5 1.7 C 12.5 2.5 15.5 2.5 15.5 4.5 C 15.5 5.8 14.5 6.5 13.2 6.5 C 11.8 6.5 11 5.8 11 4.5 H 12.5 C 12.5 5 12.8 5.3 13.3 5.3 C 13.8 5.3 14 5 14 4.7 C 14 3.8 11.5 3.5 11.5 2 Z" fill="#ffffff"/>
+        <path d="M 17 8 L 19 0 H 20.5 L 22.5 8 H 20.8 L 20.3 6 H 18.2 L 17.7 8 Z M 18.5 5 H 20 L 19.3 2 Z" fill="#ffffff"/>
+      </g>
     </svg>`,
   },
   {
@@ -295,6 +335,12 @@ export const DESTS = [
     hint:  "Número do cartão Mastercard",
     logo:  "https://upload.wikimedia.org/wikipedia/commons/thumb/2/2a/Mastercard-logo.svg/320px-Mastercard-logo.svg.png",
     logoBg: "#1A1F71",
+    svg: `<svg width="100%" height="100%" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <rect width="40" height="40" rx="8" fill="#FFFFFF"/>
+      <circle cx="15" cy="20" r="9.5" fill="#EB001B"/>
+      <circle cx="25" cy="20" r="9.5" fill="#F79E1B"/>
+      <path d="M 20 11.92 A 9.5 9.5 0 0 1 20 28.08 A 9.5 9.5 0 0 1 20 11.92 Z" fill="#FF5F00"/>
+    </svg>`,
   },
 
   // ── CARTEIRAS DIGITAIS INTERNACIONAIS ─────────────────────────────────────
