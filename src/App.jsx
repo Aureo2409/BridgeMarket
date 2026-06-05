@@ -302,7 +302,7 @@ function KycOnboarding({ user, currentStep, kycRecord, onLogout, onBack }) {
       <div className="shell" style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "40px 20px", textAlign: "center" }}>
         <div style={{ marginBottom: 16 }}><Icon name="loader" size={50} color="#6366f1" className="spin" /></div>
         <div style={{ fontSize: 24, fontWeight: 900, color: "#1e1b4b", letterSpacing: -1 }}>Em análise</div>
-        <div style={{ fontSize: 13, color: "#6b7280", fontWeight: 600, marginTop: 10, maxWidth: 300, lineHeight: 1.5 }}>A tua identidade está a ser verificada pela nossa equipa. Por favor, aguarda a aprovação.</div>
+        <div style={{ fontSize: 13, color: "#6b7280", fontWeight: 600, marginTop: 10, maxWidth: 300, lineHeight: 1.5 }}>A tua identidade está sob análise. O processo de verificação de conta pode demorar até 24 horas, embora geralmente seja concluído em poucos minutos. Agradecemos a paciência.</div>
         {onBack && (
           <button className="btn btn-p" onClick={onBack} style={{ marginTop: 24, width: "100%", maxWidth: 200 }}>
             Voltar para a Calculadora
@@ -1467,7 +1467,7 @@ function ClientApp({ user, onLogout }) {
             Aguardando Aprovação (500 Kz)
           </div>
           <p style={{ fontSize: 12, color: "#6b7280", lineHeight: 1.6, marginBottom: 20, fontWeight: 500 }}>
-            O teu comprovativo de pagamento foi enviado com sucesso e está sob análise da nossa equipa. A ativação costuma ocorrer em poucos minutos. Agradecemos a paciência!
+            O teu comprovativo de pagamento foi enviado com sucesso e está sob análise. A validação e ativação da conta pode demorar até 24 horas, embora geralmente ocorra em poucos minutos. Agradecemos a paciência!
           </p>
 
           <button
