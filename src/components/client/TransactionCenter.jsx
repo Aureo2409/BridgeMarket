@@ -838,7 +838,7 @@ export function TransactionCenter({ order, user, onBack, onCancel }) {
                 display: "flex", alignItems: "center", justifyContent: "center", color: selectedDest?.color || "#6366f1", flexShrink: 0, overflow: "hidden"
               }}>
                 {selectedDest?.svg ? (
-                  <div style={{ width: 32, height: 32 }} dangerouslySetInnerHTML={{ __html: selectedDest.svg }} />
+                  <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center" }} dangerouslySetInnerHTML={{ __html: selectedDest.svg }} />
                 ) : selectedDest?.logo ? (
                   <img src={selectedDest.logo} alt={selectedDest.label} style={{ width: 32, height: 32, objectFit: "contain", borderRadius: "50%" }} onError={e => { e.target.style.display = "none"; }} />
                 ) : (
@@ -953,7 +953,7 @@ export function TransactionCenter({ order, user, onBack, onCancel }) {
                                     <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                                       <div style={{ width: 28, height: 28, borderRadius: 8, background: d.logoBg || d.bg, display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden", flexShrink: 0 }}>
                                         {d.svg
-                                          ? <div dangerouslySetInnerHTML={{ __html: d.svg }} />
+                                          ? <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center" }} dangerouslySetInnerHTML={{ __html: d.svg }} />
                                           : d.logo ? <img src={d.logo} alt={d.label} style={{ width: 28, height: 28, objectFit: "contain" }} onError={e => { e.target.style.display = "none"; }} /> : null
                                         }
                                       </div>

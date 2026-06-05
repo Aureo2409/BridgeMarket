@@ -20,7 +20,7 @@ export const ANGOLAN_BANKS = [
 ];
 
 const BANK_LOGOS = {
-  bai: `<svg viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+  bai: `<svg width="100%" height="100%" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
     <rect width="40" height="40" rx="8" fill="#002147"/>
     <circle cx="20" cy="20" r="9" stroke="#00AEEF" stroke-width="1.2" fill="none" opacity="0.8"/>
     <ellipse cx="20" cy="20" rx="9" ry="4" stroke="#00AEEF" stroke-width="1.2" fill="none" opacity="0.8"/>
@@ -29,7 +29,7 @@ const BANK_LOGOS = {
     <line x1="11" y1="20" x2="29" y2="20" stroke="#00AEEF" stroke-width="1.2" opacity="0.8"/>
     <circle cx="20" cy="20" r="11" stroke="#FFFFFF" stroke-width="1" fill="none" opacity="0.15"/>
   </svg>`,
-  bfa: `<svg viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+  bfa: `<svg width="100%" height="100%" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
     <rect width="40" height="40" rx="8" fill="#FF6600"/>
     <g transform="translate(20, 20) scale(1.1)">
       <path d="M0 -7 C-3 -3 -3 0 0 0 C3 0 3 -3 0 -7 Z" fill="white" transform="rotate(0)"/>
@@ -40,19 +40,19 @@ const BANK_LOGOS = {
       <circle cx="0" cy="0" r="1.5" fill="#006633"/>
     </g>
   </svg>`,
-  bic: `<svg viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+  bic: `<svg width="100%" height="100%" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
     <rect width="40" height="40" rx="8" fill="#FFFFFF"/>
     <path d="M19 28h2v-8h-2v8zm-5-11c0 2.2 1.8 4 4 4h1v-2h-1c-1.1 0-2-.9-2-2v-4h-2v4zm12 0c0-2.2-1.8-4-4-4h-1v2h1c1.1 0 2 .9 2 2v4h2v-4z" fill="#E21A1A"/>
     <path d="M16 14c0 1.1.9 2 2 2h1v-2h-1c-.5 0-1-.5-1-1v-4h-2v5zm8 0c0-1.1-.9-2-2-2h-1v2h1c.5 0 1 .5 1 1v4h2v-5z" fill="#E21A1A"/>
     <circle cx="20" cy="9" r="1.5" fill="#E21A1A"/>
   </svg>`,
-  atlantico: `<svg viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+  atlantico: `<svg width="100%" height="100%" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
     <rect width="40" height="40" rx="8" fill="#FFFFFF"/>
     <circle cx="20" cy="20" r="8" stroke="#008B9B" stroke-width="2.5" fill="none"/>
     <line x1="20" y1="8" x2="20" y2="32" stroke="#008B9B" stroke-width="2.5" stroke-linecap="round"/>
     <circle cx="20" cy="20" r="2.5" fill="#008B9B"/>
   </svg>`,
-  sba: `<svg viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+  sba: `<svg width="100%" height="100%" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
     <rect width="40" height="40" rx="8" fill="#0033A0"/>
     <g transform="translate(11, 8)">
       <path d="M0 0 H18 V10 C18 16 13 21 9 24 C5 21 0 16 0 10 Z" fill="#FFFFFF"/>
@@ -61,7 +61,7 @@ const BANK_LOGOS = {
       <path d="M7.5 6 H13 V11 H7.5 Z" fill="#FFFFFF"/>
     </g>
   </svg>`,
-  sol: `<svg viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+  sol: `<svg width="100%" height="100%" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
     <rect width="40" height="40" rx="8" fill="#FFFFFF"/>
     <circle cx="20" cy="20" r="9" fill="url(#solGradient)"/>
     <defs>
@@ -71,7 +71,7 @@ const BANK_LOGOS = {
       </linearGradient>
     </defs>
   </svg>`,
-  bpc: `<svg viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+  bpc: `<svg width="100%" height="100%" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
     <rect width="40" height="40" rx="8" fill="#FFFFFF"/>
     <g transform="translate(20, 20) rotate(45)">
       <rect x="-8" y="-8" width="16" height="16" stroke="#0079C1" stroke-width="2.5" fill="none"/>
@@ -82,7 +82,7 @@ const BANK_LOGOS = {
       <line x1="8" y1="-8" x2="4" y2="-4" stroke="#0079C1" stroke-width="1.5"/>
     </g>
   </svg>`,
-  bci: `<svg viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+  bci: `<svg width="100%" height="100%" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
     <rect width="40" height="40" rx="8" fill="#FFFFFF"/>
     <g transform="translate(12, 10)" stroke="#B3105C" stroke-width="2" fill="none">
       <path d="M0 20V0h20"/>
@@ -91,12 +91,12 @@ const BANK_LOGOS = {
       <path d="M9 20V9h11"/>
     </g>
   </svg>`,
-  keve: `<svg viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+  keve: `<svg width="100%" height="100%" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
     <rect width="40" height="40" rx="8" fill="#FFFFFF"/>
     <path d="M10 23 C14 23 16 17 20 17 C24 17 26 23 30 23" stroke="#FF8C00" stroke-width="3" stroke-linecap="round" fill="none"/>
     <path d="M10 17 C14 17 16 23 20 23 C24 23 26 17 30 17" stroke="#00529F" stroke-width="3" stroke-linecap="round" fill="none"/>
   </svg>`,
-  yetu: `<svg viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+  yetu: `<svg width="100%" height="100%" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
     <rect width="40" height="40" rx="8" fill="#FFFFFF"/>
     <g stroke="#9E7E38" stroke-width="2.2" stroke-linecap="round" fill="none" transform="translate(0, -1)">
       <line x1="12" y1="12" x2="20" y2="18"/>
@@ -108,19 +108,19 @@ const BANK_LOGOS = {
       <line x1="20" y1="10" x2="20" y2="30" stroke-width="1.5"/>
     </g>
   </svg>`,
-  bni: `<svg viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+  bni: `<svg width="100%" height="100%" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
     <rect width="40" height="40" rx="8" fill="#FFFFFF"/>
     <rect x="10" y="10" width="20" height="20" rx="5" stroke="#C47D2B" stroke-width="2" fill="none"/>
     <path d="M15 17c2-2 4 0 5 2s3 4 5 2" stroke="#C47D2B" stroke-width="2" stroke-linecap="round" fill="none"/>
     <path d="M15 23c2 2 4 0 5-2s3-4 5-2" stroke="#C47D2B" stroke-width="2" stroke-linecap="round" fill="none"/>
   </svg>`,
-  economico: `<svg viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+  economico: `<svg width="100%" height="100%" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
     <rect width="40" height="40" rx="8" fill="#5F259F"/>
     <path d="M12 13 H28 M12 20 H24 M12 27 H28" stroke="#00B0FF" stroke-width="2.5" stroke-linecap="round"/>
     <path d="M12 13 V27" stroke="#00B0FF" stroke-width="2.5" stroke-linecap="round"/>
     <path d="M16 16 H24 M16 24 H24" stroke="#00B0FF" stroke-width="1.5" stroke-linecap="round" opacity="0.6"/>
   </svg>`,
-  cga: `<svg viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+  cga: `<svg width="100%" height="100%" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
     <rect width="40" height="40" rx="8" fill="#FFFFFF"/>
     <g fill="#005A9C">
       <path d="M11 11h7v2h-5v5h-2v-7z"/>
@@ -130,7 +130,7 @@ const BANK_LOGOS = {
       <rect x="15" y="15" width="10" height="10" fill="#005A9C"/>
     </g>
   </svg>`,
-  express: `<svg viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+  express: `<svg width="100%" height="100%" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
     <rect width="40" height="40" rx="8" fill="#0056B3"/>
     <rect x="13" y="9" width="14" height="22" rx="3" stroke="white" stroke-width="2" fill="none"/>
     <circle cx="20" cy="27" r="1" fill="white"/>
@@ -233,7 +233,7 @@ function SelectionModal({ isOpen, title, items, selectedId, onSelect, onClose, r
                 <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
                   <div style={{ width: 36, height: 36, borderRadius: 10, overflow: "hidden", flexShrink: 0, background: item.logoBg || "#f1f5f9", display: "flex", alignItems: "center", justifyContent: "center" }}>
                     {renderIcon(item) ? (
-                      <div dangerouslySetInnerHTML={{ __html: renderIcon(item) }} />
+                      <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center" }} dangerouslySetInnerHTML={{ __html: renderIcon(item) }} />
                     ) : item.logo ? (
                       <img src={item.logo} alt={item.label} style={{ width: 36, height: 36, objectFit: "contain", borderRadius: 10 }} onError={e => { e.target.style.display = "none"; }} />
                     ) : null}
@@ -458,7 +458,7 @@ export function Calculator({ appliedRate, rate, onSubmit, loading, user, kycStep
                 <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
                   <div style={{ width: 36, height: 36, flexShrink: 0, borderRadius: 10, overflow: "hidden", background: destInfo?.logoBg || "#f1f5f9", display: "flex", alignItems: "center", justifyContent: "center" }}>
                     {destInfo?.svg ? (
-                      <div dangerouslySetInnerHTML={{ __html: destInfo.svg }} />
+                      <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center" }} dangerouslySetInnerHTML={{ __html: destInfo.svg }} />
                     ) : destInfo?.logo ? (
                       <img src={destInfo.logo} alt={destInfo.label} style={{ width: 36, height: 36, objectFit: "contain", borderRadius: 10 }} onError={e => { e.target.style.display = "none"; }} />
                     ) : null}
@@ -501,7 +501,7 @@ export function Calculator({ appliedRate, rate, onSubmit, loading, user, kycStep
               >
                 <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
                   <div 
-                    style={{ width: 36, height: 36, flexShrink: 0, borderRadius: 8, overflow: "hidden" }} 
+                    style={{ width: 36, height: 36, flexShrink: 0, borderRadius: 8, overflow: "hidden", display: "flex", alignItems: "center", justifyContent: "center" }} 
                     dangerouslySetInnerHTML={{ __html: BANK_LOGOS[selectedBank] }} 
                   />
                   <div>

@@ -467,7 +467,7 @@ export function AdminPanel({ user, onLogout }) {
                       <div style={{ fontSize: 9, fontFamily: "monospace", color: "#334155", fontWeight: 700 }}>{o.order_ref ?? "#" + o.id.slice(0, 8).toUpperCase()}</div>
                       <div style={{ fontSize: 12, fontWeight: 700, color: "#e2e8f0", marginTop: 2, display: "flex", alignItems: "center", gap: 6 }}>
                         {d?.svg ? (
-                          <div style={{ display: "inline-block", width: 14, height: 14, flexShrink: 0 }} dangerouslySetInnerHTML={{ __html: d.svg }} />
+                          <div style={{ display: "flex", alignItems: "center", justifyContent: "center", width: 14, height: 14, flexShrink: 0 }} dangerouslySetInnerHTML={{ __html: d.svg }} />
                         ) : null}
                         <span>{d?.label} · {o.destination_account}</span>
                       </div>
@@ -596,7 +596,7 @@ export function AdminPanel({ user, onLogout }) {
                       <div style={{ fontSize: 9, fontFamily: "monospace", color: "#334155", fontWeight: 700 }}>{o.order_ref ?? "#" + o.id.slice(0, 8).toUpperCase()}</div>
                       <div style={{ fontSize: 12, fontWeight: 700, color: "#e2e8f0", marginTop: 2, display: "flex", alignItems: "center", gap: 6 }}>
                         {d?.svg ? (
-                          <div style={{ display: "inline-block", width: 14, height: 14, flexShrink: 0 }} dangerouslySetInnerHTML={{ __html: d.svg }} />
+                          <div style={{ display: "flex", alignItems: "center", justifyContent: "center", width: 14, height: 14, flexShrink: 0 }} dangerouslySetInnerHTML={{ __html: d.svg }} />
                         ) : null}
                         <span>{d?.label} · {o.destination_account}</span>
                       </div>
