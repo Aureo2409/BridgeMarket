@@ -75,23 +75,16 @@ export const DESTS = [
   {
     id:    "airtm",
     label: "Airtm",
-    color: "#0052FF",
-    bg:    "#eef2ff",
+    color: "#1E293B",
+    bg:    "#F1F5F9",
     desc:  "Carteira digital Airtm",
     hint:  "E-mail da conta Airtm",
     logo:  "https://play-lh.googleusercontent.com/YKiMZ0ibGBjKHnVF9BJr-CjyHsVGa-zl0TJ4iuDhBRG5TgK1v3oLjPVAFrpF0wY8kw=w240-h480-rw",
-    logoBg: "#0052FF",
+    logoBg: "#FFFFFF",
     svg: `<svg width="100%" height="100%" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
       <rect width="40" height="40" rx="8" fill="#FFFFFF"/>
-      <g transform="translate(0, 1)">
-        <polygon points="20,8 11.34,13 14.8,15 20,12" fill="#00D2FF" />
-        <polygon points="20,8 28.66,13 25.2,15 20,12" fill="#4CAF50" />
-        <polygon points="28.66,13 28.66,23 25.2,21 25.2,15" fill="#FFC107" />
-        <polygon points="20,28 28.66,23 25.2,21 20,24" fill="#FF5722" />
-        <polygon points="11.34,23 20,28 20,24 14.8,21" fill="#9C27B0" />
-        <polygon points="11.34,13 11.34,23 14.8,21 14.8,15" fill="#2196F3" />
-        <path d="M28.66,23 L28.66,28 C28.66,29.5 29.5,30 31,30 L31,26.5 C30.2,26.5 28.66,26 28.66,23 Z" fill="#E91E63" />
-      </g>
+      <rect x="0.5" y="0.5" width="39" height="39" rx="7.5" stroke="#E2E8F0" stroke-width="1" fill="none"/>
+      <path d="M 14 26 L 19 12 C 19.5 10.5, 20.5 10.5, 21 12 L 25.5 22 C 26 23.5, 24.5 25, 23.5 24.5 L 18 20.5 C 16.5 19.5, 16.5 18.5, 18 18.5 L 26 18.5" stroke="#111111" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
     </svg>`,
   },
   {
