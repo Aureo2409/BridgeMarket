@@ -104,3 +104,16 @@ export async function uploadBiometricVideo(userId, orderId, videoBlob) {
   return { path };
 }
 
+export async function uploadAccessProof(userId, file) {
+  const ext = file.name.split(".").pop().toLowerCase();
+  const path = `weekly_access/${userId}/${Date.now()}.${ext}`;
+
+  const { error } = await sb.storage
+    .from("payment-proofs")
+    .upload(path, file, { cacheControl: "3600", contentType: file.type });
+
+  if (error) throw error;
+
+  return { path };
+}
+

@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import { sb, checkIsAdmin, fetchLatestRate, fetchAdminConfig, uploadKycDocument, uploadAvatar } from "./lib/supabase.js";
+import { sb, checkIsAdmin, fetchLatestRate, fetchAdminConfig, uploadKycDocument, uploadAvatar, uploadAccessProof } from "./lib/supabase.js";
 import { CSS, DESTS } from "./lib/constants.js";
 import { Toast, StepBar, Header, Icon, ConfirmModal } from "./components/shared/UI.jsx";
 import { Calculator } from "./components/client/Calculator.jsx";
@@ -477,6 +477,8 @@ function ClientApp({ user, onLogout }) {
   const [profileLoad, setProfileLoad] = useState(false);
   const [showActivationScreen, setShowActivationScreen] = useState(false);
   const [avatarUploading, setAvatarUploading] = useState(false);
+  const [accessFile, setAccessFile] = useState(null);
+  const [accessFileLoad, setAccessFileLoad] = useState(false);
 
   const [userRating, setUserRating] = useState({ avg: 0, total: 0 });
   const [isDesktop, setIsDesktop] = useState(window.innerWidth >= 768);
@@ -1449,6 +1451,67 @@ function ClientApp({ user, onLogout }) {
   }
 
   function renderActivationCard() {
+    const isPending = profile?.access_status === "pending_payment";
+
+    if (isPending) {
+      return (
+        <div className="card" style={{ padding: "28px 22px", textAlign: "center", border: "1.5px solid #f59e0b", borderRadius: 20, maxWidth: 500, margin: "20px auto" }}>
+          <div style={{ width: 56, height: 56, borderRadius: "50%", background: "rgba(245,158,11,0.08)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 16px", color: "#f59e0b" }}>
+            <Icon name="clock" size={28} />
+          </div>
+          
+          <h2 style={{ fontSize: 18, fontWeight: 900, color: "#1e1b4b", letterSpacing: "-0.4px", marginBottom: 6 }}>
+            Acesso em Fase de Validação
+          </h2>
+          <div style={{ fontSize: 12, color: "#f59e0b", fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 12 }}>
+            Aguardando Aprovação (500 Kz)
+          </div>
+          <p style={{ fontSize: 12, color: "#6b7280", lineHeight: 1.6, marginBottom: 20, fontWeight: 500 }}>
+            O teu comprovativo de pagamento foi enviado com sucesso e está sob análise da nossa equipa. A ativação costuma ocorrer em poucos minutos. Agradecemos a paciência!
+          </p>
+
+          <button
+            className="btn btn-p"
+            onClick={() => setShowActivationScreen(false)}
+            style={{ width: "100%", background: "linear-gradient(135deg,#6366f1,#8b5cf6)", boxShadow: "0 6px 16px rgba(99,102,241,0.2)" }}
+          >
+            Voltar ao Mercado
+          </button>
+
+          <button
+            className="btn"
+            onClick={async () => {
+              triggerConfirm(
+                "Cancelar Solicitação",
+                "Tens a certeza que queres cancelar esta solicitação para enviar outro comprovativo?",
+                async () => {
+                  setAccessFileLoad(true);
+                  const { error } = await sb.from("profiles").update({
+                    access_status: "inactive",
+                    access_proof_url: null
+                  }).eq("id", user.id);
+                  setAccessFileLoad(false);
+                  if (error) {
+                    toast_("Erro ao cancelar: " + error.message, "err");
+                  } else {
+                    toast_("Solicitação cancelada. Podes carregar outro comprovativo.");
+                    const updatedP = { ...profile, access_status: "inactive", access_proof_url: null };
+                    setProfile(updatedP);
+                    localStorage.setItem("bridge_profile", JSON.stringify(updatedP));
+                    setAccessFile(null);
+                  }
+                }
+              );
+            }}
+            disabled={accessFileLoad}
+            style={{ width: "100%", marginTop: 12, background: "rgba(239, 68, 68, 0.08)", color: "#ef4444", border: "1px solid rgba(239, 68, 68, 0.15)" }}
+          >
+            {accessFileLoad ? "A processar..." : "Cancelar e Enviar Outro Comprovativo"}
+          </button>
+        </div>
+      );
+    }
+
     return (
       <div className="card" style={{ padding: "28px 22px", textAlign: "center", border: "1.5px solid #6366f1", borderRadius: 20, maxWidth: 500, margin: "20px auto" }}>
         <div style={{ width: 56, height: 56, borderRadius: "50%", background: "rgba(99,102,241,0.08)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 16px", color: "#6366f1" }}>
@@ -1470,37 +1533,66 @@ function ClientApp({ user, onLogout }) {
             Dados para Transferência
           </div>
           <div style={{ display: "flex", flexDirection: "column", gap: 6, fontSize: 12, color: "#1e1b4b", fontWeight: 600 }}>
-            <div>Banco: <span style={{ color: "#4f46e5" }}>BAI</span></div>
-            <div>IBAN: <span style={{ color: "#4f46e5", fontFamily: "monospace" }}>AO06 0040 0000 5543 2190 1012 3</span></div>
-            <div>Destinatário: <span style={{ color: "#475569" }}>Pixel Flex Lda.</span></div>
+            <div>Canal: <span style={{ color: "#4f46e5" }}>Multicaixa Express</span></div>
+            <div>Número: <span style={{ color: "#4f46e5", fontFamily: "monospace" }}>952740023</span></div>
+            <div>Destinatário: <span style={{ color: "#475569" }}>BridgeP2P</span></div>
+          </div>
+        </div>
+
+        {/* Upload zone */}
+        <div
+          className={`upload-zone${accessFile ? " has-file" : ""}`}
+          onClick={() => document.getElementById("access-pf-inp").click()}
+          style={{ marginBottom: 20 }}
+        >
+          <input id="access-pf-inp" type="file" accept="image/jpeg,image/png,image/webp,application/pdf"
+            style={{ display: "none" }}
+            onChange={e => { if (e.target.files[0]) { setAccessFile(e.target.files[0]); } }} />
+          <div className="up-icon">{accessFile ? <Icon name="file" size={24} style={{ color: "#10b981" }} /> : <Icon name="upload" size={24} style={{ color: "#6366f1" }} />}</div>
+          <div className="up-title" style={{ fontSize: 13, fontWeight: 700, color: "#1e1b4b", marginTop: 8 }}>
+            {accessFile ? accessFile.name : "Selecionar Comprovativo"}
+          </div>
+          <div className="up-sub" style={{ fontSize: 10, color: "#94a3b8", marginTop: 4 }}>
+            {accessFile
+              ? `${(accessFile.size / 1024).toFixed(1)} KB · ${accessFile.type}`
+              : "PNG, JPG, WEBP ou PDF — máx. 5 MB"}
           </div>
         </div>
 
         <button
           className="btn btn-p"
           onClick={async () => {
-            setOrdLoad(true);
-            const expiryDate = new Date();
-            expiryDate.setDate(expiryDate.getDate() + 7);
-            const { error } = await sb.from("profiles").update({
-              access_status: "active",
-              access_expires_at: expiryDate.toISOString()
-            }).eq("id", user.id);
-            setOrdLoad(false);
-            if (error) {
-              toast_("Erro ao ativar acesso: " + error.message, "err");
-            } else {
-              toast_("Acesso ativado com sucesso por 7 dias!");
-              const updatedP = { ...profile, access_status: "active", access_expires_at: expiryDate.toISOString() };
-              setProfile(updatedP);
-              localStorage.setItem("bridge_profile", JSON.stringify(updatedP));
-              setShowActivationScreen(false);
+            if (!accessFile) {
+              toast_("Por favor, seleciona o comprovativo do pagamento.", "err");
+              return;
+            }
+            setAccessFileLoad(true);
+            try {
+              const { path } = await uploadAccessProof(user.id, accessFile);
+              const { error } = await sb.from("profiles").update({
+                access_status: "pending_payment",
+                access_proof_url: path
+              }).eq("id", user.id);
+              
+              if (error) {
+                toast_("Erro ao enviar comprovativo: " + error.message, "err");
+              } else {
+                toast_("Comprovativo enviado para validação com sucesso!");
+                const updatedP = { ...profile, access_status: "pending_payment", access_proof_url: path };
+                setProfile(updatedP);
+                localStorage.setItem("bridge_profile", JSON.stringify(updatedP));
+                setAccessFile(null);
+              }
+            } catch (err) {
+              toast_("Erro no upload do ficheiro: " + err.message, "err");
+            } finally {
+              setAccessFileLoad(false);
             }
           }}
-          disabled={orderLoad}
+          disabled={accessFileLoad || !accessFile}
           style={{ width: "100%", background: "linear-gradient(135deg,#6366f1,#8b5cf6)", boxShadow: "0 6px 16px rgba(99,102,241,0.2)" }}
         >
-          {orderLoad ? "A processar..." : "Simular Pagamento e Activar"}
+          {accessFileLoad ? "A enviar..." : "Enviar Comprovativo e Solicitar Acesso"}
         </button>
 
         <button
@@ -1512,7 +1604,7 @@ function ClientApp({ user, onLogout }) {
         </button>
         
         <div style={{ fontSize: 10, color: "#94a3b8", fontWeight: 700, marginTop: 10 }}>
-          Nota: O acesso expira automaticamente após 7 dias
+          Nota: O acesso expira automaticamente após 7 dias de uso ativo
         </div>
       </div>
     );

@@ -69,6 +69,7 @@ export function AdminPanel({ user, onLogout }) {
   const [toast, setToast] = useState(null);
   const [kycs, setKycs] = useState([]);
   const [rejectedKycs, setRejectedKycs] = useState([]);
+  const [accessRequests, setAccessRequests] = useState([]);
   const [editingOrder, setEditingOrder] = useState(null);
   const [editForm, setEditForm] = useState({});
 
@@ -97,13 +98,14 @@ export function AdminPanel({ user, onLogout }) {
       })
       .on("postgres_changes", { event: "*", schema: "public", table: "kyc_verifications" }, () => fetchKycs())
       .on("postgres_changes", { event: "*", schema: "public", table: "orders" }, () => { fetchOrders(); fetchStats(); })
+      .on("postgres_changes", { event: "*", schema: "public", table: "profiles" }, () => fetchAccessRequests())
       .on("postgres_changes", { event: "INSERT", schema: "public", table: "exchange_rates" }, p => setRate(p.new))
       .subscribe();
     return () => sb.removeChannel(ch);
   }, []);
 
   async function boot() {
-    await Promise.all([fetchAlerts(), fetchOrders(), fetchProofs(), fetchStats(), fetchConfig(), fetchKycs()]);
+    await Promise.all([fetchAlerts(), fetchOrders(), fetchProofs(), fetchStats(), fetchConfig(), fetchKycs(), fetchAccessRequests()]);
     const { data } = await sb.from("exchange_rates").select("*").order("fetched_at", { ascending: false }).limit(1).maybeSingle();
     if (data) setRate(data);
   }
@@ -151,6 +153,91 @@ export function AdminPanel({ user, onLogout }) {
     // Puxar também o histórico de rejeitados
     const { data: rData } = await sb.from("kyc_verifications").select("*, profiles(full_name, phone)").eq("ocr_status", "rejected").order("updated_at", { ascending: false });
     if (rData) setRejectedKycs(rData);
+  }
+
+  async function fetchAccessRequests() {
+    const { data, error } = await sb
+      .from("profiles")
+      .select("id, full_name, phone, access_proof_url, updated_at")
+      .eq("access_status", "pending_payment")
+      .order("updated_at", { ascending: false });
+    
+    if (error) {
+      console.error("Erro ao buscar solicitações de acesso:", error);
+      return;
+    }
+
+    if (data) {
+      const requestsWithUrls = await Promise.all(data.map(async (p) => {
+        let signedUrl = p.access_proof_url;
+        if (p.access_proof_url && !p.access_proof_url.startsWith("http")) {
+          const { data: sData } = await sb.storage.from("payment-proofs").createSignedUrl(p.access_proof_url, 3600);
+          if (sData) signedUrl = sData.signedUrl;
+        }
+        return { ...p, signedUrl };
+      }));
+      setAccessRequests(requestsWithUrls);
+    } else {
+      setAccessRequests([]);
+    }
+  }
+
+  async function approveAccess(profileId) {
+    const expiryDate = new Date();
+    expiryDate.setDate(expiryDate.getDate() + 7);
+    const { error } = await sb.from("profiles").update({
+      access_status: "active",
+      access_expires_at: expiryDate.toISOString()
+    }).eq("id", profileId);
+
+    if (error) {
+      toast_("Erro ao aprovar acesso: " + error.message, "err");
+    } else {
+      toast_("Acesso semanal aprovado!");
+      fetchAccessRequests();
+      const userReq = accessRequests.find(r => r.id === profileId);
+      if (userReq && userReq.phone) {
+        await sb.from("notifications").insert({
+          user_id: profileId,
+          channel: "whatsapp",
+          recipient_phone: userReq.phone,
+          message_body: `Olá ${userReq.full_name || "Cliente"}, o teu comprovativo de pagamento de 500 Kz foi validado com sucesso! O teu acesso de 7 dias à plataforma BridgeP2P já está ativo. Bons negócios!`,
+          status: "pending"
+        });
+      }
+    }
+  }
+
+  async function rejectAccess(profileId, proofUrl) {
+    const reason = window.prompt("Motivo da rejeição (será enviado por notificação):");
+    if (reason === null) return;
+
+    const { error } = await sb.from("profiles").update({
+      access_status: "inactive",
+      access_proof_url: null
+    }).eq("id", profileId);
+
+    if (error) {
+      toast_("Erro ao rejeitar: " + error.message, "err");
+    } else {
+      toast_("Acesso semanal rejeitado.");
+      fetchAccessRequests();
+
+      if (proofUrl && !proofUrl.startsWith("http")) {
+        await sb.storage.from("payment-proofs").remove([proofUrl]);
+      }
+
+      const userReq = accessRequests.find(r => r.id === profileId);
+      if (userReq && userReq.phone) {
+        await sb.from("notifications").insert({
+          user_id: profileId,
+          channel: "whatsapp",
+          recipient_phone: userReq.phone,
+          message_body: `Olá ${userReq.full_name || "Cliente"}, o teu comprovativo de pagamento de 500 Kz foi recusado. Motivo: ${reason || "Comprovativo inválido ou ilegível"}. Por favor, tenta novamente submetendo o comprovativo correto.`,
+          status: "pending"
+        });
+      }
+    }
   }
 
   async function markRead(id) {
@@ -618,7 +705,39 @@ export function AdminPanel({ user, onLogout }) {
 
         {tab === "kyc" && (
           <>
-            <span className="adm-section">Verificações de Identidade (KYC)</span>
+            <span className="adm-section">Acessos Semanais Pendentes (500 Kz)</span>
+            {accessRequests.length === 0 && <div style={{ textAlign: "center", padding: "24px 0", color: "#94a3b8", fontWeight: 600, fontSize: 13 }}>Nenhuma solicitação de acesso pendente.</div>}
+            {accessRequests.map(r => (
+              <div key={r.id} className="adm-card">
+                <div style={{ fontSize: 13, fontWeight: 800, color: "#1e1b4b" }}>{r.full_name || "Utilizador"}</div>
+                <div style={{ fontSize: 11, color: "#64748b", marginBottom: 10 }}>
+                  Telefone: {r.phone || "Sem telefone"} · Enviado: {new Date(r.updated_at).toLocaleString("pt-AO")}
+                </div>
+                
+                {r.signedUrl && (
+                  <div style={{ marginBottom: 12 }}>
+                    <div style={{ fontSize: 9, color: "#64748b", marginBottom: 4, fontWeight: 700, textTransform: "uppercase" }}>Comprovativo</div>
+                    {r.access_proof_url?.match(/\.pdf$/i) ? (
+                      <a href={r.signedUrl} target="_blank" rel="noreferrer" style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", height: 80, borderRadius: 6, border: "1px solid #cbd5e1", background: "rgba(0,0,0,0.15)", textDecoration: "none", color: "#6366f1" }}>
+                        <Icon name="file" size={24} />
+                        <span style={{ fontSize: 9, fontWeight: 800, marginTop: 4, color: "#e2e8f0" }}>Ver PDF</span>
+                      </a>
+                    ) : (
+                      <a href={r.signedUrl} target="_blank" rel="noreferrer">
+                        <img src={r.signedUrl} alt="Comprovativo" style={{ width: "100%", maxHeight: 200, objectFit: "contain", borderRadius: 6, border: "1px solid #cbd5e1", background: "#f8fafc" }} />
+                      </a>
+                    )}
+                  </div>
+                )}
+
+                <div style={{ display: "flex", gap: 8 }}>
+                  <button className="adm-btn" style={{ background: "#10b981", flex: 1, color: "#fff", border: "none" }} onClick={() => approveAccess(r.id)}>Aprovar Acesso</button>
+                  <button className="adm-btn" style={{ background: "#ef4444", flex: 1, color: "#fff", border: "none" }} onClick={() => rejectAccess(r.id, r.access_proof_url)}>Rejeitar</button>
+                </div>
+              </div>
+            ))}
+
+            <span className="adm-section" style={{ marginTop: 24 }}>Verificações de Identidade (KYC)</span>
             {kycs.length === 0 && <div style={{ textAlign: "center", padding: "36px 0", color: "#94a3b8", fontWeight: 600, fontSize: 13 }}>Nenhum KYC pendente de aprovação.</div>}
             {kycs.map(k => (
               <div key={k.id} className="adm-card">
