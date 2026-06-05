@@ -1,5 +1,7 @@
-// ── Carteiras (ícones SVG reais da Fase 1) ─────────────────────────────────────
+// ── Destinos de Pagamento — logos reais via URL ───────────────────────────────
 export const DESTS = [
+
+  // ── CARTEIRAS DIGITAIS LOCAIS ─────────────────────────────────────────────
   {
     id:    "multicaixa",
     label: "Multicaixa Express",
@@ -7,12 +9,8 @@ export const DESTS = [
     bg:    "#f1f5f9",
     desc:  "Carteira digital local",
     hint:  "Número de telefone associado ao Express (9XXXXXXXX)",
-    svg: `<svg viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <rect width="40" height="40" rx="10" fill="#0F172A"/>
-      <rect x="13" y="10" width="14" height="20" rx="2" stroke="white" stroke-width="2.5"/>
-      <circle cx="20" cy="25" r="2.5" fill="white"/>
-      <line x1="16" y1="14" x2="24" y2="14" stroke="white" stroke-width="2" stroke-linecap="round"/>
-    </svg>`,
+    logo:  "https://upload.wikimedia.org/wikipedia/commons/thumb/7/7e/Multicaixa_Express_logo.png/320px-Multicaixa_Express_logo.png",
+    logoBg: "#0F172A",
   },
   {
     id:    "unitel_money",
@@ -21,23 +19,184 @@ export const DESTS = [
     bg:    "#fff7ed",
     desc:  "Carteira móvel Unitel",
     hint:  "Número Unitel associado (9XXXXXXXX)",
-    svg: `<svg viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <rect width="40" height="40" rx="10" fill="#FF6B00"/>
-      <path d="M12 25V15a3 3 0 016 0v10M22 25V15a3 3 0 016 0v10" stroke="white" stroke-width="3" stroke-linecap="round"/>
-      <line x1="12" y1="20" x2="28" y2="20" stroke="white" stroke-width="2.5"/>
-    </svg>`,
+    logo:  "https://upload.wikimedia.org/wikipedia/commons/thumb/2/2b/Unitel_Angola_logo.svg/320px-Unitel_Angola_logo.svg.png",
+    logoBg: "#FF6B00",
   },
+
+  // ── BANCOS ANGOLANOS ──────────────────────────────────────────────────────
   {
     id:    "bai_visa",
     label: "BAI Visa",
-    color: "#0056B3",
+    color: "#003DA5",
     bg:    "#eff6ff",
-    desc:  "Cartão bancário BAI",
-    hint:  "IBAN ou número do cartão BAI",
-    svg: `<svg viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <rect width="40" height="40" rx="10" fill="#0056B3"/>
-      <path d="M11 26h18M13 26v-8M17 26v-8M21 26v-8M25 26v-8M11 15l9-5 9 5v3H11v-3z" stroke="white" stroke-width="2" stroke-linejoin="round"/>
-    </svg>`,
+    desc:  "Banco BAI — Visa/Débito",
+    hint:  "IBAN BAI ou número do cartão",
+    logo:  "https://upload.wikimedia.org/wikipedia/commons/thumb/5/5c/BAI_Logo.png/320px-BAI_Logo.png",
+    logoBg: "#003DA5",
+  },
+  {
+    id:    "bfa",
+    label: "BFA",
+    color: "#E8001C",
+    bg:    "#fff0f2",
+    desc:  "Banco de Fomento Angola",
+    hint:  "IBAN BFA (AO06 XXXX...)",
+    logo:  "https://upload.wikimedia.org/wikipedia/commons/thumb/b/b4/BFA_Logo.png/320px-BFA_Logo.png",
+    logoBg: "#E8001C",
+  },
+  {
+    id:    "bic",
+    label: "Banco BIC",
+    color: "#8B0000",
+    bg:    "#fef2f2",
+    desc:  "BancoBIC Angola",
+    hint:  "IBAN BIC (AO06 XXXX...)",
+    logo:  "https://upload.wikimedia.org/wikipedia/commons/thumb/3/3c/Banco_BIC_Logo.png/320px-Banco_BIC_Logo.png",
+    logoBg: "#8B0000",
+  },
+  {
+    id:    "atlantico",
+    label: "Banco Atlântico",
+    color: "#00748A",
+    bg:    "#f0fdff",
+    desc:  "Banco Millennium Atlântico",
+    hint:  "IBAN Atlântico (AO06 XXXX...)",
+    logo:  "https://upload.wikimedia.org/wikipedia/commons/thumb/e/e3/Banco_Millennium_Atlantico_logo.png/320px-Banco_Millennium_Atlantico_logo.png",
+    logoBg: "#00748A",
+  },
+  {
+    id:    "bci",
+    label: "BCI",
+    color: "#00843D",
+    bg:    "#f0fdf4",
+    desc:  "Banco de Comércio e Indústria",
+    hint:  "IBAN BCI (AO06 XXXX...)",
+    logo:  "https://upload.wikimedia.org/wikipedia/commons/thumb/2/2a/BCI_Angola_logo.png/320px-BCI_Angola_logo.png",
+    logoBg: "#00843D",
+  },
+  {
+    id:    "bpc",
+    label: "BPC",
+    color: "#0070C0",
+    bg:    "#eff6ff",
+    desc:  "Banco de Poupança e Crédito",
+    hint:  "IBAN BPC (AO06 XXXX...)",
+    logo:  "https://upload.wikimedia.org/wikipedia/commons/thumb/9/9a/BPC_Angola_logo.png/320px-BPC_Angola_logo.png",
+    logoBg: "#0070C0",
+  },
+  {
+    id:    "bni",
+    label: "BNI",
+    color: "#E87722",
+    bg:    "#fff7ed",
+    desc:  "Banco de Negócios Internacional",
+    hint:  "IBAN BNI (AO06 XXXX...)",
+    logo:  "https://upload.wikimedia.org/wikipedia/commons/thumb/4/4e/BNI_Angola_logo.png/320px-BNI_Angola_logo.png",
+    logoBg: "#E87722",
+  },
+  {
+    id:    "bancosol",
+    label: "Banco Sol",
+    color: "#F5A800",
+    bg:    "#fffbeb",
+    desc:  "Banco Sol Angola",
+    hint:  "IBAN Banco Sol (AO06 XXXX...)",
+    logo:  "https://upload.wikimedia.org/wikipedia/commons/thumb/0/02/BancoSol_Angola_logo.png/320px-BancoSol_Angola_logo.png",
+    logoBg: "#F5A800",
+  },
+  {
+    id:    "bancoyetu",
+    label: "Banco Yetu",
+    color: "#C9A84C",
+    bg:    "#fdfaf0",
+    desc:  "Banco Yetu Angola",
+    hint:  "IBAN Banco Yetu (AO06 XXXX...)",
+    logo:  "https://upload.wikimedia.org/wikipedia/commons/thumb/8/8e/BancoYetu_logo.png/320px-BancoYetu_logo.png",
+    logoBg: "#C9A84C",
+  },
+  {
+    id:    "cga",
+    label: "Caixa Geral Angola",
+    color: "#005A2B",
+    bg:    "#f0fdf4",
+    desc:  "Caixa Geral de Depósitos Angola",
+    hint:  "IBAN CGA (AO06 XXXX...)",
+    logo:  "https://upload.wikimedia.org/wikipedia/commons/thumb/6/6e/Caixa_Geral_Angola_logo.png/320px-Caixa_Geral_Angola_logo.png",
+    logoBg: "#005A2B",
+  },
+  {
+    id:    "standard_bank",
+    label: "Standard Bank",
+    color: "#0033A0",
+    bg:    "#eff6ff",
+    desc:  "Standard Bank Angola",
+    hint:  "IBAN Standard Bank (AO06 XXXX...)",
+    logo:  "https://upload.wikimedia.org/wikipedia/commons/thumb/7/72/Standard_Bank_Logo.svg/320px-Standard_Bank_Logo.svg.png",
+    logoBg: "#0033A0",
+  },
+  {
+    id:    "bancoeconomico",
+    label: "Banco Económico",
+    color: "#6B21A8",
+    bg:    "#faf5ff",
+    desc:  "Banco Económico Angola",
+    hint:  "IBAN Banco Económico (AO06 XXXX...)",
+    logo:  "https://upload.wikimedia.org/wikipedia/commons/thumb/5/5b/Banco_Economico_Angola_logo.png/320px-Banco_Economico_Angola_logo.png",
+    logoBg: "#6B21A8",
+  },
+  {
+    id:    "bancokeve",
+    label: "Banco Keve",
+    color: "#005F9E",
+    bg:    "#eff6ff",
+    desc:  "Banco Keve Angola",
+    hint:  "IBAN Banco Keve (AO06 XXXX...)",
+    logo:  "https://upload.wikimedia.org/wikipedia/commons/thumb/3/3b/BancoKeve_logo.png/320px-BancoKeve_logo.png",
+    logoBg: "#005F9E",
+  },
+
+  // ── CARTÕES INTERNACIONAIS ────────────────────────────────────────────────
+  {
+    id:    "visa_virtual",
+    label: "Visa Virtual",
+    color: "#1A1F71",
+    bg:    "#eef2ff",
+    desc:  "Cartão Visa Virtual",
+    hint:  "Número do cartão Visa virtual",
+    logo:  "https://upload.wikimedia.org/wikipedia/commons/thumb/5/5e/Visa_Inc._logo.svg/320px-Visa_Inc._logo.svg.png",
+    logoBg: "#1A1F71",
+  },
+  {
+    id:    "mastercard",
+    label: "Mastercard",
+    color: "#EB001B",
+    bg:    "#fff0f0",
+    desc:  "Cartão Mastercard",
+    hint:  "Número do cartão Mastercard",
+    logo:  "https://upload.wikimedia.org/wikipedia/commons/thumb/2/2a/Mastercard-logo.svg/320px-Mastercard-logo.svg.png",
+    logoBg: "#1A1F71",
+  },
+
+  // ── CARTEIRAS DIGITAIS INTERNACIONAIS ─────────────────────────────────────
+  {
+    id:    "paypal",
+    label: "PayPal",
+    color: "#003087",
+    bg:    "#eff6ff",
+    desc:  "Carteira PayPal",
+    hint:  "E-mail da conta PayPal",
+    logo:  "https://upload.wikimedia.org/wikipedia/commons/thumb/b/b5/PayPal.svg/320px-PayPal.svg.png",
+    logoBg: "#003087",
+  },
+  {
+    id:    "wise",
+    label: "Wise",
+    color: "#00B9FF",
+    bg:    "#f0fbff",
+    desc:  "Transferência Wise",
+    hint:  "E-mail ou número de conta Wise",
+    logo:  "https://upload.wikimedia.org/wikipedia/commons/thumb/1/16/Wise_logo.svg/320px-Wise_logo.svg.png",
+    logoBg: "#163300",
   },
   {
     id:    "airtm",
@@ -45,13 +204,9 @@ export const DESTS = [
     color: "#0052FF",
     bg:    "#eef2ff",
     desc:  "Carteira digital Airtm",
-    hint:  "E-mail da conta Airtm (ex: conta@airtm.com)",
-    svg: `<svg viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <rect width="40" height="40" rx="10" fill="#0052FF"/>
-      <path d="M20 11L11 27h5.5l3.5-7 3.5 7H29l-9-16z" fill="white"/>
-      <path d="M20 20l-2 4h4l-2-4z" fill="#0052FF" opacity="0.8"/>
-      <text x="20" y="34" font-family="system-ui, sans-serif" font-size="7" font-weight="900" fill="white" text-anchor="middle" letter-spacing="0.5">AIRTM</text>
-    </svg>`,
+    hint:  "E-mail da conta Airtm",
+    logo:  "https://play-lh.googleusercontent.com/YKiMZ0ibGBjKHnVF9BJr-CjyHsVGa-zl0TJ4iuDhBRG5TgK1v3oLjPVAFrpF0wY8kw=w240-h480-rw",
+    logoBg: "#0052FF",
   },
   {
     id:    "redotpay",
@@ -59,84 +214,42 @@ export const DESTS = [
     color: "#FF334B",
     bg:    "#fff0f2",
     desc:  "Carteira digital RedotPay",
-    hint:  "ID de utilizador RedotPay (ex: 8 dígitos)",
-    svg: `<svg viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <rect width="40" height="40" rx="10" fill="#111111"/>
-      <circle cx="20" cy="20" r="16" fill="#111111" stroke="#FF334B" stroke-width="1.5"/>
-      <path d="M14 13h7a4.5 4.5 0 010 9h-7v5h-2.5V13zm2.5 2.5v4h4.5a2 2 0 000-4h-4.5z" fill="#FF334B"/>
-      <path d="M18.5 22.5L24 27h3.5l-6-5h-2.5z" fill="#FF334B"/>
-      <circle cx="20.5" cy="17" r="1.5" fill="white"/>
-    </svg>`,
+    hint:  "ID de utilizador RedotPay",
+    logo:  "https://play-lh.googleusercontent.com/jSLtVLqp1JNr7iPOujdYJJTnqd7YFxwRF4gAYfXrX7MQJhqr0Mc_4RBSXI5ePqNEbw=w240-h480-rw",
+    logoBg: "#111111",
   },
   {
     id:    "binance",
     label: "Binance",
     color: "#F3BA2F",
     bg:    "#fffdf0",
-    desc:  "Carteira / Binance Pay",
-    hint:  "Binance Pay ID ou Email/Telefone da conta",
-    svg: `<svg viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <rect width="40" height="40" rx="10" fill="#12161A"/>
-      <path d="M20 7l-4.5 4.5 2 2L20 11l2.5 2.5 2-2L20 7z" fill="#F3BA2F"/>
-      <path d="M12.5 14.5l-2 2L20 26l9.5-9.5-2-2L20 22l-7.5-7.5z" fill="#F3BA2F"/>
-      <path d="M20 14.5l-3.5 3.5 3.5 3.5 3.5-3.5-3.5-3.5z" fill="#F3BA2F"/>
-      <path d="M10.5 16.5l-3.5 3.5 3.5 3.5 1.5-1.5L10 20l2-2-1.5-1.5z" fill="#F3BA2F"/>
-      <path d="M29.5 16.5l-1.5 1.5 2 2-2 2 1.5 1.5 3.5-3.5-3.5-3.5z" fill="#F3BA2F"/>
-      <text x="20" y="34" font-family="system-ui, sans-serif" font-size="7" font-weight="900" fill="#F3BA2F" text-anchor="middle" letter-spacing="0.5">BINANCE</text>
-    </svg>`,
+    desc:  "Binance / Binance Pay",
+    hint:  "Binance Pay ID ou Email da conta",
+    logo:  "https://upload.wikimedia.org/wikipedia/commons/thumb/e/e8/Binance_Logo.svg/320px-Binance_Logo.svg.png",
+    logoBg: "#12161A",
   },
-  {
-    id:    "paypal",
-    label: "PayPal",
-    color: "#003087",
-    bg:    "#eaf0ff",
-    desc:  "Carteira internacional",
-    hint:  "E-mail da conta PayPal (ex: conta@paypal.com)",
-    svg: `<svg viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <rect width="40" height="40" rx="10" fill="#003087"/>
-      <path d="M15 12h7c4 0 6 2 5 5s-3 5-7 5h-3l-2 8H11l4-18z" stroke="white" stroke-width="2.5" stroke-linejoin="round" fill="none"/>
-      <path d="M18 15h6c3.5 0 5 1.5 4.5 4s-2.5 4-6 4h-2.5l-1.5 6" stroke="white" stroke-width="1.8" stroke-linejoin="round"/>
-    </svg>`,
-  },
-  {
-    id:    "wise",
-    label: "Wise",
-    color: "#9FE870",
-    bg:    "#f6fdf0",
-    desc:  "Transferência Wise",
-    hint:  "E-mail ou dados de conta Wise (USD)",
-    svg: `<svg viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <rect width="40" height="40" rx="10" fill="#25B55E"/>
-      <path d="M12 13h16l-8 14-8-14z" fill="white"/>
-      <path d="M20 13v9" stroke="white" stroke-width="2" stroke-linecap="round"/>
-    </svg>`,
-  },
+
+  // ── TRANSFERÊNCIAS BANCÁRIAS INTERNACIONAIS ───────────────────────────────
   {
     id:    "iban_eu",
     label: "IBAN Europeu",
     color: "#003399",
-    bg:    "#f0f4ff",
-    desc:  "Conta bancária EU (SEPA)",
-    hint:  "IBAN Europeu (ex: PT50 0003...)",
-    svg: `<svg viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <rect width="40" height="40" rx="10" fill="#003399"/>
-      <circle cx="20" cy="20" r="8" stroke="white" stroke-width="2"/>
-      <path d="M17 17.5h5M17 20h4M17 22.5h5" stroke="white" stroke-width="1.8" stroke-linecap="round"/>
-    </svg>`,
+    bg:    "#eff6ff",
+    desc:  "Transferência bancária SEPA",
+    hint:  "IBAN europeu (ex: PT50, DE89, FR76...)",
+    logo:  "https://upload.wikimedia.org/wikipedia/commons/thumb/b/b7/Flag_of_Europe.svg/320px-Flag_of_Europe.svg.png",
+    logoBg: "#003399",
   },
   {
     id:    "iban_us",
     label: "IBAN Americano",
-    color: "#0A3161",
-    bg:    "#f0f4f8",
-    desc:  "Conta bancária EUA (ACH)",
-    hint:  "Número da conta e Routing Number (ACH)",
-    svg: `<svg viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <rect width="40" height="40" rx="10" fill="#0A3161"/>
-      <circle cx="20" cy="20" r="8" stroke="white" stroke-width="2"/>
-      <path d="M20 15v10M17.5 17.5h5a2.5 2.5 0 010 5h-5a2.5 2.5 0 000 5h5" stroke="white" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
-    </svg>`,
-  }
+    color: "#B22234",
+    bg:    "#fff0f0",
+    desc:  "Transferência bancária EUA",
+    hint:  "Routing + Account Number (EUA)",
+    logo:  "https://upload.wikimedia.org/wikipedia/commons/thumb/a/a4/Flag_of_the_United_States.svg/320px-Flag_of_the_United_States.svg.png",
+    logoBg: "#B22234",
+  },
 ];
 
 // ── Estados dos pedidos ───────────────────────────────────────────────────────
@@ -200,8 +313,9 @@ body{font-family:'Plus Jakarta Sans',sans-serif;background:#e8e9f5;color:#1e1b4b
 .dest-card{border:1.5px solid rgba(229,231,235,.8);border-radius:14px;padding:10px 10px;cursor:pointer;transition:all .2s;background:rgba(255,255,255,.7);display:flex;align-items:center;gap:8px;position:relative}
 .dest-card:hover{border-color:#c7d2fe;transform:translateY(-1px);box-shadow:0 4px 12px rgba(99,102,241,.03)}
 .dest-card.sel{border-width:2px;box-shadow:0 6px 16px -8px rgba(99,102,241,.2)}
-.dest-logo{width:32px;height:32px;flex-shrink:0;border-radius:8px;overflow:hidden}
-.dest-logo svg{width:32px;height:32px}
+.dest-logo{width:36px;height:36px;flex-shrink:0;border-radius:10px;overflow:hidden;display:flex;align-items:center;justify-content:center;background:#f8fafc}
+.dest-logo img{width:36px;height:36px;object-fit:contain;border-radius:10px}
+.dest-logo svg{width:36px;height:36px}
 .d-name{font-size:12px;font-weight:800;color:#1e1b4b}
 .d-desc{font-size:9px;color:#9ca3af;font-weight:600;margin-top:1px}
 

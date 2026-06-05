@@ -837,8 +837,10 @@ export function TransactionCenter({ order, user, onBack, onCancel }) {
                 width: 32, height: 32, borderRadius: "50%", background: selectedDest?.bg || "rgba(99,102,241,0.06)",
                 display: "flex", alignItems: "center", justifyContent: "center", color: selectedDest?.color || "#6366f1", flexShrink: 0, overflow: "hidden"
               }}>
-                {selectedDest?.svg ? (
-                  <div style={{ width: 32, height: 32 }} dangerouslySetInnerHTML={{ __html: selectedDest.svg }} fill="none" />
+                {selectedDest?.logo ? (
+                  <img src={selectedDest.logo} alt={selectedDest.label} style={{ width: 32, height: 32, objectFit: "contain", borderRadius: "50%" }} onError={e => { e.target.style.display = "none"; }} />
+                ) : selectedDest?.svg ? (
+                  <div style={{ width: 32, height: 32 }} dangerouslySetInnerHTML={{ __html: selectedDest.svg }} />
                 ) : (
                   <Icon name="globe" size={14} />
                 )}
@@ -949,7 +951,12 @@ export function TransactionCenter({ order, user, onBack, onCancel }) {
                                     }}
                                   >
                                     <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                                      <div style={{ width: 24, height: 24, borderRadius: 6, background: d.bg, display: "flex", alignItems: "center", justifyContent: "center" }} dangerouslySetInnerHTML={{ __html: d.svg }} />
+                                      <div style={{ width: 28, height: 28, borderRadius: 8, background: d.logoBg || d.bg, display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden", flexShrink: 0 }}>
+                                        {d.logo
+                                          ? <img src={d.logo} alt={d.label} style={{ width: 28, height: 28, objectFit: "contain" }} onError={e => { e.target.style.display = "none"; }} />
+                                          : d.svg ? <div dangerouslySetInnerHTML={{ __html: d.svg }} /> : null
+                                        }
+                                      </div>
                                       <div>
                                         <div style={{ fontSize: 11.5, fontWeight: 800, color: "#1e1b4b" }}>{d.label}</div>
                                         <div style={{ fontSize: 10, color: "#64748b", fontFamily: "monospace", marginTop: 2 }}>{info.value}</div>
