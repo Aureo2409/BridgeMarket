@@ -808,6 +808,92 @@ supabase.channel('bot_admin_alerts')
         }
     })
 
+    // Acesso semanal - Alertas de upload, aprovação e rejeição de comprovativo de 500 Kz
+    .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'profiles' }, async (payload) => {
+        const { new: newData, old: oldData } = payload;
+        if (!oldData || Object.keys(oldData).length === 0 || oldData.access_status === undefined) return;
+
+        // 1. Alerta para o Admin quando um comprovativo é enviado
+        if (newData.access_status === 'pending_payment' && oldData.access_status !== 'pending_payment') {
+            const alertMsg = `🚨 *PAGAMENTO DE ACESSO PENDENTE (Bridge)*\n\nO utilizador *${newData.full_name || "Cliente"}* (${newData.phone || "Sem telefone"}) acabou de submeter um comprovativo para a taxa de acesso semanal (500 Kz).\n\n👉 Acede ao Painel de Administrador (separador KYC) para validar e aprovar o acesso.`;
+            sendWhatsappMessage(ADMIN_PHONE, alertMsg).catch(err => console.error('Erro ao enviar whatsapp de acesso semanal ao admin:', err));
+
+            if (ADMIN_EMAIL) {
+                const subject = `🚨 Comprovativo de Acesso Semanal Pendente - Bridge`;
+                const html = buildEmailTemplate(
+                    "Solicitação de Acesso Semanal Pendente",
+                    `<p>O utilizador <strong>${newData.full_name || "Cliente"}</strong> (${newData.phone || "Sem telefone"}) submeteu um comprovativo de pagamento da taxa de acesso de 500 Kz.</p>
+                     <p>Por favor, aceda ao Painel de Administrador da Bridge para validar a transferência e ativar o acesso.</p>`,
+                    "Aceder ao Painel",
+                    "https://bridge-market-delta.vercel.app"
+                );
+                sendEmailNotification(ADMIN_EMAIL, subject, html, `Solicitação de acesso semanal de 500 Kz pendente na Bridge para ${newData.full_name || "Cliente"}.`).catch(err => console.error('Erro ao enviar e-mail de acesso semanal ao admin:', err));
+            }
+        }
+
+        // 2. Alerta para o Cliente quando aprovado
+        if (newData.access_status === 'active' && oldData.access_status === 'pending_payment') {
+            try {
+                if (newData.phone) {
+                    let phone = newData.phone.replace(/\D/g, '');
+                    if (phone.length === 9) phone = '244' + phone;
+                    const clientName = newData.full_name ? newData.full_name.split(' ')[0] : 'Cliente';
+                    const msg = `🎉 *ACESSO SEMANAL ATIVO*\n\nOlá ${clientName},\nO teu comprovativo de pagamento de 500 Kz foi validado com sucesso!\nO teu acesso de 7 dias à plataforma BridgeP2P já está ativo. Bons negócios! 🚀`;
+                    sendWhatsappMessage(phone, msg).catch(err => console.error('Erro ao enviar WhatsApp de aprovação de acesso:', err));
+                }
+
+                const userEmail = await getUserEmail(newData.id);
+                const emailEnabled = await isEmailNotificationEnabled(newData.id);
+                if (userEmail && emailEnabled) {
+                    const clientName = newData.full_name ? newData.full_name.split(' ')[0] : 'Cliente';
+                    const subject = `🎉 Acesso Semanal Ativo - Bridge Marketplace`;
+                    const html = buildEmailTemplate(
+                        "O teu Acesso Semanal está Ativo!",
+                        `<p>Olá <strong>${clientName}</strong>,</p>
+                         <p>Temos o prazer de informar que o teu comprovativo de pagamento de 500 Kz foi validado e aprovado pela nossa equipa!</p>
+                         <p>O teu acesso de 7 dias ao mercado P2P já está ativo e podes transacionar livremente sem taxas ou comissões por operação.</p>`,
+                        "Aceder ao Marketplace",
+                        "https://bridge-market-delta.vercel.app"
+                    );
+                    sendEmailNotification(userEmail, subject, html, "O teu acesso semanal de 7 dias foi ativado com sucesso no Bridge Marketplace!").catch(err => console.error('Erro ao enviar e-mail de aprovação de acesso:', err));
+                }
+            } catch (err) {
+                console.error('Erro ao notificar cliente sobre aprovação de acesso semanal:', err);
+            }
+        }
+
+        // 3. Alerta para o Cliente quando rejeitado
+        if (newData.access_status === 'inactive' && oldData.access_status === 'pending_payment') {
+            try {
+                if (newData.phone) {
+                    let phone = newData.phone.replace(/\D/g, '');
+                    if (phone.length === 9) phone = '244' + phone;
+                    const clientName = newData.full_name ? newData.full_name.split(' ')[0] : 'Cliente';
+                    const msg = `❌ *ACESSO SEMANAL RECUSADO*\n\nOlá ${clientName},\nLamentamos, mas o teu comprovativo de pagamento de 500 Kz não pôde ser validado.\n\nPor favor, aceda à plataforma para carregar o comprovativo correto.`;
+                    sendWhatsappMessage(phone, msg).catch(err => console.error('Erro ao enviar WhatsApp de rejeição de acesso:', err));
+                }
+
+                const userEmail = await getUserEmail(newData.id);
+                const emailEnabled = await isEmailNotificationEnabled(newData.id);
+                if (userEmail && emailEnabled) {
+                    const clientName = newData.full_name ? newData.full_name.split(' ')[0] : 'Cliente';
+                    const subject = `❌ Acesso Semanal Recusado - Bridge Marketplace`;
+                    const html = buildEmailTemplate(
+                        "Comprovativo de Acesso Recusado",
+                        `<p>Olá <strong>${clientName}</strong>,</p>
+                         <p>Lamentamos informar que não foi possível validar o comprovativo de pagamento de 500 Kz submetido.</p>
+                         <p>Por favor, aceda à plataforma oficial para submeter novamente o comprovativo de transferência bancária correto.</p>`,
+                        "Submeter Novamente",
+                        "https://bridge-market-delta.vercel.app"
+                    );
+                    sendEmailNotification(userEmail, subject, html, "O teu comprovativo de pagamento de 500 Kz foi recusado no Bridge Marketplace.").catch(err => console.error('Erro ao enviar e-mail de rejeição de acesso:', err));
+                }
+            } catch (err) {
+                console.error('Erro ao notificar cliente sobre rejeição de acesso semanal:', err);
+            }
+        }
+    })
+
     // Novo pedido criado — Alerta para Admin
     .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'orders' }, (payload) => {
         const newOrder = payload.new;
