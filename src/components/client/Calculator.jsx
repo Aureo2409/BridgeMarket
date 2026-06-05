@@ -3,94 +3,139 @@ import { DESTS } from "../../lib/constants.js";
 import { Icon } from "../shared/UI.jsx";
 
 export const ANGOLAN_BANKS = [
-  { id: "bai", label: "BAI", desc: "Banco Angolano de Investimentos", color: "#003399", bg: "#f0f4ff" },
+  { id: "bai", label: "BAI", desc: "Banco Angolano de Investimentos", color: "#002147", bg: "#f0f4ff" },
   { id: "bfa", label: "BFA", desc: "Banco de Fomento Angola", color: "#FF6600", bg: "#fff3eb" },
   { id: "bic", label: "BIC", desc: "Banco BIC", color: "#CC0000", bg: "#fff0f0" },
-  { id: "atlantico", label: "ATLANTICO", desc: "Banco Millennium Atlântico", color: "#008080", bg: "#e6f2f2" },
+  { id: "atlantico", label: "ATLANTICO", desc: "Banco Millennium Atlântico", color: "#008B9B", bg: "#e6f2f2" },
   { id: "sba", label: "SBA", desc: "Standard Bank de Angola", color: "#0033A0", bg: "#f0f4ff" },
   { id: "sol", label: "SOL", desc: "Banco Sol", color: "#FFCC00", bg: "#fffdeb" },
-  { id: "bpc", label: "BPC", desc: "Banco de Poupança e Crédito", color: "#006633", bg: "#f0f7f4" },
-  { id: "bci", label: "BCI", desc: "Banco de Comércio e Indústria", color: "#333333", bg: "#f5f5f5" },
-  { id: "keve", label: "KEVE", desc: "Banco Keve", color: "#800080", bg: "#fdf0fd" },
-  { id: "yetu", label: "YETU", desc: "Banco Yetu", color: "#FF5050", bg: "#fff2f2" },
+  { id: "bpc", label: "BPC", desc: "Banco de Poupança e Crédito", color: "#0079C1", bg: "#f0f7f4" },
+  { id: "bci", label: "BCI", desc: "Banco de Comércio e Indústria", color: "#B3105C", bg: "#fdf2f6" },
+  { id: "keve", label: "KEVE", desc: "Banco Keve", color: "#00529F", bg: "#fdf0fd" },
+  { id: "yetu", label: "YETU", desc: "Banco Yetu", color: "#9E7E38", bg: "#fffcf2" },
+  { id: "bni", label: "BNI", desc: "Banco de Negócios Internacional", color: "#A87232", bg: "#fdf8f2" },
+  { id: "economico", label: "Banco Económico", desc: "Banco Económico", color: "#5F259F", bg: "#fbf2ff" },
+  { id: "cga", label: "Caixa Geral Angola", desc: "Caixa Geral Angola", color: "#005BA6", bg: "#f0f6fc" },
   { id: "express", label: "Express", desc: "Multicaixa Express", color: "#0099FF", bg: "#f0f9ff" }
 ];
 
 const BANK_LOGOS = {
   bai: `<svg viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
-    <rect width="40" height="40" rx="10" fill="#002147"/>
-    <path d="M15 15c0 2.2 1.8 4 4 4s4-1.8 4-4" stroke="#FF8C00" stroke-width="2.5" stroke-linecap="round"/>
-    <path d="M25 25c0-2.2-1.8-4-4-4s-4 1.8-4 4" stroke="#FFA500" stroke-width="2.5" stroke-linecap="round"/>
-    <circle cx="20" cy="20" r="2.2" fill="white"/>
-    <text x="20" y="32" font-family="system-ui, sans-serif" font-size="8" font-weight="900" fill="white" text-anchor="middle" letter-spacing="0.5">BAI</text>
+    <rect width="40" height="40" rx="8" fill="#002147"/>
+    <circle cx="20" cy="20" r="9" stroke="#00AEEF" stroke-width="1.2" fill="none" opacity="0.8"/>
+    <ellipse cx="20" cy="20" rx="9" ry="4" stroke="#00AEEF" stroke-width="1.2" fill="none" opacity="0.8"/>
+    <ellipse cx="20" cy="20" rx="4" ry="9" stroke="#00AEEF" stroke-width="1.2" fill="none" opacity="0.8"/>
+    <line x1="20" y1="11" x2="20" y2="29" stroke="#00AEEF" stroke-width="1.2" opacity="0.8"/>
+    <line x1="11" y1="20" x2="29" y2="20" stroke="#00AEEF" stroke-width="1.2" opacity="0.8"/>
+    <circle cx="20" cy="20" r="11" stroke="#FFFFFF" stroke-width="1" fill="none" opacity="0.15"/>
   </svg>`,
   bfa: `<svg viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
-    <rect width="40" height="40" rx="10" fill="#FF6600"/>
-    <path d="M20 24V12M20 24c-2.5-2.5-5-1.5-6-4.5M20 24c2.5-2.5 5-1.5 6-4.5" stroke="white" stroke-width="2.5" stroke-linecap="round"/>
-    <circle cx="14" cy="19.5" r="1.5" fill="#006633"/>
-    <circle cx="26" cy="19.5" r="1.5" fill="#006633"/>
-    <circle cx="20" cy="12" r="1.5" fill="#006633"/>
-    <text x="20" y="32" font-family="system-ui, sans-serif" font-size="8" font-weight="900" fill="white" text-anchor="middle" letter-spacing="0.5">BFA</text>
+    <rect width="40" height="40" rx="8" fill="#FF6600"/>
+    <g transform="translate(20, 20) scale(1.1)">
+      <path d="M0 -7 C-3 -3 -3 0 0 0 C3 0 3 -3 0 -7 Z" fill="white" transform="rotate(0)"/>
+      <path d="M0 -7 C-3 -3 -3 0 0 0 C3 0 3 -3 0 -7 Z" fill="white" transform="rotate(72)"/>
+      <path d="M0 -7 C-3 -3 -3 0 0 0 C3 0 3 -3 0 -7 Z" fill="white" transform="rotate(144)"/>
+      <path d="M0 -7 C-3 -3 -3 0 0 0 C3 0 3 -3 0 -7 Z" fill="white" transform="rotate(216)"/>
+      <path d="M0 -7 C-3 -3 -3 0 0 0 C3 0 3 -3 0 -7 Z" fill="white" transform="rotate(288)"/>
+      <circle cx="0" cy="0" r="1.5" fill="#006633"/>
+    </g>
   </svg>`,
   bic: `<svg viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
-    <rect width="40" height="40" rx="10" fill="#CC0000"/>
-    <rect x="12" y="12" width="16" height="16" rx="3" stroke="white" stroke-width="2" fill="none"/>
-    <path d="M12 20h16M20 12v16" stroke="white" stroke-width="1.5" stroke-dasharray="2"/>
-    <text x="20" y="24" font-family="system-ui, sans-serif" font-size="9" font-weight="900" fill="white" text-anchor="middle">BIC</text>
+    <rect width="40" height="40" rx="8" fill="#FFFFFF"/>
+    <path d="M19 28h2v-8h-2v8zm-5-11c0 2.2 1.8 4 4 4h1v-2h-1c-1.1 0-2-.9-2-2v-4h-2v4zm12 0c0-2.2-1.8-4-4-4h-1v2h1c1.1 0 2 .9 2 2v4h2v-4z" fill="#E21A1A"/>
+    <path d="M16 14c0 1.1.9 2 2 2h1v-2h-1c-.5 0-1-.5-1-1v-4h-2v5zm8 0c0-1.1-.9-2-2-2h-1v2h1c.5 0 1 .5 1 1v4h2v-5z" fill="#E21A1A"/>
+    <circle cx="20" cy="9" r="1.5" fill="#E21A1A"/>
   </svg>`,
   atlantico: `<svg viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
-    <rect width="40" height="40" rx="10" fill="#008080"/>
-    <g transform="translate(20,18)">
-      <path d="M0 0c-3-3-3-8 0-10c3 2 3 7 0 10z" fill="white" opacity="0.9"/>
-      <path d="M0 0c3-3 8-3 10 0c-2 3-7 3-10 0z" fill="white" opacity="0.9"/>
-      <path d="M0 0c3 3 3 8 0 10c-3-2-3-7 0-10z" fill="white" opacity="0.9"/>
-      <path d="M0 0c-3 3-8 3-10 0c2-3 7-3 10 0z" fill="white" opacity="0.9"/>
-    </g>
-    <text x="20" y="34" font-family="system-ui, sans-serif" font-size="7" font-weight="900" fill="white" text-anchor="middle" letter-spacing="0.2">ATLANTICO</text>
+    <rect width="40" height="40" rx="8" fill="#FFFFFF"/>
+    <circle cx="20" cy="20" r="8" stroke="#008B9B" stroke-width="2.5" fill="none"/>
+    <line x1="20" y1="8" x2="20" y2="32" stroke="#008B9B" stroke-width="2.5" stroke-linecap="round"/>
+    <circle cx="20" cy="20" r="2.5" fill="#008B9B"/>
   </svg>`,
   sba: `<svg viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
-    <rect width="40" height="40" rx="10" fill="#0033A0"/>
-    <path d="M14 14h12v4c0 3.3-2.7 6-6 6h-0c-3.3 0-6-2.7-6-6v-4z" fill="none" stroke="white" stroke-width="2.5"/>
-    <path d="M20 14v10M14 18h12" stroke="white" stroke-width="1.5"/>
-    <text x="20" y="33" font-family="system-ui, sans-serif" font-size="8.5" font-weight="900" fill="white" text-anchor="middle">SBA</text>
+    <rect width="40" height="40" rx="8" fill="#0033A0"/>
+    <g transform="translate(11, 8)">
+      <path d="M0 0 H18 V10 C18 16 13 21 9 24 C5 21 0 16 0 10 Z" fill="#FFFFFF"/>
+      <path d="M3 3 H15 V10 C15 14.5 11 18.5 9 21 C7 18.5 3 14.5 3 10 Z" fill="#0033A0"/>
+      <rect x="7.5" y="6" width="3" height="12" fill="#FFFFFF"/>
+      <path d="M7.5 6 H13 V11 H7.5 Z" fill="#FFFFFF"/>
+    </g>
   </svg>`,
   sol: `<svg viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
-    <rect width="40" height="40" rx="10" fill="#FFCC00"/>
-    <circle cx="20" cy="18" r="6" fill="#FF6600"/>
-    <circle cx="20" cy="18" r="4" fill="#FFCC00"/>
-    <path d="M20 8v4M20 24v4M10 18h4M26 18h4M13 11l3 3M24 22l3 3M13 25l3-3M24 14l3-3" stroke="#FF6600" stroke-width="2" stroke-linecap="round"/>
-    <text x="20" y="34" font-family="system-ui, sans-serif" font-size="8" font-weight="900" fill="#1e1b4b" text-anchor="middle">SOL</text>
+    <rect width="40" height="40" rx="8" fill="#FFFFFF"/>
+    <circle cx="20" cy="20" r="9" fill="url(#solGradient)"/>
+    <defs>
+      <linearGradient id="solGradient" x1="0" y1="0" x2="1" y2="1">
+        <stop offset="0%" stop-color="#FFD600"/>
+        <stop offset="100%" stop-color="#FF9E00"/>
+      </linearGradient>
+    </defs>
   </svg>`,
   bpc: `<svg viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
-    <rect width="40" height="40" rx="10" fill="#006633"/>
-    <path d="M15 13h10v6c0 3-2 5-5 5s-5-2-5-5v-6z" fill="none" stroke="#FFCC00" stroke-width="2.5"/>
-    <path d="M18 17l2-2 2 2M20 15v6" stroke="#FFCC00" stroke-width="2" stroke-linecap="round"/>
-    <text x="20" y="33" font-family="system-ui, sans-serif" font-size="8.5" font-weight="900" fill="white" text-anchor="middle">BPC</text>
+    <rect width="40" height="40" rx="8" fill="#FFFFFF"/>
+    <g transform="translate(20, 20) rotate(45)">
+      <rect x="-8" y="-8" width="16" height="16" stroke="#0079C1" stroke-width="2.5" fill="none"/>
+      <rect x="-4" y="-4" width="8" height="8" stroke="#0079C1" stroke-width="1.5" fill="none"/>
+      <line x1="-8" y1="-8" x2="-4" y2="-4" stroke="#0079C1" stroke-width="1.5"/>
+      <line x1="8" y1="8" x2="4" y2="4" stroke="#0079C1" stroke-width="1.5"/>
+      <line x1="-8" y1="8" x2="-4" y2="4" stroke="#0079C1" stroke-width="1.5"/>
+      <line x1="8" y1="-8" x2="4" y2="-4" stroke="#0079C1" stroke-width="1.5"/>
+    </g>
   </svg>`,
   bci: `<svg viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
-    <rect width="40" height="40" rx="10" fill="#333333"/>
-    <path d="M12 14h16M14 20h12M16 26h8" stroke="white" stroke-width="2.5" stroke-linecap="round"/>
-    <path d="M22 14l-4 12" stroke="#CC0000" stroke-width="3" stroke-linecap="round"/>
-    <text x="20" y="33" font-family="system-ui, sans-serif" font-size="8" font-weight="900" fill="white" text-anchor="middle">BCI</text>
+    <rect width="40" height="40" rx="8" fill="#FFFFFF"/>
+    <g transform="translate(12, 10)" stroke="#B3105C" stroke-width="2" fill="none">
+      <path d="M0 20V0h20"/>
+      <path d="M3 20V3h17"/>
+      <path d="M6 20V6h14"/>
+      <path d="M9 20V9h11"/>
+    </g>
   </svg>`,
   keve: `<svg viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
-    <rect width="40" height="40" rx="10" fill="#800080"/>
-    <path d="M14 22c0-3 3-5 6-5s6 2 6 5M20 13v4" stroke="#FFD700" stroke-width="2" stroke-linecap="round"/>
-    <circle cx="20" cy="13" r="2" fill="#FFD700"/>
-    <text x="20" y="33" font-family="system-ui, sans-serif" font-size="8" font-weight="900" fill="white" text-anchor="middle">KEVE</text>
+    <rect width="40" height="40" rx="8" fill="#FFFFFF"/>
+    <path d="M10 23 C14 23 16 17 20 17 C24 17 26 23 30 23" stroke="#FF8C00" stroke-width="3" stroke-linecap="round" fill="none"/>
+    <path d="M10 17 C14 17 16 23 20 23 C24 23 26 17 30 17" stroke="#00529F" stroke-width="3" stroke-linecap="round" fill="none"/>
   </svg>`,
   yetu: `<svg viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
-    <rect width="40" height="40" rx="10" fill="#FF5050"/>
-    <path d="M20 12c-4 2-5 7-5 10c0 4 3 6 5 6s5-2 5-6c0-3-1-8-5-10z" fill="white" opacity="0.3"/>
-    <path d="M20 11v11M16 17h8" stroke="white" stroke-width="2" stroke-linecap="round"/>
-    <text x="20" y="33" font-family="system-ui, sans-serif" font-size="8" font-weight="900" fill="white" text-anchor="middle">YETU</text>
+    <rect width="40" height="40" rx="8" fill="#FFFFFF"/>
+    <g stroke="#9E7E38" stroke-width="2.2" stroke-linecap="round" fill="none" transform="translate(0, -1)">
+      <line x1="12" y1="12" x2="20" y2="18"/>
+      <line x1="12" y1="18" x2="20" y2="24"/>
+      <line x1="12" y1="24" x2="20" y2="30"/>
+      <line x1="28" y1="12" x2="20" y2="18"/>
+      <line x1="28" y1="18" x2="20" y2="24"/>
+      <line x1="28" y1="24" x2="20" y2="30"/>
+      <line x1="20" y1="10" x2="20" y2="30" stroke-width="1.5"/>
+    </g>
+  </svg>`,
+  bni: `<svg viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <rect width="40" height="40" rx="8" fill="#FFFFFF"/>
+    <rect x="10" y="10" width="20" height="20" rx="5" stroke="#C47D2B" stroke-width="2" fill="none"/>
+    <path d="M15 17c2-2 4 0 5 2s3 4 5 2" stroke="#C47D2B" stroke-width="2" stroke-linecap="round" fill="none"/>
+    <path d="M15 23c2 2 4 0 5-2s3-4 5-2" stroke="#C47D2B" stroke-width="2" stroke-linecap="round" fill="none"/>
+  </svg>`,
+  economico: `<svg viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <rect width="40" height="40" rx="8" fill="#5F259F"/>
+    <path d="M12 13 H28 M12 20 H24 M12 27 H28" stroke="#00B0FF" stroke-width="2.5" stroke-linecap="round"/>
+    <path d="M12 13 V27" stroke="#00B0FF" stroke-width="2.5" stroke-linecap="round"/>
+    <path d="M16 16 H24 M16 24 H24" stroke="#00B0FF" stroke-width="1.5" stroke-linecap="round" opacity="0.6"/>
+  </svg>`,
+  cga: `<svg viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <rect width="40" height="40" rx="8" fill="#FFFFFF"/>
+    <g fill="#005A9C">
+      <path d="M11 11h7v2h-5v5h-2v-7z"/>
+      <path d="M22 11h7v7h-2v-5h-5v-2z"/>
+      <path d="M22 22h5v5h-7v-7h2v2z"/>
+      <path d="M11 22h2v5h5v2h-7v-7z"/>
+      <rect x="15" y="15" width="10" height="10" fill="#005A9C"/>
+    </g>
   </svg>`,
   express: `<svg viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
-    <rect width="40" height="40" rx="10" fill="#0099FF"/>
-    <circle cx="20" cy="18" r="7" stroke="white" stroke-width="2" opacity="0.2"/>
-    <path d="M20 11a7 7 0 0 1 7 7M20 25a7 7 0 0 1-7-7" stroke="white" stroke-width="2.5" stroke-linecap="round"/>
-    <path d="M27 15l2 3-3 1M13 21l-2-3 3-1" stroke="white" stroke-width="2" stroke-linecap="round"/>
-    <text x="20" y="33" font-family="system-ui, sans-serif" font-size="7.5" font-weight="900" fill="white" text-anchor="middle">EXPRESS</text>
+    <rect width="40" height="40" rx="8" fill="#0056B3"/>
+    <rect x="13" y="9" width="14" height="22" rx="3" stroke="white" stroke-width="2" fill="none"/>
+    <circle cx="20" cy="27" r="1" fill="white"/>
+    <circle cx="18" cy="18" r="3" stroke="#FFCC00" stroke-width="1.2" fill="none"/>
+    <circle cx="22" cy="18" r="3" stroke="#00FFCC" stroke-width="1.2" fill="none"/>
   </svg>`
 };
 

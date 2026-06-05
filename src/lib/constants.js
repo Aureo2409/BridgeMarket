@@ -8,10 +8,10 @@ export const DESTS = [
     desc:  "Carteira digital local",
     hint:  "Número de telefone associado ao Express (9XXXXXXXX)",
     svg: `<svg viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <rect width="40" height="40" rx="10" fill="#0F172A"/>
-      <rect x="13" y="10" width="14" height="20" rx="2" stroke="white" stroke-width="2.5"/>
-      <circle cx="20" cy="25" r="2.5" fill="white"/>
-      <line x1="16" y1="14" x2="24" y2="14" stroke="white" stroke-width="2" stroke-linecap="round"/>
+      <rect width="40" height="40" rx="8" fill="#FFFFFF"/>
+      <circle cx="15" cy="20" r="6.5" stroke="#004691" stroke-width="3" fill="none" />
+      <circle cx="25" cy="20" r="6.5" stroke="#00B0EA" stroke-width="3" fill="none" />
+      <path d="M19.24 15.76 A 6.5 6.5 0 0 1 21.5 20" stroke="#004691" stroke-width="3" fill="none" stroke-linecap="round" />
     </svg>`,
   },
   {
@@ -22,9 +22,10 @@ export const DESTS = [
     desc:  "Carteira móvel Unitel",
     hint:  "Número Unitel associado (9XXXXXXXX)",
     svg: `<svg viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <rect width="40" height="40" rx="10" fill="#FF6B00"/>
-      <path d="M12 25V15a3 3 0 016 0v10M22 25V15a3 3 0 016 0v10" stroke="white" stroke-width="3" stroke-linecap="round"/>
-      <line x1="12" y1="20" x2="28" y2="20" stroke="white" stroke-width="2.5"/>
+      <rect width="40" height="40" rx="8" fill="#FF7A00"/>
+      <rect x="13" y="10" width="14" height="20" rx="3" stroke="white" stroke-width="2.5" fill="none"/>
+      <circle cx="20" cy="26" r="1.5" fill="white"/>
+      <path d="M17 15h6M19 19v4M18 20h4" stroke="white" stroke-width="2" stroke-linecap="round"/>
     </svg>`,
   },
   {
@@ -35,8 +36,11 @@ export const DESTS = [
     desc:  "Cartão bancário BAI",
     hint:  "IBAN ou número do cartão BAI",
     svg: `<svg viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <rect width="40" height="40" rx="10" fill="#0056B3"/>
-      <path d="M11 26h18M13 26v-8M17 26v-8M21 26v-8M25 26v-8M11 15l9-5 9 5v3H11v-3z" stroke="white" stroke-width="2" stroke-linejoin="round"/>
+      <rect width="40" height="40" rx="8" fill="#002147"/>
+      <circle cx="12" cy="13" r="4.5" stroke="#00AEEF" stroke-width="0.8" fill="none"/>
+      <ellipse cx="12" cy="13" rx="4.5" ry="2" stroke="#00AEEF" stroke-width="0.8" fill="none"/>
+      <ellipse cx="12" cy="13" rx="2" ry="4.5" stroke="#00AEEF" stroke-width="0.8" fill="none"/>
+      <path d="M22 28h1.8l1.1-7H23.1l-1.1 7zm7.5-6.8c-.3-.2-.8-.4-1.4-.4-1.4 0-2.4.8-2.4 1.8 0 .8.7 1.2 1.3 1.5.5.3.7.4.7.7 0 .4-.5.6-1 .6-.7 0-1.1-.1-1.6-.3l-.2-.1-.2 1.5c.4.2 1.1.4 1.9.4 1.5 0 2.5-.8 2.5-2 0-.7-.4-1.2-1.3-1.6-.5-.3-.9-.4-.9-.7 0-.3.3-.5.8-.5.5 0 .9.1 1.2.3l.1.1.2-1.7zm-4.7-.2h-1.4c-.4 0-.8.2-.9.6l-2.7 6.4h1.9l.4-1h2.3l.2 1h1.7l-1.5-7zm-2 4.2l.6-1.7.4 1.7h-1zm-4.3-4.2l-1.5 4.8-.2-1c-.3-1-.9-2-1.8-2.5h3.5z" fill="#FFF"/>
     </svg>`,
   },
   {
@@ -47,10 +51,16 @@ export const DESTS = [
     desc:  "Carteira digital Airtm",
     hint:  "E-mail da conta Airtm (ex: conta@airtm.com)",
     svg: `<svg viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <rect width="40" height="40" rx="10" fill="#0052FF"/>
-      <path d="M20 11L11 27h5.5l3.5-7 3.5 7H29l-9-16z" fill="white"/>
-      <path d="M20 20l-2 4h4l-2-4z" fill="#0052FF" opacity="0.8"/>
-      <text x="20" y="34" font-family="system-ui, sans-serif" font-size="7" font-weight="900" fill="white" text-anchor="middle" letter-spacing="0.5">AIRTM</text>
+      <rect width="40" height="40" rx="8" fill="#FFFFFF"/>
+      <g transform="translate(0, 1)">
+        <polygon points="20,8 11.34,13 14.8,15 20,12" fill="#00D2FF" />
+        <polygon points="20,8 28.66,13 25.2,15 20,12" fill="#4CAF50" />
+        <polygon points="28.66,13 28.66,23 25.2,21 25.2,15" fill="#FFC107" />
+        <polygon points="20,28 28.66,23 25.2,21 20,24" fill="#FF5722" />
+        <polygon points="11.34,23 20,28 20,24 14.8,21" fill="#9C27B0" />
+        <polygon points="11.34,13 11.34,23 14.8,21 14.8,15" fill="#2196F3" />
+        <path d="M28.66,23 L28.66,28 C28.66,29.5 29.5,30 31,30 L31,26.5 C30.2,26.5 28.66,26 28.66,23 Z" fill="#E91E63" />
+      </g>
     </svg>`,
   },
   {
@@ -61,11 +71,8 @@ export const DESTS = [
     desc:  "Carteira digital RedotPay",
     hint:  "ID de utilizador RedotPay (ex: 8 dígitos)",
     svg: `<svg viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <rect width="40" height="40" rx="10" fill="#111111"/>
-      <circle cx="20" cy="20" r="16" fill="#111111" stroke="#FF334B" stroke-width="1.5"/>
-      <path d="M14 13h7a4.5 4.5 0 010 9h-7v5h-2.5V13zm2.5 2.5v4h4.5a2 2 0 000-4h-4.5z" fill="#FF334B"/>
-      <path d="M18.5 22.5L24 27h3.5l-6-5h-2.5z" fill="#FF334B"/>
-      <circle cx="20.5" cy="17" r="1.5" fill="white"/>
+      <rect width="40" height="40" rx="8" fill="#FFFFFF"/>
+      <path d="M20 10c5.523 0 10 4.477 10 10s-4.477 10-10 10h-4v-4h4a6 6 0 1 0 0-12h-4v12h-4V10h8z" fill="#E51937" />
     </svg>`,
   },
   {
@@ -76,13 +83,12 @@ export const DESTS = [
     desc:  "Carteira / Binance Pay",
     hint:  "Binance Pay ID ou Email/Telefone da conta",
     svg: `<svg viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <rect width="40" height="40" rx="10" fill="#12161A"/>
-      <path d="M20 7l-4.5 4.5 2 2L20 11l2.5 2.5 2-2L20 7z" fill="#F3BA2F"/>
-      <path d="M12.5 14.5l-2 2L20 26l9.5-9.5-2-2L20 22l-7.5-7.5z" fill="#F3BA2F"/>
-      <path d="M20 14.5l-3.5 3.5 3.5 3.5 3.5-3.5-3.5-3.5z" fill="#F3BA2F"/>
-      <path d="M10.5 16.5l-3.5 3.5 3.5 3.5 1.5-1.5L10 20l2-2-1.5-1.5z" fill="#F3BA2F"/>
-      <path d="M29.5 16.5l-1.5 1.5 2 2-2 2 1.5 1.5 3.5-3.5-3.5-3.5z" fill="#F3BA2F"/>
-      <text x="20" y="34" font-family="system-ui, sans-serif" font-size="7" font-weight="900" fill="#F3BA2F" text-anchor="middle" letter-spacing="0.5">BINANCE</text>
+      <rect width="40" height="40" rx="8" fill="#12161A"/>
+      <path d="M20 8.5L14.7 13.8l1.8 1.8L20 12.1l3.5 3.5 1.8-1.8L20 8.5z" fill="#F3BA2F"/>
+      <path d="M12.1 16.5l-1.8-1.8-5.3 5.3 5.3 5.3 1.8-1.8-3.5-3.5 3.5-3.5z" fill="#F3BA2F"/>
+      <path d="M27.9 16.5l1.8-1.8 5.3 5.3-5.3 5.3-1.8-1.8 3.5-3.5-3.5-3.5z" fill="#F3BA2F"/>
+      <path d="M20 31.5l5.3-5.3-1.8-1.8-3.5 3.5-3.5-3.5-1.8 1.8 5.3 5.3z" fill="#F3BA2F"/>
+      <path d="M20 15.5L15.5 20l4.5 4.5 4.5-4.5-4.5-4.5z" fill="#F3BA2F"/>
     </svg>`,
   },
   {
@@ -93,9 +99,12 @@ export const DESTS = [
     desc:  "Carteira internacional",
     hint:  "E-mail da conta PayPal (ex: conta@paypal.com)",
     svg: `<svg viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <rect width="40" height="40" rx="10" fill="#003087"/>
-      <path d="M15 12h7c4 0 6 2 5 5s-3 5-7 5h-3l-2 8H11l4-18z" stroke="white" stroke-width="2.5" stroke-linejoin="round" fill="none"/>
-      <path d="M18 15h6c3.5 0 5 1.5 4.5 4s-2.5 4-6 4h-2.5l-1.5 6" stroke="white" stroke-width="1.8" stroke-linejoin="round"/>
+      <rect width="40" height="40" rx="8" fill="#FFFFFF"/>
+      <g transform="translate(10, 6)">
+        <path d="M8.5 2C5.5 2 3.5 3.8 3.5 7L1.2 22C1.1 22.5 1.5 23 2 23H6L7.3 14H10C13 14 15 12 15.7 9C16.3 6 15 3.8 11.5 2.5C10.5 2.2 9.5 2 8.5 2Z" fill="#002C8A"/>
+        <path d="M12.5 7C9.5 7 7.5 8.8 7.5 12L5.2 27C5.1 27.5 5.5 28 6 28H10L11.3 19H14C17 19 19 17 19.7 14C20.3 11 19 8.8 15.5 7.5C14.5 7.2 13.5 7 12.5 7Z" fill="#0079C1" opacity="0.95"/>
+        <path d="M7.5 12L6.3 20H10.3C13.3 20 15.3 18 16 15C16.7 12 15.4 9.8 11.9 8.5C10.9 8.2 9.9 8 8.9 8C8.3 8 7.8 8.1 7.5 12Z" fill="#00457C" opacity="0.2"/>
+      </g>
     </svg>`,
   },
   {
@@ -106,9 +115,8 @@ export const DESTS = [
     desc:  "Transferência Wise",
     hint:  "E-mail ou dados de conta Wise (USD)",
     svg: `<svg viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <rect width="40" height="40" rx="10" fill="#25B55E"/>
-      <path d="M12 13h16l-8 14-8-14z" fill="white"/>
-      <path d="M20 13v9" stroke="white" stroke-width="2" stroke-linecap="round"/>
+      <rect width="40" height="40" rx="8" fill="#9FE870"/>
+      <path d="M11 11h16.5l-7.5 9 5.5 9h-4.5l-4.5-7.5-3.5 5.5-2-7 6.5-9z" fill="#1D2939"/>
     </svg>`,
   },
   {
@@ -119,9 +127,22 @@ export const DESTS = [
     desc:  "Conta bancária EU (SEPA)",
     hint:  "IBAN Europeu (ex: PT50 0003...)",
     svg: `<svg viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <rect width="40" height="40" rx="10" fill="#003399"/>
-      <circle cx="20" cy="20" r="8" stroke="white" stroke-width="2"/>
-      <path d="M17 17.5h5M17 20h4M17 22.5h5" stroke="white" stroke-width="1.8" stroke-linecap="round"/>
+      <rect width="40" height="40" rx="8" fill="#003399"/>
+      <g fill="#FFCC00" transform="translate(20, 20) scale(0.8)">
+        <polygon points="0,-10 3,-3 10,-3 5,2 7,9 0,5 -7,9 -5,2 -10,-3 -3,-3" transform="scale(0.3) translate(0, -33)"/>
+        <polygon points="0,-10 3,-3 10,-3 5,2 7,9 0,5 -7,9 -5,2 -10,-3 -3,-3" transform="rotate(30) scale(0.3) translate(0, -33)"/>
+        <polygon points="0,-10 3,-3 10,-3 5,2 7,9 0,5 -7,9 -5,2 -10,-3 -3,-3" transform="rotate(60) scale(0.3) translate(0, -33)"/>
+        <polygon points="0,-10 3,-3 10,-3 5,2 7,9 0,5 -7,9 -5,2 -10,-3 -3,-3" transform="rotate(90) scale(0.3) translate(0, -33)"/>
+        <polygon points="0,-10 3,-3 10,-3 5,2 7,9 0,5 -7,9 -5,2 -10,-3 -3,-3" transform="rotate(120) scale(0.3) translate(0, -33)"/>
+        <polygon points="0,-10 3,-3 10,-3 5,2 7,9 0,5 -7,9 -5,2 -10,-3 -3,-3" transform="rotate(150) scale(0.3) translate(0, -33)"/>
+        <polygon points="0,-10 3,-3 10,-3 5,2 7,9 0,5 -7,9 -5,2 -10,-3 -3,-3" transform="rotate(180) scale(0.3) translate(0, -33)"/>
+        <polygon points="0,-10 3,-3 10,-3 5,2 7,9 0,5 -7,9 -5,2 -10,-3 -3,-3" transform="rotate(210) scale(0.3) translate(0, -33)"/>
+        <polygon points="0,-10 3,-3 10,-3 5,2 7,9 0,5 -7,9 -5,2 -10,-3 -3,-3" transform="rotate(240) scale(0.3) translate(0, -33)"/>
+        <polygon points="0,-10 3,-3 10,-3 5,2 7,9 0,5 -7,9 -5,2 -10,-3 -3,-3" transform="rotate(270) scale(0.3) translate(0, -33)"/>
+        <polygon points="0,-10 3,-3 10,-3 5,2 7,9 0,5 -7,9 -5,2 -10,-3 -3,-3" transform="rotate(300) scale(0.3) translate(0, -33)"/>
+        <polygon points="0,-10 3,-3 10,-3 5,2 7,9 0,5 -7,9 -5,2 -10,-3 -3,-3" transform="rotate(330) scale(0.3) translate(0, -33)"/>
+      </g>
+      <text x="20" y="24" font-family="system-ui, sans-serif" font-size="11" font-weight="900" fill="white" text-anchor="middle">€</text>
     </svg>`,
   },
   {
@@ -132,9 +153,19 @@ export const DESTS = [
     desc:  "Conta bancária EUA (ACH)",
     hint:  "Número da conta e Routing Number (ACH)",
     svg: `<svg viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <rect width="40" height="40" rx="10" fill="#0A3161"/>
-      <circle cx="20" cy="20" r="8" stroke="white" stroke-width="2"/>
-      <path d="M20 15v10M17.5 17.5h5a2.5 2.5 0 010 5h-5a2.5 2.5 0 000 5h5" stroke="white" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+      <rect width="40" height="40" rx="8" fill="#0A3161"/>
+      <g fill="#B22234">
+        <rect x="2" y="18" width="36" height="3"/>
+        <rect x="2" y="24" width="36" height="3"/>
+        <rect x="2" y="30" width="36" height="3"/>
+      </g>
+      <rect x="2" y="6" width="16" height="12" fill="#3C3B6E" rx="1"/>
+      <circle cx="6" cy="10" r="1" fill="white"/>
+      <circle cx="10" cy="10" r="1" fill="white"/>
+      <circle cx="14" cy="10" r="1" fill="white"/>
+      <circle cx="8" cy="14" r="1" fill="white"/>
+      <circle cx="12" cy="14" r="1" fill="white"/>
+      <text x="28" y="16" font-family="system-ui, sans-serif" font-size="12" font-weight="900" fill="#FFFFFF" text-anchor="middle">$</text>
     </svg>`,
   }
 ];
