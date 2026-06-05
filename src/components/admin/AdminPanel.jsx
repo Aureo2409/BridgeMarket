@@ -245,19 +245,100 @@ export function AdminPanel({ user, onLogout }) {
 
   function exportToCSV() {
     if (orders.length === 0) { toast_("Nenhum pedido", "err"); return; }
-    const headers = ["ID", "Ref", "Data", "Status", "USD", "AOA", "Taxa", "Destino", "Conta"];
+    const headers = ["ID", "Ref", "Data/Hora", "Status", "USD", "AOA", "Taxa AOA/USD",
+      "Destino", "Conta Destino", "Motivo Cambial", "Comprador ID", "Vendedor ID",
+      "Comprovativo", "Avaliação Vendedor", "Avaliação Comprador"];
     const rows = orders.map(o => [
-      o.id, o.order_ref || "", new Date(o.created_at).toLocaleString("pt-AO").replace(/,/g, ""), o.status,
-      o.amount_usd, o.amount_aoa, o.rate_applied, o.destination, o.destination_account
+      o.id,
+      o.order_ref || "",
+      new Date(o.created_at).toLocaleString("pt-AO").replace(/,/g, ""),
+      o.status,
+      parseFloat(o.amount_usd || 0).toFixed(2),
+      parseFloat(o.amount_aoa || 0).toFixed(2),
+      o.rate_applied || "1140",
+      o.destination || "",
+      o.destination_account || "",
+      o.exchange_reason || "Não declarado",
+      o.user_id || "",
+      o.funder_id || "",
+      o.proof_url ? "Sim" : "Não",
+      o.funder_rating || "",
+      o.buyer_rating || ""
     ]);
-    const csvContent = [headers.join(","), ...rows.map(e => e.join(","))].join("\n");
-    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const csvContent = [headers.join(","), ...rows.map(e => e.map(v => `"${v}"`).join(","))].join("\n");
+    const blob = new Blob(["\uFEFF" + csvContent], { type: "text/csv;charset=utf-8;" });
     const link = document.createElement("a");
     link.href = URL.createObjectURL(blob);
-    link.download = `pedidos_${new Date().toISOString().slice(0, 10)}.csv`;
+    link.download = `bridge_relatorio_${new Date().toISOString().slice(0, 10)}.csv`;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+    toast_("Relatório exportado com sucesso", "ok");
+  }
+
+  function exportUIFReport() {
+    const completed = orders.filter(o => o.status === "completed");
+    if (completed.length === 0) { toast_("Sem transacções concluídas", "err"); return; }
+
+    // Relatório UIF — formato conforme Lei 34/11
+    const headers = [
+      "ID_TRANSACCAO", "REFERENCIA", "DATA_OPERACAO", "HORA_OPERACAO",
+      "VALOR_USD", "VALOR_AOA", "TAXA_CAMBIO",
+      "MOTIVO_CAMBIAL", "DESTINO_FUNDOS", "CONTA_DESTINO",
+      "ID_COMPRADOR", "ID_VENDEDOR",
+      "KYC_COMPRADOR", "KYC_VENDEDOR",
+      "COMPROVATIVO_SUBMETIDO", "ESTADO_FINAL"
+    ];
+    const rows = completed.map(o => {
+      const dt = new Date(o.created_at);
+      return [
+        o.id,
+        o.order_ref || "",
+        dt.toLocaleDateString("pt-AO"),
+        dt.toLocaleTimeString("pt-AO"),
+        parseFloat(o.amount_usd || 0).toFixed(2),
+        parseFloat(o.amount_aoa || 0).toFixed(2),
+        o.rate_applied || "1140",
+        o.exchange_reason || "NAO_DECLARADO",
+        o.destination || "",
+        o.destination_account || "",
+        o.user_id || "",
+        o.funder_id || "",
+        o.kyc_status_buyer || "VERIFICADO",
+        o.kyc_status_seller || "VERIFICADO",
+        o.proof_url ? "SIM" : "NAO",
+        "CONCLUIDO"
+      ];
+    });
+
+    // Adicionar resumo no topo
+    const totalUSD = completed.reduce((s, o) => s + parseFloat(o.amount_usd || 0), 0);
+    const totalAOA = completed.reduce((s, o) => s + parseFloat(o.amount_aoa || 0), 0);
+    const summary = [
+      [`# RELATÓRIO UIF — BRIDGE MARKET`],
+      [`# Gerado em: ${new Date().toLocaleString("pt-AO")}`],
+      [`# Total de transacções: ${completed.length}`],
+      [`# Volume total USD: $${totalUSD.toFixed(2)}`],
+      [`# Volume total AOA: ${totalAOA.toFixed(2)} Kz`],
+      [`# Conformidade: Lei 34/11 — Prevenção e Combate ao Branqueamento de Capitais`],
+      [`# Promotor: Aureo Mendes — Bridge Market — Luanda, Angola`],
+      [``],
+    ];
+
+    const csvContent = [
+      ...summary.map(r => r[0]),
+      headers.join(","),
+      ...rows.map(e => e.map(v => `"${v}"`).join(","))
+    ].join("\n");
+
+    const blob = new Blob(["\uFEFF" + csvContent], { type: "text/csv;charset=utf-8;" });
+    const link = document.createElement("a");
+    link.href = URL.createObjectURL(blob);
+    link.download = `bridge_relatorio_UIF_${new Date().toISOString().slice(0, 10)}.csv`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    toast_(`Relatório UIF exportado — ${completed.length} transacções`, "ok");
   }
 
   const TABS = [
@@ -365,9 +446,14 @@ export function AdminPanel({ user, onLogout }) {
           <>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
               <span className="adm-section" style={{ marginBottom: 0 }}>Pedidos pendentes / concluídos</span>
-              <button onClick={exportToCSV} style={{ background: "none", border: "none", fontSize: 10, fontWeight: 700, color: "#10b981", cursor: "pointer" }}>
-                <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}><Icon name="download" size={14} /> Exportar CSV</div>
-              </button>
+              <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+                <button onClick={exportToCSV} style={{ background: "none", border: "none", fontSize: 10, fontWeight: 700, color: "#10b981", cursor: "pointer" }}>
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}><Icon name="download" size={14} /> Exportar CSV</div>
+                </button>
+                <button onClick={exportUIFReport} style={{ background: "rgba(79,70,229,.1)", border: "1px solid rgba(79,70,229,.3)", borderRadius: 6, fontSize: 10, fontWeight: 700, color: "#6366f1", cursor: "pointer", padding: "4px 10px", display: "flex", alignItems: "center", gap: 5 }}>
+                  <Icon name="download" size={13} /> Relatório UIF
+                </button>
+              </div>
             </div>
             {orders.filter(o => o.status !== "cancelled" && o.status !== "failed").length === 0 && <div style={{ textAlign: "center", padding: "36px 0", color: "#94a3b8", fontWeight: 600, fontSize: 13 }}>Nenhum pedido activo.</div>}
             {orders.filter(o => o.status !== "cancelled" && o.status !== "failed").map(o => {

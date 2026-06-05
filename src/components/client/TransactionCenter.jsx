@@ -250,11 +250,17 @@ export function TransactionCenter({ order, user, onBack, onCancel }) {
 
   async function handleSaveRating(val) {
     setRating(val);
+    // Comprador avalia o vendedor (funder_rating)
+    // Vendedor avalia o comprador (buyer_rating)
+    const updateField = isCreator ? "funder_rating" : "buyer_rating";
     const { error } = await sb.from("orders").update({
-      funder_rating: val
+      [updateField]: val,
+      rating_done: true
     }).eq("id", currentOrder.id);
     if (error) {
       alert("Erro ao salvar avaliação: " + error.message);
+    } else {
+      setCurrentOrder(prev => ({ ...prev, [updateField]: val, rating_done: true }));
     }
   }
 
@@ -564,31 +570,71 @@ export function TransactionCenter({ order, user, onBack, onCancel }) {
                 )}
 
                 {currentOrder.status === "completed" && (
-                  <div style={{ marginTop: 24, paddingTop: 16, borderTop: "1px solid #f1f5f9" }}>
-                    <div style={{ fontSize: 12, fontWeight: 800, color: "#475569", marginBottom: 8 }}>
-                      Como foi a experiência com seu parceiro?
+                  <div style={{ marginTop: 20, padding: "16px", background: "linear-gradient(135deg, #f8fafc, #f1f5f9)", borderRadius: 14, border: "1px solid #e2e8f0" }}>
+                    {/* Cabeçalho */}
+                    <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
+                      <span style={{ fontSize: 18 }}>⭐</span>
+                      <div>
+                        <div style={{ fontSize: 12, fontWeight: 800, color: "#0f172a" }}>
+                          {rating > 0 ? "Avaliação Enviada" : "Avalia a tua Experiência"}
+                        </div>
+                        <div style={{ fontSize: 10, color: "#64748b", marginTop: 1 }}>
+                          {isCreator ? "Como foi o serviço do vendedor?" : "Como foi a experiência com o comprador?"}
+                        </div>
+                      </div>
                     </div>
-                    <div style={{ display: "flex", justifyContent: "center", gap: 8, marginBottom: 12 }}>
+
+                    {/* Estrelas */}
+                    <div style={{ display: "flex", justifyContent: "center", gap: 6, marginBottom: 10 }}>
                       {[1, 2, 3, 4, 5].map(val => (
                         <button
                           key={val}
-                          onClick={() => handleSaveRating(val)}
+                          onClick={() => !rating && handleSaveRating(val)}
                           style={{
                             background: "none",
                             border: "none",
-                            cursor: "pointer",
-                            color: val <= rating ? "#f59e0b" : "#e2e8f0",
-                            fontSize: 24,
-                            transition: "transform 0.15s ease"
+                            cursor: rating > 0 ? "default" : "pointer",
+                            color: val <= rating ? "#f59e0b" : "#cbd5e1",
+                            fontSize: 28,
+                            transition: "transform 0.15s ease, color 0.15s ease",
+                            transform: val <= rating ? "scale(1.1)" : "scale(1)",
+                            padding: 2
                           }}
-                        >
-                          ★
-                        </button>
+                        >★</button>
                       ))}
                     </div>
+
+                    {/* Labels de texto */}
+                    <div style={{ display: "flex", justifyContent: "space-between", fontSize: 9, color: "#94a3b8", marginBottom: 10, paddingX: 4 }}>
+                      <span>Muito mau</span>
+                      <span>Excelente</span>
+                    </div>
+
+                    {/* Feedback pós-avaliação */}
                     {rating > 0 && (
-                      <div style={{ animation: "fadeIn 0.2s ease-out", fontSize: 11, fontWeight: 700, color: "#16a34a", background: "#f0fdf4", display: "inline-block", padding: "6px 12px", borderRadius: 8 }}>
-                        Avaliado com {rating} Estrelas! Excelente.
+                      <div style={{ animation: "fadeIn 0.3s ease-out", background: "#f0fdf4", border: "1px solid #bbf7d0", borderRadius: 10, padding: "10px 14px", display: "flex", alignItems: "center", gap: 8 }}>
+                        <span style={{ fontSize: 18 }}>
+                          {rating >= 4 ? "🙌" : rating === 3 ? "👍" : "💬"}
+                        </span>
+                        <div>
+                          <div style={{ fontSize: 11, fontWeight: 800, color: "#16a34a" }}>
+                            {rating === 5 ? "Excelente! Obrigado pelo feedback." :
+                             rating === 4 ? "Muito bom! Avaliação registada." :
+                             rating === 3 ? "Aceitável. Avaliação registada." :
+                             rating === 2 ? "Feedback registado. Vamos melhorar." :
+                             "Feedback registado. Analisaremos a situação."}
+                          </div>
+                          <div style={{ fontSize: 10, color: "#4ade80", marginTop: 2 }}>
+                            {rating} {rating === 1 ? "estrela" : "estrelas"} guardadas na transacção
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Avaliação média do parceiro */}
+                    {partnerProfile?.totalRatings > 0 && (
+                      <div style={{ marginTop: 10, fontSize: 10, color: "#64748b", textAlign: "center" }}>
+                        Média do parceiro: <strong style={{ color: "#f59e0b" }}>★ {partnerProfile.avgRating.toFixed(1)}</strong> ({partnerProfile.totalRatings} avaliações)
                       </div>
                     )}
                   </div>
@@ -792,7 +838,9 @@ export function TransactionCenter({ order, user, onBack, onCancel }) {
                 display: "flex", alignItems: "center", justifyContent: "center", color: selectedDest?.color || "#6366f1", flexShrink: 0, overflow: "hidden"
               }}>
                 {selectedDest?.svg ? (
-                  <div style={{ width: 32, height: 32 }} dangerouslySetInnerHTML={{ __html: selectedDest.svg }} fill="none" />
+                  <div style={{ width: 32, height: 32 }} dangerouslySetInnerHTML={{ __html: selectedDest.svg }} />
+                ) : selectedDest?.logo ? (
+                  <img src={selectedDest.logo} alt={selectedDest.label} style={{ width: 32, height: 32, objectFit: "contain", borderRadius: "50%" }} onError={e => { e.target.style.display = "none"; }} />
                 ) : (
                   <Icon name="globe" size={14} />
                 )}
@@ -903,7 +951,12 @@ export function TransactionCenter({ order, user, onBack, onCancel }) {
                                     }}
                                   >
                                     <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                                      <div style={{ width: 24, height: 24, borderRadius: 6, background: d.bg, display: "flex", alignItems: "center", justifyContent: "center" }} dangerouslySetInnerHTML={{ __html: d.svg }} />
+                                      <div style={{ width: 28, height: 28, borderRadius: 8, background: d.logoBg || d.bg, display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden", flexShrink: 0 }}>
+                                        {d.svg
+                                          ? <div dangerouslySetInnerHTML={{ __html: d.svg }} />
+                                          : d.logo ? <img src={d.logo} alt={d.label} style={{ width: 28, height: 28, objectFit: "contain" }} onError={e => { e.target.style.display = "none"; }} /> : null
+                                        }
+                                      </div>
                                       <div>
                                         <div style={{ fontSize: 11.5, fontWeight: 800, color: "#1e1b4b" }}>{d.label}</div>
                                         <div style={{ fontSize: 10, color: "#64748b", fontFamily: "monospace", marginTop: 2 }}>{info.value}</div>

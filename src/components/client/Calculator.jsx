@@ -231,10 +231,13 @@ function SelectionModal({ isOpen, title, items, selectedId, onSelect, onClose, r
                 }}
               >
                 <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                  <div 
-                    style={{ width: 36, height: 36, borderRadius: 8, overflow: "hidden", flexShrink: 0 }}
-                    dangerouslySetInnerHTML={{ __html: renderIcon(item) }} 
-                  />
+                  <div style={{ width: 36, height: 36, borderRadius: 10, overflow: "hidden", flexShrink: 0, background: item.logoBg || "#f1f5f9", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                    {renderIcon(item) ? (
+                      <div dangerouslySetInnerHTML={{ __html: renderIcon(item) }} />
+                    ) : item.logo ? (
+                      <img src={item.logo} alt={item.label} style={{ width: 36, height: 36, objectFit: "contain", borderRadius: 10 }} onError={e => { e.target.style.display = "none"; }} />
+                    ) : null}
+                  </div>
                   <div>
                     <div style={{ fontSize: 13, fontWeight: 800, color: "#1e1b4b" }}>{item.label}</div>
                     <div style={{ fontSize: 10, color: "#8b92a9", fontWeight: 600, marginTop: 1 }}>{item.desc}</div>
@@ -453,10 +456,13 @@ export function Calculator({ appliedRate, rate, onSubmit, loading, user, kycStep
                 }}
               >
                 <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                  <div 
-                    style={{ width: 36, height: 36, flexShrink: 0, borderRadius: 8, overflow: "hidden" }} 
-                    dangerouslySetInnerHTML={{ __html: destInfo?.svg }} 
-                  />
+                  <div style={{ width: 36, height: 36, flexShrink: 0, borderRadius: 10, overflow: "hidden", background: destInfo?.logoBg || "#f1f5f9", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                    {destInfo?.svg ? (
+                      <div dangerouslySetInnerHTML={{ __html: destInfo.svg }} />
+                    ) : destInfo?.logo ? (
+                      <img src={destInfo.logo} alt={destInfo.label} style={{ width: 36, height: 36, objectFit: "contain", borderRadius: 10 }} onError={e => { e.target.style.display = "none"; }} />
+                    ) : null}
+                  </div>
                   <div>
                     <div style={{ fontSize: 13, fontWeight: 800, color: "#1e1b4b" }}>{destInfo?.label}</div>
                     <div style={{ fontSize: 9.5, color: "#8b92a9", fontWeight: 600, marginTop: 1 }}>{destInfo?.desc}</div>

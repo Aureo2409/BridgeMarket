@@ -456,6 +456,8 @@ export function OrderList({ orders, onCancel, currentUserId, onTransact, isMarke
               }}>
                 {d?.svg ? (
                   <div style={{ width: 40, height: 40, flexShrink: 0 }} dangerouslySetInnerHTML={{ __html: d.svg }} />
+                ) : d?.logo ? (
+                  <img src={d.logo} alt={d.label} style={{ width: 40, height: 40, objectFit: "contain", borderRadius: 8 }} onError={e => { e.target.style.display = "none"; }} />
                 ) : (
                   <Icon name="chart" size={20} />
                 )}
