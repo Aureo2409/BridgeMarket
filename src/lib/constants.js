@@ -1,330 +1,26 @@
 // ── Destinos de Pagamento — logos reais via URL ───────────────────────────────
 export const DESTS = [
 
-  // ── CARTEIRAS DIGITAIS LOCAIS ─────────────────────────────────────────────
+  // ── CARTÕES INTERNACIONAIS ────────────────────────────────────────────────
   {
-    id:    "multicaixa",
-    label: "Multicaixa Express",
-    color: "#0F172A",
-    bg:    "#f1f5f9",
-    desc:  "Carteira digital local",
-    hint:  "Número de telefone associado ao Express (9XXXXXXXX)",
-    logo:  "https://upload.wikimedia.org/wikipedia/commons/thumb/7/7e/Multicaixa_Express_logo.png/320px-Multicaixa_Express_logo.png",
-    logoBg: "#0F172A",
+    id:    "visa_virtual",
+    label: "Visa Virtual",
+    color: "#0A2458",
+    bg:    "#eef2ff",
+    desc:  "Cartão Visa Virtual",
+    hint:  "Número do cartão Visa virtual",
+    logo:  "https://upload.wikimedia.org/wikipedia/commons/thumb/5/5e/Visa_Inc._logo.svg/320px-Visa_Inc._logo.svg.png",
+    logoBg: "#0A2458",
     svg: `<svg width="100%" height="100%" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <rect width="40" height="40" rx="8" fill="#FFFFFF"/>
-      <circle cx="15" cy="20" r="6.5" stroke="#004691" stroke-width="3" fill="none" />
-      <circle cx="25" cy="20" r="6.5" stroke="#00B0EA" stroke-width="3" fill="none" />
-      <path d="M19.24 15.76 A 6.5 6.5 0 0 1 21.5 20" stroke="#004691" stroke-width="3" fill="none" stroke-linecap="round" />
-    </svg>`,
-  },
-  {
-    id:    "unitel_money",
-    label: "Unitel Money",
-    color: "#FF6B00",
-    bg:    "#fff7ed",
-    desc:  "Carteira móvel Unitel",
-    hint:  "Número Unitel associado (9XXXXXXXX)",
-    logo:  "https://upload.wikimedia.org/wikipedia/commons/thumb/2/2b/Unitel_Angola_logo.svg/320px-Unitel_Angola_logo.svg.png",
-    logoBg: "#FF6B00",
-    svg: `<svg width="100%" height="100%" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <defs>
-        <linearGradient id="unitel-bg-grad" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stop-color="#0E6EB8"/>
-          <stop offset="100%" stop-color="#0A4D85"/>
-        </linearGradient>
-      </defs>
-      <rect width="40" height="40" rx="9" fill="url(#unitel-bg-grad)"/>
-      <rect x="0.5" y="0.5" width="39" height="39" rx="8.5" stroke="rgba(255, 255, 255, 0.08)" stroke-width="1" fill="none"/>
-      <text x="3.5" y="24" fill="#FFFFFF" font-family="system-ui, -apple-system, sans-serif" font-weight="900" font-size="10.5" letter-spacing="-0.3">MO</text>
-      <rect x="17.2" y="15" width="1.5" height="8" fill="#FF5E00" rx="0.3"/>
-      <path d="M 18.7 15 L 21.8 21.5 L 21.8 23 L 18.7 17 Z" fill="#FF5E00"/>
-      <rect x="21.8" y="12" width="5.5" height="13.5" rx="1" stroke="#FF5E00" stroke-width="1.2" fill="none"/>
-      <rect x="21.8" y="19.5" width="5.5" height="6" fill="#FF5E00" rx="0.5"/>
-      <rect x="22.6" y="20.5" width="1.5" height="0.8" fill="#FFFFFF" rx="0.2"/>
-      <rect x="24.7" y="20.5" width="1.5" height="0.8" fill="#FFFFFF" rx="0.2"/>
-      <rect x="22.6" y="22" width="1.5" height="0.8" fill="#FFFFFF" rx="0.2"/>
-      <rect x="24.7" y="22" width="1.5" height="0.8" fill="#FFFFFF" rx="0.2"/>
-      <rect x="22.6" y="23.5" width="1.5" height="0.8" fill="#FFFFFF" rx="0.2"/>
-      <rect x="24.7" y="23.5" width="1.5" height="0.8" fill="#FFFFFF" rx="0.2"/>
-      <circle cx="24.55" cy="13.5" r="0.5" fill="#FFFFFF"/>
-      <text x="28.8" y="24" fill="#FFFFFF" font-family="system-ui, -apple-system, sans-serif" font-weight="900" font-size="10.5" letter-spacing="-0.3">EY</text>
-    </svg>`,
-  },
-
-  // ── BANCOS ANGOLANOS ──────────────────────────────────────────────────────
-  {
-    id:    "bai_visa",
-    label: "BAI Visa",
-    color: "#003DA5",
-    bg:    "#eff6ff",
-    desc:  "Banco BAI — Visa/Débito",
-    hint:  "IBAN BAI ou número do cartão",
-    logo:  "https://upload.wikimedia.org/wikipedia/commons/thumb/5/5c/BAI_Logo.png/320px-BAI_Logo.png",
-    logoBg: "#003DA5",
-    svg: `<svg width="100%" height="100%" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <defs>
-        <linearGradient id="visa-bg-grad" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stop-color="#0E2452"/>
-          <stop offset="100%" stop-color="#051028"/>
-        </linearGradient>
-        <radialGradient id="visa-globe-grad" cx="35%" cy="35%" r="65%">
-          <stop offset="0%" stop-color="#4e8fd4" />
-          <stop offset="100%" stop-color="#0b2347" />
-        </radialGradient>
-        <pattern id="visa-dot-grid" width="1.4" height="1.4" patternUnits="userSpaceOnUse">
-          <circle cx="0.7" cy="0.7" r="0.4" fill="#ffffff" opacity="0.95" />
-        </pattern>
-        <clipPath id="visa-globe-clip">
-          <circle cx="14" cy="16" r="6" />
-        </clipPath>
-      </defs>
-      <rect width="40" height="40" rx="8" fill="url(#visa-bg-grad)"/>
-      <rect x="0.5" y="0.5" width="39" height="39" rx="7.5" stroke="rgba(255, 255, 255, 0.08)" stroke-width="1" fill="none"/>
-      <circle cx="14" cy="16" r="6" fill="url(#visa-globe-grad)"/>
-      <g clip-path="url(#visa-globe-clip)">
-        <path d="M9 12 C10 10, 12 10, 14 12 C13 14, 12 15, 10 17 Z M14 9 L16 11 L13 11 Z M10 17 C13 20, 13 22, 11 29 C8 24, 9 21, 10 17 Z M17 10 H20 L19 14 L17 12 Z M16 14 C20 14, 21 17, 19 25 C15 18, 16 16, 16 14 Z M20 11 H26 L28 14 L24 18 Z" transform="translate(4.4, 4) scale(0.6)" fill="url(#visa-dot-grid)"/>
-      </g>
-      <g transform="translate(22, 26) scale(0.35)">
+      <rect width="40" height="40" rx="8" fill="#0A2458"/>
+      <rect x="0.5" y="0.5" width="39" height="39" rx="7.5" stroke="rgba(255,255,255,0.08)" stroke-width="1" fill="none"/>
+      <g transform="translate(9, 16) scale(1.0)">
         <path d="M 0 0 L 2.8 8 L 5.6 0 H 3.8 L 2.8 6 L 1.8 0 Z" fill="#ffffff"/>
         <path d="M 6.8 0 L 6.8 8 H 8.4 L 8.4 0 Z" fill="#ffffff"/>
         <path d="M 11.5 2 C 11.5 0.8 12.5 0.5 13.5 0.5 C 14.8 0.5 15.5 1 15.5 2 H 14 C 14 1.5 13.7 1.2 13.2 1.2 C 12.7 1.2 12.5 1.4 12.5 1.7 C 12.5 2.5 15.5 2.5 15.5 4.5 C 15.5 5.8 14.5 6.5 13.2 6.5 C 11.8 6.5 11 5.8 11 4.5 H 12.5 C 12.5 5 12.8 5.3 13.3 5.3 C 13.8 5.3 14 5 14 4.7 C 14 3.8 11.5 3.5 11.5 2 Z" fill="#ffffff"/>
         <path d="M 17 8 L 19 0 H 20.5 L 22.5 8 H 20.8 L 20.3 6 H 18.2 L 17.7 8 Z M 18.5 5 H 20 L 19.3 2 Z" fill="#ffffff"/>
       </g>
     </svg>`,
-  },
-  {
-    id:    "bfa",
-    label: "BFA",
-    color: "#E8001C",
-    bg:    "#fff0f2",
-    desc:  "Banco de Fomento Angola",
-    hint:  "IBAN BFA (AO06 XXXX...)",
-    logo:  "https://upload.wikimedia.org/wikipedia/commons/thumb/b/b4/BFA_Logo.png/320px-BFA_Logo.png",
-    logoBg: "#E8001C",
-    svg: `<svg width="100%" height="100%" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <rect width="40" height="40" rx="8" fill="#FF6600"/>
-      <g transform="translate(20, 20) scale(1.1)">
-        <path d="M0 -7 C-3 -3 -3 0 0 0 C3 0 3 -3 0 -7 Z" fill="white" transform="rotate(0)"/>
-        <path d="M0 -7 C-3 -3 -3 0 0 0 C3 0 3 -3 0 -7 Z" fill="white" transform="rotate(72)"/>
-        <path d="M0 -7 C-3 -3 -3 0 0 0 C3 0 3 -3 0 -7 Z" fill="white" transform="rotate(144)"/>
-        <path d="M0 -7 C-3 -3 -3 0 0 0 C3 0 3 -3 0 -7 Z" fill="white" transform="rotate(216)"/>
-        <path d="M0 -7 C-3 -3 -3 0 0 0 C3 0 3 -3 0 -7 Z" fill="white" transform="rotate(288)"/>
-        <circle cx="0" cy="0" r="1.5" fill="#006633"/>
-      </g>
-    </svg>`,
-  },
-  {
-    id:    "bic",
-    label: "Banco BIC",
-    color: "#8B0000",
-    bg:    "#fef2f2",
-    desc:  "BancoBIC Angola",
-    hint:  "IBAN BIC (AO06 XXXX...)",
-    logo:  "https://upload.wikimedia.org/wikipedia/commons/thumb/3/3c/Banco_BIC_Logo.png/320px-Banco_BIC_Logo.png",
-    logoBg: "#8B0000",
-    svg: `<svg width="100%" height="100%" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <rect width="40" height="40" rx="8" fill="#FFFFFF"/>
-      <path d="M19 28h2v-8h-2v8zm-5-11c0 2.2 1.8 4 4 4h1v-2h-1c-1.1 0-2-.9-2-2v-4h-2v4zm12 0c0-2.2-1.8-4-4-4h-1v2h1c1.1 0 2 .9 2 2v4h2v-4z" fill="#E21A1A"/>
-      <path d="M16 14c0 1.1.9 2 2 2h1v-2h-1c-.5 0-1-.5-1-1v-4h-2v5zm8 0c0-1.1-.9-2-2-2h-1v2h1c.5 0 1 .5 1 1v4h2v-5z" fill="#E21A1A"/>
-      <circle cx="20" cy="9" r="1.5" fill="#E21A1A"/>
-    </svg>`,
-  },
-  {
-    id:    "atlantico",
-    label: "Banco Atlântico",
-    color: "#00748A",
-    bg:    "#f0fdff",
-    desc:  "Banco Millennium Atlântico",
-    hint:  "IBAN Atlântico (AO06 XXXX...)",
-    logo:  "https://upload.wikimedia.org/wikipedia/commons/thumb/e/e3/Banco_Millennium_Atlantico_logo.png/320px-Banco_Millennium_Atlantico_logo.png",
-    logoBg: "#00748A",
-    svg: `<svg width="100%" height="100%" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <rect width="40" height="40" rx="8" fill="#FFFFFF"/>
-      <circle cx="20" cy="20" r="8" stroke="#008B9B" stroke-width="2.5" fill="none"/>
-      <line x1="20" y1="8" x2="20" y2="32" stroke="#008B9B" stroke-width="2.5" stroke-linecap="round"/>
-      <circle cx="20" cy="20" r="2.5" fill="#008B9B"/>
-    </svg>`,
-  },
-  {
-    id:    "bci",
-    label: "BCI",
-    color: "#00843D",
-    bg:    "#f0fdf4",
-    desc:  "Banco de Comércio e Indústria",
-    hint:  "IBAN BCI (AO06 XXXX...)",
-    logo:  "https://upload.wikimedia.org/wikipedia/commons/thumb/2/2a/BCI_Angola_logo.png/320px-BCI_Angola_logo.png",
-    logoBg: "#00843D",
-    svg: `<svg width="100%" height="100%" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <rect width="40" height="40" rx="8" fill="#FFFFFF"/>
-      <g transform="translate(12, 10)" stroke="#B3105C" stroke-width="2" fill="none">
-        <path d="M0 20V0h20"/>
-        <path d="M3 20V3h17"/>
-        <path d="M6 20V6h14"/>
-        <path d="M9 20V9h11"/>
-      </g>
-    </svg>`,
-  },
-  {
-    id:    "bpc",
-    label: "BPC",
-    color: "#0070C0",
-    bg:    "#eff6ff",
-    desc:  "Banco de Poupança e Crédito",
-    hint:  "IBAN BPC (AO06 XXXX...)",
-    logo:  "https://upload.wikimedia.org/wikipedia/commons/thumb/9/9a/BPC_Angola_logo.png/320px-BPC_Angola_logo.png",
-    logoBg: "#0070C0",
-    svg: `<svg width="100%" height="100%" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <rect width="40" height="40" rx="8" fill="#FFFFFF"/>
-      <g transform="translate(20, 20) rotate(45)">
-        <rect x="-8" y="-8" width="16" height="16" stroke="#0079C1" stroke-width="2.5" fill="none"/>
-        <rect x="-4" y="-4" width="8" height="8" stroke="#0079C1" stroke-width="1.5" fill="none"/>
-        <line x1="-8" y1="-8" x2="-4" y2="-4" stroke="#0079C1" stroke-width="1.5"/>
-        <line x1="8" y1="8" x2="4" y2="4" stroke="#0079C1" stroke-width="1.5"/>
-        <line x1="-8" y1="8" x2="-4" y2="4" stroke="#0079C1" stroke-width="1.5"/>
-        <line x1="8" y1="-8" x2="4" y2="-4" stroke="#0079C1" stroke-width="1.5"/>
-      </g>
-    </svg>`,
-  },
-  {
-    id:    "bni",
-    label: "BNI",
-    color: "#E87722",
-    bg:    "#fff7ed",
-    desc:  "Banco de Negócios Internacional",
-    hint:  "IBAN BNI (AO06 XXXX...)",
-    logo:  "https://upload.wikimedia.org/wikipedia/commons/thumb/4/4e/BNI_Angola_logo.png/320px-BNI_Angola_logo.png",
-    logoBg: "#E87722",
-    svg: `<svg width="100%" height="100%" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <rect width="40" height="40" rx="8" fill="#FFFFFF"/>
-      <rect x="10" y="10" width="20" height="20" rx="5" stroke="#C47D2B" stroke-width="2" fill="none"/>
-      <path d="M15 17c2-2 4 0 5 2s3 4 5 2" stroke="#C47D2B" stroke-width="2" stroke-linecap="round" fill="none"/>
-      <path d="M15 23c2 2 4 0 5-2s3-4 5-2" stroke="#C47D2B" stroke-width="2" stroke-linecap="round" fill="none"/>
-    </svg>`,
-  },
-  {
-    id:    "bancosol",
-    label: "Banco Sol",
-    color: "#F5A800",
-    bg:    "#fffbeb",
-    desc:  "Banco Sol Angola",
-    hint:  "IBAN Banco Sol (AO06 XXXX...)",
-    logo:  "https://upload.wikimedia.org/wikipedia/commons/thumb/0/02/BancoSol_Angola_logo.png/320px-BancoSol_Angola_logo.png",
-    logoBg: "#F5A800",
-    svg: `<svg width="100%" height="100%" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <rect width="40" height="40" rx="8" fill="#FFFFFF"/>
-      <circle cx="20" cy="20" r="9" fill="url(#solGradient)"/>
-      <defs>
-        <linearGradient id="solGradient" x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0%" stop-color="#FFD600"/>
-          <stop offset="100%" stop-color="#FF9E00"/>
-        </linearGradient>
-      </defs>
-    </svg>`,
-  },
-  {
-    id:    "bancoyetu",
-    label: "Banco Yetu",
-    color: "#C9A84C",
-    bg:    "#fdfaf0",
-    desc:  "Banco Yetu Angola",
-    hint:  "IBAN Banco Yetu (AO06 XXXX...)",
-    logo:  "https://upload.wikimedia.org/wikipedia/commons/thumb/8/8e/BancoYetu_logo.png/320px-BancoYetu_logo.png",
-    logoBg: "#C9A84C",
-    svg: `<svg width="100%" height="100%" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <rect width="40" height="40" rx="8" fill="#FFFFFF"/>
-      <g stroke="#9E7E38" stroke-width="2.2" stroke-linecap="round" fill="none" transform="translate(0, -1)">
-        <line x1="12" y1="12" x2="20" y2="18"/>
-        <line x1="12" y1="18" x2="20" y2="24"/>
-        <line x1="12" y1="24" x2="20" y2="30"/>
-        <line x1="28" y1="12" x2="20" y2="18"/>
-        <line x1="28" y1="18" x2="20" y2="24"/>
-        <line x1="28" y1="24" x2="20" y2="30"/>
-        <line x1="20" y1="10" x2="20" y2="30" stroke-width="1.5"/>
-      </g>
-    </svg>`,
-  },
-  {
-    id:    "cga",
-    label: "Caixa Geral Angola",
-    color: "#005A2B",
-    bg:    "#f0fdf4",
-    desc:  "Caixa Geral de Depósitos Angola",
-    hint:  "IBAN CGA (AO06 XXXX...)",
-    logo:  "https://upload.wikimedia.org/wikipedia/commons/thumb/6/6e/Caixa_Geral_Angola_logo.png/320px-Caixa_Geral_Angola_logo.png",
-    logoBg: "#005A2B",
-    svg: `<svg width="100%" height="100%" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <rect width="40" height="40" rx="8" fill="#FFFFFF"/>
-      <g fill="#005A9C">
-        <path d="M11 11h7v2h-5v5h-2v-7z"/>
-        <path d="M22 11h7v7h-2v-5h-5v-2z"/>
-        <path d="M22 22h5v5h-7v-7h2v2z"/>
-        <path d="M11 22h2v5h5v2h-7v-7z"/>
-        <rect x="15" y="15" width="10" height="10" fill="#005A9C"/>
-      </g>
-    </svg>`,
-  },
-  {
-    id:    "standard_bank",
-    label: "Standard Bank",
-    color: "#0033A0",
-    bg:    "#eff6ff",
-    desc:  "Standard Bank Angola",
-    hint:  "IBAN Standard Bank (AO06 XXXX...)",
-    logo:  "https://upload.wikimedia.org/wikipedia/commons/thumb/7/72/Standard_Bank_Logo.svg/320px-Standard_Bank_Logo.svg.png",
-    logoBg: "#0033A0",
-    svg: `<svg width="100%" height="100%" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <rect width="40" height="40" rx="8" fill="#0033A0"/>
-      <g transform="translate(11, 8)">
-        <path d="M0 0 H18 V10 C18 16 13 21 9 24 C5 21 0 16 0 10 Z" fill="#FFFFFF"/>
-        <path d="M3 3 H15 V10 C15 14.5 11 18.5 9 21 C7 18.5 3 14.5 3 10 Z" fill="#0033A0"/>
-        <rect x="7.5" y="6" width="3" height="12" fill="#FFFFFF"/>
-        <path d="M7.5 6 H13 V11 H7.5 Z" fill="#FFFFFF"/>
-      </g>
-    </svg>`,
-  },
-  {
-    id:    "bancoeconomico",
-    label: "Banco Económico",
-    color: "#6B21A8",
-    bg:    "#faf5ff",
-    desc:  "Banco Económico Angola",
-    hint:  "IBAN Banco Económico (AO06 XXXX...)",
-    logo:  "https://upload.wikimedia.org/wikipedia/commons/thumb/5/5b/Banco_Economico_Angola_logo.png/320px-Banco_Economico_Angola_logo.png",
-    logoBg: "#6B21A8",
-    svg: `<svg width="100%" height="100%" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <rect width="40" height="40" rx="8" fill="#5F259F"/>
-      <path d="M12 13 H28 M12 20 H24 M12 27 H28" stroke="#00B0FF" stroke-width="2.5" stroke-linecap="round"/>
-      <path d="M12 13 V27" stroke="#00B0FF" stroke-width="2.5" stroke-linecap="round"/>
-      <path d="M16 16 H24 M16 24 H24" stroke="#00B0FF" stroke-width="1.5" stroke-linecap="round" opacity="0.6"/>
-    </svg>`,
-  },
-  {
-    id:    "bancokeve",
-    label: "Banco Keve",
-    color: "#005F9E",
-    bg:    "#eff6ff",
-    desc:  "Banco Keve Angola",
-    hint:  "IBAN Banco Keve (AO06 XXXX...)",
-    logo:  "https://upload.wikimedia.org/wikipedia/commons/thumb/3/3b/BancoKeve_logo.png/320px-BancoKeve_logo.png",
-    logoBg: "#005F9E",
-    svg: `<svg width="100%" height="100%" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <rect width="40" height="40" rx="8" fill="#FFFFFF"/>
-      <path d="M10 23 C14 23 16 17 20 17 C24 17 26 23 30 23" stroke="#FF8C00" stroke-width="3" stroke-linecap="round" fill="none"/>
-      <path d="M10 17 C14 17 16 23 20 23 C24 23 26 17 30 17" stroke="#00529F" stroke-width="3" stroke-linecap="round" fill="none"/>
-    </svg>`,
-  },
-
-  // ── CARTÕES INTERNACIONAIS ────────────────────────────────────────────────
-  {
-    id:    "visa_virtual",
-    label: "Visa Virtual",
-    color: "#1A1F71",
-    bg:    "#eef2ff",
-    desc:  "Cartão Visa Virtual",
-    hint:  "Número do cartão Visa virtual",
-    logo:  "https://upload.wikimedia.org/wikipedia/commons/thumb/5/5e/Visa_Inc._logo.svg/320px-Visa_Inc._logo.svg.png",
-    logoBg: "#1A1F71",
   },
   {
     id:    "mastercard",
@@ -442,22 +138,28 @@ export const DESTS = [
     logo:  "https://upload.wikimedia.org/wikipedia/commons/thumb/b/b7/Flag_of_Europe.svg/320px-Flag_of_Europe.svg.png",
     logoBg: "#003399",
     svg: `<svg width="100%" height="100%" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <rect width="40" height="40" rx="8" fill="#003399"/>
-      <g fill="#FFCC00" transform="translate(20, 20) scale(0.8)">
-        <polygon points="0,-10 3,-3 10,-3 5,2 7,9 0,5 -7,9 -5,2 -10,-3 -3,-3" transform="scale(0.3) translate(0, -33)"/>
-        <polygon points="0,-10 3,-3 10,-3 5,2 7,9 0,5 -7,9 -5,2 -10,-3 -3,-3" transform="rotate(30) scale(0.3) translate(0, -33)"/>
-        <polygon points="0,-10 3,-3 10,-3 5,2 7,9 0,5 -7,9 -5,2 -10,-3 -3,-3" transform="rotate(60) scale(0.3) translate(0, -33)"/>
-        <polygon points="0,-10 3,-3 10,-3 5,2 7,9 0,5 -7,9 -5,2 -10,-3 -3,-3" transform="rotate(90) scale(0.3) translate(0, -33)"/>
-        <polygon points="0,-10 3,-3 10,-3 5,2 7,9 0,5 -7,9 -5,2 -10,-3 -3,-3" transform="rotate(120) scale(0.3) translate(0, -33)"/>
-        <polygon points="0,-10 3,-3 10,-3 5,2 7,9 0,5 -7,9 -5,2 -10,-3 -3,-3" transform="rotate(150) scale(0.3) translate(0, -33)"/>
-        <polygon points="0,-10 3,-3 10,-3 5,2 7,9 0,5 -7,9 -5,2 -10,-3 -3,-3" transform="rotate(180) scale(0.3) translate(0, -33)"/>
-        <polygon points="0,-10 3,-3 10,-3 5,2 7,9 0,5 -7,9 -5,2 -10,-3 -3,-3" transform="rotate(210) scale(0.3) translate(0, -33)"/>
-        <polygon points="0,-10 3,-3 10,-3 5,2 7,9 0,5 -7,9 -5,2 -10,-3 -3,-3" transform="rotate(240) scale(0.3) translate(0, -33)"/>
-        <polygon points="0,-10 3,-3 10,-3 5,2 7,9 0,5 -7,9 -5,2 -10,-3 -3,-3" transform="rotate(270) scale(0.3) translate(0, -33)"/>
-        <polygon points="0,-10 3,-3 10,-3 5,2 7,9 0,5 -7,9 -5,2 -10,-3 -3,-3" transform="rotate(300) scale(0.3) translate(0, -33)"/>
-        <polygon points="0,-10 3,-3 10,-3 5,2 7,9 0,5 -7,9 -5,2 -10,-3 -3,-3" transform="rotate(330) scale(0.3) translate(0, -33)"/>
+      <g clip-path="url(#eu-card-clip)">
+        <rect width="40" height="40" fill="#003399"/>
+        <defs>
+          <clipPath id="eu-card-clip"><rect width="40" height="40" rx="8"/></clipPath>
+          <g id="eu-star">
+            <polygon points="0,-1.5 0.45,-0.45 1.5,-0.45 0.65,0.25 1,1.3 0,0.65 -1,1.3 -0.65,0.25 -1.5,-0.45 -0.45,-0.45" fill="#FFCC00"/>
+          </g>
+        </defs>
+        <use href="#eu-star" x="20" y="10"/>
+        <use href="#eu-star" x="25" y="11.34"/>
+        <use href="#eu-star" x="28.66" y="15"/>
+        <use href="#eu-star" x="30" y="20"/>
+        <use href="#eu-star" x="28.66" y="25"/>
+        <use href="#eu-star" x="25" y="28.66"/>
+        <use href="#eu-star" x="20" y="30"/>
+        <use href="#eu-star" x="15" y="28.66"/>
+        <use href="#eu-star" x="11.34" y="25"/>
+        <use href="#eu-star" x="10" y="20"/>
+        <use href="#eu-star" x="11.34" y="15"/>
+        <use href="#eu-star" x="15" y="11.34"/>
       </g>
-      <text x="20" y="24" font-family="system-ui, sans-serif" font-size="11" font-weight="900" fill="white" text-anchor="middle">€</text>
+      <rect x="0.5" y="0.5" width="39" height="39" rx="7.5" stroke="rgba(255, 255, 255, 0.08)" stroke-width="1" fill="none"/>
     </svg>`,
   },
   {
@@ -470,19 +172,47 @@ export const DESTS = [
     logo:  "https://upload.wikimedia.org/wikipedia/commons/thumb/a/a4/Flag_of_the_United_States.svg/320px-Flag_of_the_United_States.svg.png",
     logoBg: "#B22234",
     svg: `<svg width="100%" height="100%" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <rect width="40" height="40" rx="8" fill="#0A3161"/>
-      <g fill="#B22234">
-        <rect x="2" y="18" width="36" height="3"/>
-        <rect x="2" y="24" width="36" height="3"/>
-        <rect x="2" y="30" width="36" height="3"/>
+      <g clip-path="url(#us-card-clip)">
+        <rect width="40" height="40" fill="#FFFFFF"/>
+        <rect x="0" y="0" width="40" height="3.08" fill="#B22234"/>
+        <rect x="0" y="6.15" width="40" height="3.08" fill="#B22234"/>
+        <rect x="0" y="12.31" width="40" height="3.08" fill="#B22234"/>
+        <rect x="0" y="18.46" width="40" height="3.08" fill="#B22234"/>
+        <rect x="0" y="24.62" width="40" height="3.08" fill="#B22234"/>
+        <rect x="0" y="30.77" width="40" height="3.08" fill="#B22234"/>
+        <rect x="0" y="36.92" width="40" height="3.08" fill="#B22234"/>
+        <rect x="0" y="0" width="18" height="21.54" fill="#0A3161"/>
+        <defs>
+          <clipPath id="us-card-clip"><rect width="40" height="40" rx="8"/></clipPath>
+          <g id="us-star">
+            <polygon points="0,-0.8 0.24,-0.24 0.8,-0.24 0.35,0.1 0.52,0.66 0,0.3 -0.52,0.66 -0.35,0.1 -0.8,-0.24 -0.24,-0.24" fill="#FFFFFF"/>
+          </g>
+        </defs>
+        <use href="#us-star" x="3" y="3.6"/>
+        <use href="#us-star" x="6" y="3.6"/>
+        <use href="#us-star" x="9" y="3.6"/>
+        <use href="#us-star" x="12" y="3.6"/>
+        <use href="#us-star" x="15" y="3.6"/>
+        <use href="#us-star" x="4.5" y="7.2"/>
+        <use href="#us-star" x="7.5" y="7.2"/>
+        <use href="#us-star" x="10.5" y="7.2"/>
+        <use href="#us-star" x="13.5" y="7.2"/>
+        <use href="#us-star" x="3" y="10.8"/>
+        <use href="#us-star" x="6" y="10.8"/>
+        <use href="#us-star" x="9" y="10.8"/>
+        <use href="#us-star" x="12" y="10.8"/>
+        <use href="#us-star" x="15" y="10.8"/>
+        <use href="#us-star" x="4.5" y="14.4"/>
+        <use href="#us-star" x="7.5" y="14.4"/>
+        <use href="#us-star" x="10.5" y="14.4"/>
+        <use href="#us-star" x="13.5" y="14.4"/>
+        <use href="#us-star" x="3" y="18.0"/>
+        <use href="#us-star" x="6" y="18.0"/>
+        <use href="#us-star" x="9" y="18.0"/>
+        <use href="#us-star" x="12" y="18.0"/>
+        <use href="#us-star" x="15" y="18.0"/>
       </g>
-      <rect x="2" y="6" width="16" height="12" fill="#3C3B6E" rx="1"/>
-      <circle cx="6" cy="10" r="1" fill="white"/>
-      <circle cx="10" cy="10" r="1" fill="white"/>
-      <circle cx="14" cy="10" r="1" fill="white"/>
-      <circle cx="8" cy="14" r="1" fill="white"/>
-      <circle cx="12" cy="14" r="1" fill="white"/>
-      <text x="28" y="16" font-family="system-ui, sans-serif" font-size="12" font-weight="900" fill="#FFFFFF" text-anchor="middle">$</text>
+      <rect x="0.5" y="0.5" width="39" height="39" rx="7.5" stroke="rgba(255, 255, 255, 0.08)" stroke-width="1" fill="none"/>
     </svg>`,
   },
 ];

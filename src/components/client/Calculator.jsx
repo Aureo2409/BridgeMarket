@@ -16,7 +16,7 @@ export const ANGOLAN_BANKS = [
   { id: "bni", label: "BNI", desc: "Banco de Negócios Internacional", color: "#A87232", bg: "#fdf8f2" },
   { id: "economico", label: "Banco Económico", desc: "Banco Económico", color: "#5F259F", bg: "#fbf2ff" },
   { id: "cga", label: "Caixa Geral Angola", desc: "Caixa Geral Angola", color: "#005BA6", bg: "#f0f6fc" },
-  { id: "express", label: "Express", desc: "Multicaixa Express", color: "#0099FF", bg: "#f0f9ff" }
+  { id: "express", label: "Express", desc: "Multicaixa Express", color: "#FF9344", bg: "#FFF4EC" }
 ];
 
 const BANK_LOGOS = {
@@ -50,21 +50,55 @@ const BANK_LOGOS = {
     <circle cx="20" cy="20" r="11" fill="url(#bai-globe-gloss)" opacity="0.15" pointer-events="none"/>
   </svg>`,
   bfa: `<svg width="100%" height="100%" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
-    <rect width="40" height="40" rx="8" fill="#FF6600"/>
-    <g transform="translate(20, 20) scale(1.1)">
-      <path d="M0 -7 C-3 -3 -3 0 0 0 C3 0 3 -3 0 -7 Z" fill="white" transform="rotate(0)"/>
-      <path d="M0 -7 C-3 -3 -3 0 0 0 C3 0 3 -3 0 -7 Z" fill="white" transform="rotate(72)"/>
-      <path d="M0 -7 C-3 -3 -3 0 0 0 C3 0 3 -3 0 -7 Z" fill="white" transform="rotate(144)"/>
-      <path d="M0 -7 C-3 -3 -3 0 0 0 C3 0 3 -3 0 -7 Z" fill="white" transform="rotate(216)"/>
-      <path d="M0 -7 C-3 -3 -3 0 0 0 C3 0 3 -3 0 -7 Z" fill="white" transform="rotate(288)"/>
-      <circle cx="0" cy="0" r="1.5" fill="#006633"/>
+    <rect width="40" height="40" rx="8" fill="#F05A24"/>
+    <g transform="translate(20, 20) rotate(-15) scale(1.5)">
+      <g fill="#FFFFFF">
+        <path d="M 0 -8 C -3 -6.8, -4 -3, -2.5 -0.5 C -1.5 1, 1.5 1, 2.5 -0.5 C 4 -3, 3 -6.8, 0 -8 Z" transform="rotate(0)"/>
+        <path d="M 0 -8 C -3 -6.8, -4 -3, -2.5 -0.5 C -1.5 1, 1.5 1, 2.5 -0.5 C 4 -3, 3 -6.8, 0 -8 Z" transform="rotate(90)"/>
+        <path d="M 0 -8 C -3 -6.8, -4 -3, -2.5 -0.5 C -1.5 1, 1.5 1, 2.5 -0.5 C 4 -3, 3 -6.8, 0 -8 Z" transform="rotate(180)"/>
+        <path d="M 0 -8 C -3 -6.8, -4 -3, -2.5 -0.5 C -1.5 1, 1.5 1, 2.5 -0.5 C 4 -3, 3 -6.8, 0 -8 Z" transform="rotate(270)"/>
+      </g>
+      <g stroke="#F05A24" stroke-width="0.45" stroke-linecap="round">
+        <line x1="0" y1="0" x2="0" y2="-4.2"/>
+        <line x1="0" y1="0" x2="2.97" y2="-2.97"/>
+        <line x1="0" y1="0" x2="4.2" y2="0"/>
+        <line x1="0" y1="0" x2="2.97" y2="2.97"/>
+        <line x1="0" y1="0" x2="0" y2="4.2"/>
+        <line x1="0" y1="0" x2="-2.97" y2="2.97"/>
+        <line x1="0" y1="0" x2="-4.2" y2="0"/>
+        <line x1="0" y1="0" x2="-2.97" y2="-2.97"/>
+      </g>
+      <circle cx="0" cy="-4.2" r="0.45" fill="#F05A24"/>
+      <circle cx="2.97" cy="-2.97" r="0.45" fill="#F05A24"/>
+      <circle cx="4.2" cy="0" r="0.45" fill="#F05A24"/>
+      <circle cx="2.97" cy="2.97" r="0.45" fill="#F05A24"/>
+      <circle cx="0" cy="4.2" r="0.45" fill="#F05A24"/>
+      <circle cx="-2.97" cy="2.97" r="0.45" fill="#F05A24"/>
+      <circle cx="-4.2" cy="0" r="0.45" fill="#F05A24"/>
+      <circle cx="-2.97" cy="-2.97" r="0.45" fill="#F05A24"/>
+      <circle cx="0" cy="0" r="1.15" fill="#F05A24"/>
     </g>
   </svg>`,
   bic: `<svg width="100%" height="100%" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
-    <rect width="40" height="40" rx="8" fill="#FFFFFF"/>
-    <path d="M19 28h2v-8h-2v8zm-5-11c0 2.2 1.8 4 4 4h1v-2h-1c-1.1 0-2-.9-2-2v-4h-2v4zm12 0c0-2.2-1.8-4-4-4h-1v2h1c1.1 0 2 .9 2 2v4h2v-4z" fill="#E21A1A"/>
-    <path d="M16 14c0 1.1.9 2 2 2h1v-2h-1c-.5 0-1-.5-1-1v-4h-2v5zm8 0c0-1.1-.9-2-2-2h-1v2h1c.5 0 1 .5 1 1v4h2v-5z" fill="#E21A1A"/>
-    <circle cx="20" cy="9" r="1.5" fill="#E21A1A"/>
+    <defs>
+      <mask id="bic-tree-mask">
+        <rect width="40" height="40" fill="#FFFFFF"/>
+        <ellipse cx="14" cy="14" rx="1.2" ry="2.2" transform="rotate(-30 14 14)" fill="#000000"/>
+        <ellipse cx="18" cy="12.5" rx="1.2" ry="2.2" transform="rotate(-15 18 12.5)" fill="#000000"/>
+        <ellipse cx="22" cy="12.5" rx="1.2" ry="2.2" transform="rotate(15 22 12.5)" fill="#000000"/>
+        <ellipse cx="26" cy="14" rx="1.2" ry="2.2" transform="rotate(30 26 14)" fill="#000000"/>
+        <ellipse cx="13" cy="18.5" rx="1.2" ry="2.2" transform="rotate(-45 13 18.5)" fill="#000000"/>
+        <ellipse cx="20" cy="15.5" rx="1.2" ry="2.5" fill="#000000"/>
+        <ellipse cx="27" cy="18.5" rx="1.2" ry="2.2" transform="rotate(45 27 18.5)" fill="#000000"/>
+        <ellipse cx="17.5" cy="20.5" rx="1.2" ry="3" transform="rotate(-30 17.5 20.5)" fill="#000000"/>
+        <ellipse cx="22.5" cy="20.5" rx="1.2" ry="3" transform="rotate(30 22.5 20.5)" fill="#000000"/>
+        <ellipse cx="20" cy="22.5" rx="1" ry="3.5" fill="#000000"/>
+      </mask>
+    </defs>
+    <rect width="40" height="40" rx="8" fill="#E21A1A"/>
+    <rect x="0.5" y="0.5" width="39" height="39" rx="7.5" stroke="rgba(255,255,255,0.08)" stroke-width="1" fill="none"/>
+    <path d="M 17.5 28 C 17.5 25.5, 16.5 24.5, 14 23.5 C 9.5 21.5, 7.5 15.5, 11 11.5 C 14.5 7.5, 25.5 7.5, 29 11.5 C 32.5 15.5, 30.5 21.5, 26 23.5 C 23.5 24.5, 22.5 25.5, 22.5 28 Z" fill="#FFFFFF" mask="url(#bic-tree-mask)"/>
+    <text x="20" y="35" fill="#FFFFFF" font-family="system-ui, -apple-system, sans-serif" text-anchor="middle" font-size="5.2" font-weight="600" letter-spacing="-0.1">Banco<tspan font-weight="900">BIC</tspan></text>
   </svg>`,
   atlantico: `<svg width="100%" height="100%" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
     <rect width="40" height="40" rx="8" fill="#FFFFFF"/>
@@ -92,14 +126,14 @@ const BANK_LOGOS = {
     </defs>
   </svg>`,
   bpc: `<svg width="100%" height="100%" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
-    <rect width="40" height="40" rx="8" fill="#FFFFFF"/>
-    <g transform="translate(20, 20) rotate(45)">
-      <rect x="-8" y="-8" width="16" height="16" stroke="#0079C1" stroke-width="2.5" fill="none"/>
-      <rect x="-4" y="-4" width="8" height="8" stroke="#0079C1" stroke-width="1.5" fill="none"/>
-      <line x1="-8" y1="-8" x2="-4" y2="-4" stroke="#0079C1" stroke-width="1.5"/>
-      <line x1="8" y1="8" x2="4" y2="4" stroke="#0079C1" stroke-width="1.5"/>
-      <line x1="-8" y1="8" x2="-4" y2="4" stroke="#0079C1" stroke-width="1.5"/>
-      <line x1="8" y1="-8" x2="4" y2="-4" stroke="#0079C1" stroke-width="1.5"/>
+    <rect width="40" height="40" rx="8" fill="#00357A"/>
+    <rect x="0.5" y="0.5" width="39" height="39" rx="7.5" stroke="rgba(255,255,255,0.08)" stroke-width="1" fill="none"/>
+    <rect x="9" y="9" width="22" height="22" rx="4.5" transform="rotate(45 20 20)" fill="#00AEEF"/>
+    <g transform="translate(20, 20) scale(1.85)">
+      <path d="M -5 -5 H 2 A 3 3 0 0 1 5 -2 V 5" stroke="white" stroke-width="1.8" stroke-linecap="round" fill="none"/>
+      <path d="M 5 -5 V 2 A 3 3 0 0 1 2 5 H -5" stroke="white" stroke-width="1.8" stroke-linecap="round" fill="none"/>
+      <path d="M 5 5 H -2 A 3 3 0 0 1 -5 2 V -5" stroke="white" stroke-width="1.8" stroke-linecap="round" fill="none"/>
+      <path d="M -5 5 V -2 A 3 3 0 0 1 -2 -5 H 5" stroke="white" stroke-width="1.8" stroke-linecap="round" fill="none"/>
     </g>
   </svg>`,
   bci: `<svg width="100%" height="100%" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -151,11 +185,22 @@ const BANK_LOGOS = {
     </g>
   </svg>`,
   express: `<svg width="100%" height="100%" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
-    <rect width="40" height="40" rx="8" fill="#0056B3"/>
-    <rect x="13" y="9" width="14" height="22" rx="3" stroke="white" stroke-width="2" fill="none"/>
-    <circle cx="20" cy="27" r="1" fill="white"/>
-    <circle cx="18" cy="18" r="3" stroke="#FFCC00" stroke-width="1.2" fill="none"/>
-    <circle cx="22" cy="18" r="3" stroke="#00FFCC" stroke-width="1.2" fill="none"/>
+    <rect width="40" height="40" rx="8" fill="#FFA461"/>
+    <rect x="0.5" y="0.5" width="39" height="39" rx="7.5" stroke="rgba(255,255,255,0.08)" stroke-width="1" fill="none"/>
+    <g transform="translate(20, 16) scale(1.15)">
+      <g stroke="#FFFFFF" stroke-width="0.8" stroke-linejoin="round" fill="#B44252">
+        <rect x="-1.4" y="-2.25" width="2.8" height="4.5" rx="0.6" transform="rotate(0) translate(0, -3.5) rotate(15)"/>
+        <rect x="-1.4" y="-2.25" width="2.8" height="4.5" rx="0.6" transform="rotate(45) translate(0, -3.5) rotate(15)"/>
+        <rect x="-1.4" y="-2.25" width="2.8" height="4.5" rx="0.6" transform="rotate(90) translate(0, -3.5) rotate(15)"/>
+        <rect x="-1.4" y="-2.25" width="2.8" height="4.5" rx="0.6" transform="rotate(135) translate(0, -3.5) rotate(15)"/>
+        <rect x="-1.4" y="-2.25" width="2.8" height="4.5" rx="0.6" transform="rotate(180) translate(0, -3.5) rotate(15)"/>
+        <rect x="-1.4" y="-2.25" width="2.8" height="4.5" rx="0.6" transform="rotate(225) translate(0, -3.5) rotate(15)"/>
+        <rect x="-1.4" y="-2.25" width="2.8" height="4.5" rx="0.6" transform="rotate(270) translate(0, -3.5) rotate(15)"/>
+        <rect x="-1.4" y="-2.25" width="2.8" height="4.5" rx="0.6" transform="rotate(315) translate(0, -3.5) rotate(15)"/>
+      </g>
+      <circle cx="0" cy="0" r="1.8" fill="#FFA461" stroke="#FFFFFF" stroke-width="0.8"/>
+    </g>
+    <text x="20" y="32" fill="#B44252" font-family="system-ui, -apple-system, sans-serif" font-weight="900" font-size="6.2" text-anchor="middle" letter-spacing="-0.2">express</text>
   </svg>`
 };
 
