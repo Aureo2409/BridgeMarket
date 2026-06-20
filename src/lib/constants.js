@@ -254,6 +254,7 @@ export const CURRENCIES = [
   {
     id:     "USD",
     label:  "Dólar Americano",
+    desc:   "Carteiras, cartões e Binance",
     symbol: "$",
     flag:   "🇺🇸",
     color:  "#1a3a6e",
@@ -263,6 +264,7 @@ export const CURRENCIES = [
   {
     id:     "EUR",
     label:  "Euro",
+    desc:   "MB WAY, IBAN SEPA, Wise, PayPal",
     symbol: "€",
     flag:   "🇪🇺",
     color:  "#003399",
@@ -271,6 +273,7 @@ export const CURRENCIES = [
   {
     id:     "BRL",
     label:  "Real Brasileiro",
+    desc:   "Pix, Wise, Binance",
     symbol: "R$",
     flag:   "🇧🇷",
     color:  "#009c3b",
@@ -279,6 +282,7 @@ export const CURRENCIES = [
   {
     id:     "ZAR",
     label:  "Rand Sul-Africano",
+    desc:   "EFT (FNB, Capitec), Wise, Binance",
     symbol: "R",
     flag:   "🇿🇦",
     color:  "#007B40",

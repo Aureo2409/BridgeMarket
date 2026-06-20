@@ -204,7 +204,7 @@ const BANK_LOGOS = {
   </svg>`
 };
 
-function SelectionModal({ isOpen, title, items, selectedId, onSelect, onClose, renderIcon }) {
+function SelectionModal({ isOpen, title, items, selectedId, onSelect, onClose, renderIcon, renderFlag }) {
   if (!isOpen) return null;
   return (
     <div 
@@ -296,15 +296,17 @@ function SelectionModal({ isOpen, title, items, selectedId, onSelect, onClose, r
                 }}
               >
                 <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                  <div style={{ width: 36, height: 36, borderRadius: 10, overflow: "hidden", flexShrink: 0, background: item.logoBg || "#f1f5f9", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                    {renderIcon(item) ? (
+                  <div style={{ width: 36, height: 36, borderRadius: 10, overflow: "hidden", flexShrink: 0, background: item.logoBg || item.bg || "#f1f5f9", display: "flex", alignItems: "center", justifyContent: "center", fontSize: renderFlag ? 22 : undefined }}>
+                    {renderFlag ? (
+                      <span>{renderFlag(item)}</span>
+                    ) : renderIcon(item) ? (
                       <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center" }} dangerouslySetInnerHTML={{ __html: renderIcon(item) }} />
                     ) : item.logo ? (
                       <img src={item.logo} alt={item.label} style={{ width: 36, height: 36, objectFit: "contain", borderRadius: 10 }} onError={e => { e.target.style.display = "none"; }} />
                     ) : null}
                   </div>
                   <div>
-                    <div style={{ fontSize: 13, fontWeight: 800, color: "#1e1b4b" }}>{item.label}</div>
+                    <div style={{ fontSize: 13, fontWeight: 800, color: "#1e1b4b" }}>{item.id ? `${item.id} — ${item.label}` : item.label}</div>
                     <div style={{ fontSize: 10, color: "#8b92a9", fontWeight: 600, marginTop: 1 }}>{item.desc}</div>
                   </div>
                 </div>
@@ -450,7 +452,7 @@ export function Calculator({ appliedRate, rate, onSubmit, loading, user, kycStep
             boxShadow: opType === "buy" ? "0 4px 12px rgba(99,102,241,0.2)" : "none"
           }}
         >
-          🟢 QUERO COMPRAR USD
+          🟢 QUERO COMPRAR {currency}
         </button>
         <button
           onClick={() => handleOpTypeChange("sell")}
@@ -469,7 +471,7 @@ export function Calculator({ appliedRate, rate, onSubmit, loading, user, kycStep
             boxShadow: opType === "sell" ? "0 4px 12px rgba(99,102,241,0.2)" : "none"
           }}
         >
-          🔴 QUERO VENDER USD
+          🔴 QUERO VENDER {currency}
         </button>
       </div>
 
@@ -480,34 +482,84 @@ export function Calculator({ appliedRate, rate, onSubmit, loading, user, kycStep
       </div>
 
       <div className="card">
-        <div className={`calc-box${field === "usd" ? " active" : ""}`} onClick={() => setField("usd")}>
-          <div className="calc-flag" style={{ display: "flex", alignItems: "center", gap: 6, cursor: "pointer" }}
-            onClick={() => setShowCurrencyModal(true)}>
-            <span style={{ fontSize: 16 }}>{currentCurrencyDef.flag}</span>
-            <span style={{ fontWeight: 700, color: currentCurrencyDef.color }}>{currency}</span>
-            <span style={{ color: "#8b92a9", fontSize: 12 }}>— {currentCurrencyDef.label}</span>
-            <span style={{ fontSize: 10, color: "#6366f1", marginLeft: 4, background: "#eff6ff", padding: "1px 6px", borderRadius: 6 }}>▼ trocar</span>
+        {/* ── Caixa de cima: muda consoante swapped ── */}
+        {!swapped ? (
+          <div className={`calc-box${field === "usd" ? " active" : ""}`} onClick={() => setField("usd")}>
+            <div className="calc-flag" style={{ display: "flex", alignItems: "center", gap: 6, cursor: "pointer" }}
+              onClick={e => { e.stopPropagation(); setShowCurrencyModal(true); }}>
+              <span style={{ fontSize: 16 }}>{currentCurrencyDef.flag}</span>
+              <span style={{ fontWeight: 700, color: currentCurrencyDef.color }}>{currency}</span>
+              <span style={{ color: "#8b92a9", fontSize: 12 }}>— {currentCurrencyDef.label}</span>
+              <span style={{ fontSize: 10, color: "#6366f1", marginLeft: 4, background: "#eff6ff", padding: "1px 6px", borderRadius: 6, display: "flex", alignItems: "center", gap: 2 }}>▼ trocar</span>
+            </div>
+            <input className="calc-num" type="number" placeholder="0.00" value={usd}
+              onChange={e => onUsd(e.target.value)} onFocus={() => setField("usd")} />
+            <div className="calc-hint">{opType === "buy" ? "Digita o valor que desejas comprar" : "Digita o valor que desejas vender"}</div>
           </div>
-          <input className="calc-num" type="number" placeholder="0.00" value={usd}
-            onChange={e => onUsd(e.target.value)} onFocus={() => setField("usd")} />
-          <div className="calc-hint">{opType === "buy" ? "Digita o valor que desejas comprar" : "Digita o valor que desejas vender"}</div>
-        </div>
+        ) : (
+          <div className={`calc-box${field === "aoa" ? " active" : ""}`} onClick={() => setField("aoa")}>
+            <div className="calc-flag" style={{ display: "flex", alignItems: "center", gap: 6 }}><Icon name="bank" size={14} /> AOA — Kwanza angolano</div>
+            <input className="calc-num" type="text" placeholder="0" value={aoa}
+              onChange={e => onAoa(e.target.value)} onFocus={() => setField("aoa")} />
+            <div className="calc-hint">{opType === "buy" ? "Valor correspondente em Kwanzas" : "Valor que irás receber em Kwanzas"}</div>
+          </div>
+        )}
+
+        {/* ── Botão de swap com duas setas, inverte fisicamente as caixas ── */}
         <div className="swap-row">
           <div className="swap-line" />
-          <button className="swap-btn" onClick={swap}><Icon name="arrowRight" size={16} style={{ transform: "rotate(90deg)" }} /></button>
+          <button
+            className="swap-btn"
+            onClick={swap}
+            title="Trocar posição das moedas"
+            style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: -2, padding: 6 }}
+          >
+            <Icon name="arrowRight" size={13} style={{ transform: "rotate(-90deg)", marginBottom: -3 }} />
+            <Icon name="arrowRight" size={13} style={{ transform: "rotate(90deg)", marginTop: -3 }} />
+          </button>
           <div className="swap-line" />
         </div>
-        <div className={`calc-box${field === "aoa" ? " active" : ""}`} onClick={() => setField("aoa")}>
-          <div className="calc-flag" style={{ display: "flex", alignItems: "center", gap: 6 }}><Icon name="bank" size={14} /> AOA — Kwanza angolano</div>
-          <input className="calc-num" type="text" placeholder="0" value={aoa}
-            onChange={e => onAoa(e.target.value)} onFocus={() => setField("aoa")} />
-          <div className="calc-hint">{opType === "buy" ? "Valor correspondente em Kwanzas" : "Valor que irás receber em Kwanzas"}</div>
-        </div>
+
+        {/* ── Caixa de baixo: a outra metade do swap ── */}
+        {!swapped ? (
+          <div className={`calc-box${field === "aoa" ? " active" : ""}`} onClick={() => setField("aoa")}>
+            <div className="calc-flag" style={{ display: "flex", alignItems: "center", gap: 6 }}><Icon name="bank" size={14} /> AOA — Kwanza angolano</div>
+            <input className="calc-num" type="text" placeholder="0" value={aoa}
+              onChange={e => onAoa(e.target.value)} onFocus={() => setField("aoa")} />
+            <div className="calc-hint">{opType === "buy" ? "Valor correspondente em Kwanzas" : "Valor que irás receber em Kwanzas"}</div>
+          </div>
+        ) : (
+          <div className={`calc-box${field === "usd" ? " active" : ""}`} onClick={() => setField("usd")}>
+            <div className="calc-flag" style={{ display: "flex", alignItems: "center", gap: 6, cursor: "pointer" }}
+              onClick={e => { e.stopPropagation(); setShowCurrencyModal(true); }}>
+              <span style={{ fontSize: 16 }}>{currentCurrencyDef.flag}</span>
+              <span style={{ fontWeight: 700, color: currentCurrencyDef.color }}>{currency}</span>
+              <span style={{ color: "#8b92a9", fontSize: 12 }}>— {currentCurrencyDef.label}</span>
+              <span style={{ fontSize: 10, color: "#6366f1", marginLeft: 4, background: "#eff6ff", padding: "1px 6px", borderRadius: 6 }}>▼ trocar</span>
+            </div>
+            <input className="calc-num" type="number" placeholder="0.00" value={usd}
+              onChange={e => onUsd(e.target.value)} onFocus={() => setField("usd")} />
+            <div className="calc-hint">{opType === "buy" ? "Digita o valor que desejas comprar" : "Digita o valor que desejas vender"}</div>
+          </div>
+        )}
+
         <div className="rate-note">
           <span style={{ fontSize: 11, color: "#6b7280", fontWeight: 600 }}>Taxa aplicada</span>
-          <span className="rate-val" style={{ display: "flex", alignItems: "center", gap: 6 }}><Icon name="chart" size={14} /> 1 USD = {applied.toLocaleString("pt-AO")} Kz</span>
+          <span className="rate-val" style={{ display: "flex", alignItems: "center", gap: 6 }}><Icon name="chart" size={14} /> 1 {currency} = {currentRate.toLocaleString("pt-AO")} Kz</span>
         </div>
       </div>
+
+      {/* Currency Selector Bottom Sheet Modal */}
+      <SelectionModal
+        isOpen={showCurrencyModal}
+        title="Selecionar Moeda"
+        items={CURRENCIES}
+        selectedId={currency}
+        onSelect={id => { setCurrency(id); setShowCurrencyModal(false); }}
+        onClose={() => setShowCurrencyModal(false)}
+        renderIcon={item => null}
+        renderFlag={item => item.flag}
+      />
 
       <div className="card" style={{ padding: "18px 20px" }}>
         {/* Caixa de Métodos de Pagamento unificada */}
@@ -636,8 +688,8 @@ export function Calculator({ appliedRate, rate, onSubmit, loading, user, kycStep
         {loading 
           ? `A criar pedido...` 
           : opType === "buy" 
-            ? `Comprar $${usd || "0"} → ${destInfo?.label}` 
-            : `Vender $${usd || "0"} → Receber em Kwanza`}
+            ? `Comprar ${currentCurrencyDef.symbol}${usd || "0"} → ${destInfo?.label}` 
+            : `Vender ${currentCurrencyDef.symbol}${usd || "0"} → Receber em Kwanza`}
       </button>
       <div style={{ textAlign: "center", marginTop: 7, fontSize: 10, color: "#9ca3af", fontWeight: 600 }}>
         O administrador é notificado instantaneamente
