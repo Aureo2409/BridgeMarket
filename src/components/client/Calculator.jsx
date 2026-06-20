@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { DESTS } from "../../lib/constants.js";
+import { DESTS, CURRENCIES } from "../../lib/constants.js";
 import { Icon } from "../shared/UI.jsx";
 
 export const ANGOLAN_BANKS = [
@@ -322,19 +322,40 @@ function SelectionModal({ isOpen, title, items, selectedId, onSelect, onClose, r
   );
 }
 
-export function Calculator({ appliedRate, rate, onSubmit, loading, user, kycStep, config }) {
+export function Calculator({ appliedRate, rate, onSubmit, loading, user, kycStep, config, multiRates }) {
   const applied = parseFloat(appliedRate) || 1165;
   const [opType, setOpType] = useState("buy"); // "buy" or "sell"
+  const [currency, setCurrency] = useState("USD");
+  const [swapped, setSwapped] = useState(false); // false = moeda estrangeira em cima
   const [usd, setUsd] = useState("100");
   const [aoa, setAoa] = useState(() => Math.round(100 * applied).toLocaleString("pt-AO"));
   const [field, setField] = useState("usd");
   const [dest, setDest] = useState("redotpay");
   const [selectedBank, setSelectedBank] = useState("bai");
   const [account, setAcc] = useState("");
+  const [showCurrencyModal, setShowCurrencyModal] = useState(false);
 
   // Modal display states
   const [showWalletModal, setShowWalletModal] = useState(false);
   const [showBankModal, setShowBankModal] = useState(false);
+
+  // Taxa actual para a moeda seleccionada
+  const currentCurrencyDef = CURRENCIES.find(c => c.id === currency) || CURRENCIES[0];
+  const currentRate = currency === "USD"
+    ? applied
+    : (multiRates?.[currency] || applied);
+
+  // Destinos filtrados pela moeda seleccionada
+  const filteredDests = currentCurrencyDef.dests
+    ? DESTS.filter(d => currentCurrencyDef.dests.includes(d.id))
+    : DESTS;
+
+  // Se o destino actual não existe na nova moeda, resetar
+  useEffect(() => {
+    if (filteredDests.length > 0 && !filteredDests.find(d => d.id === dest)) {
+      setDest(filteredDests[0].id);
+    }
+  }, [currency]);
 
   useEffect(() => {
     const isModalOpen = showWalletModal || showBankModal;
@@ -354,7 +375,7 @@ export function Calculator({ appliedRate, rate, onSubmit, loading, user, kycStep
     }
   }, [showWalletModal, showBankModal]);
 
-  const destInfo = DESTS.find(d => d.id === dest);
+  const destInfo = filteredDests.find(d => d.id === dest) || filteredDests[0];
   const bInfo = ANGOLAN_BANKS.find(b => b.id === selectedBank);
 
   const usdNum = parseFloat(usd) || 0;
@@ -362,29 +383,30 @@ export function Calculator({ appliedRate, rate, onSubmit, loading, user, kycStep
   const maxUsd = parseFloat(config?.max_amount_usd) || 5000;
   const isOutOfLimits = usdNum > 0 && (usdNum < minUsd || usdNum > maxUsd);
 
-  function onUsd(v) { 
-    setUsd(v); 
-    setField("usd"); 
-    const n = parseFloat(v) || 0; 
-    setAoa(n > 0 ? Math.round(n * applied).toLocaleString("pt-AO") : ""); 
+  function onUsd(v) {
+    setUsd(v);
+    setField("usd");
+    const n = parseFloat(v) || 0;
+    setAoa(n > 0 ? Math.round(n * currentRate).toLocaleString("pt-AO") : "");
   }
 
-  function onAoa(v) { 
-    setAoa(v); 
-    setField("aoa"); 
-    const n = parseFloat(v.replace(/\s/g, "").replace(/\./g, "").replace(",", ".")) || 0; 
-    setUsd(n > 0 ? (n / applied).toFixed(2) : ""); 
+  function onAoa(v) {
+    setAoa(v);
+    setField("aoa");
+    const n = parseFloat(v.replace(/\s/g, "").replace(/\./g, "").replace(",", ".")) || 0;
+    setUsd(n > 0 ? (n / currentRate).toFixed(2) : "");
   }
 
   function swap() {
-    if (field === "usd") { 
-      setField("aoa"); 
-      const n = parseFloat((aoa + "").replace(/\s/g, "").replace(/\./g, "").replace(",", ".")) || 0; 
-      if (n > 0) setUsd((n / applied).toFixed(2)); 
-    } else { 
-      setField("usd"); 
-      const n = parseFloat(usd) || 0; 
-      if (n > 0) setAoa(Math.round(n * applied).toLocaleString("pt-AO")); 
+    setSwapped(s => !s);
+    if (field === "usd") {
+      setField("aoa");
+      const n = parseFloat((aoa + "").replace(/\s/g, "").replace(/\./g, "").replace(",", ".")) || 0;
+      if (n > 0) setUsd((n / currentRate).toFixed(2));
+    } else {
+      setField("usd");
+      const n = parseFloat(usd) || 0;
+      if (n > 0) setAoa(Math.round(n * currentRate).toLocaleString("pt-AO"));
     }
   }
 
@@ -393,16 +415,18 @@ export function Calculator({ appliedRate, rate, onSubmit, loading, user, kycStep
     setAcc(""); // Clear input when toggling mode
   }
 
-  function submit() { 
-    onSubmit({ 
-      usd: usdNum, 
-      aoa: Math.round(usdNum * applied), 
-      dest, 
-      account, 
-      appliedRate: applied,
+  function submit() {
+    onSubmit({
+      usd: usdNum,
+      aoa: Math.round(usdNum * currentRate),
+      dest,
+      account,
+      appliedRate: currentRate,
       side: opType,
-      bank: selectedBank
-    }); 
+      bank: selectedBank,
+      currency,
+      currencySymbol: currentCurrencyDef.symbol,
+    });
   }
 
   return (
@@ -457,7 +481,13 @@ export function Calculator({ appliedRate, rate, onSubmit, loading, user, kycStep
 
       <div className="card">
         <div className={`calc-box${field === "usd" ? " active" : ""}`} onClick={() => setField("usd")}>
-          <div className="calc-flag" style={{ display: "flex", alignItems: "center", gap: 6 }}><Icon name="globe" size={14} /> USD — Dólar americano</div>
+          <div className="calc-flag" style={{ display: "flex", alignItems: "center", gap: 6, cursor: "pointer" }}
+            onClick={() => setShowCurrencyModal(true)}>
+            <span style={{ fontSize: 16 }}>{currentCurrencyDef.flag}</span>
+            <span style={{ fontWeight: 700, color: currentCurrencyDef.color }}>{currency}</span>
+            <span style={{ color: "#8b92a9", fontSize: 12 }}>— {currentCurrencyDef.label}</span>
+            <span style={{ fontSize: 10, color: "#6366f1", marginLeft: 4, background: "#eff6ff", padding: "1px 6px", borderRadius: 6 }}>▼ trocar</span>
+          </div>
           <input className="calc-num" type="number" placeholder="0.00" value={usd}
             onChange={e => onUsd(e.target.value)} onFocus={() => setField("usd")} />
           <div className="calc-hint">{opType === "buy" ? "Digita o valor que desejas comprar" : "Digita o valor que desejas vender"}</div>

@@ -66,6 +66,7 @@ export function AdminPanel({ user, onLogout }) {
   const [newBase, setNB] = useState("");
   const [newMargin, setNM] = useState("");
   const [rateLoad, setRL] = useState(false);
+  const [manualRates, setManualRates] = useState({});
   const [toast, setToast] = useState(null);
   const [kycs, setKycs] = useState([]);
   const [rejectedKycs, setRejectedKycs] = useState([]);
@@ -664,6 +665,82 @@ export function AdminPanel({ user, onLogout }) {
               )}
               <button className="adm-btn" onClick={updateRate} disabled={rateLoad}>
                 {rateLoad ? "A publicar..." : <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}><Icon name="chart" size={14} /> Publicar — propaga em realtime</div>}
+              </button>
+            </div>
+
+            {/* ── GRELHA MULTI-MOEDA — EUR / BRL / ZAR sincronizadas automaticamente ── */}
+            <span className="adm-section" style={{ marginTop: 18 }}>Taxas Multi-Moeda (auto-sync)</span>
+            <div className="adm-card" style={{ cursor: "default" }}>
+              <div style={{ fontSize: 10, color: "#64748b", marginBottom: 12, lineHeight: 1.5 }}>
+                Sincronizado automaticamente via open.er-api.com a partir da taxa USD/AOA acima.
+                {rate.last_auto_sync && (
+                  <span> Última sync: {new Date(rate.last_auto_sync).toLocaleString("pt-AO")}</span>
+                )}
+              </div>
+
+              {[
+                { id: "EUR", label: "Euro", flag: "🇪🇺", symbol: "€", field: "eur_rate", color: "#003399" },
+                { id: "BRL", label: "Real Brasileiro", flag: "🇧🇷", symbol: "R$", field: "brl_rate", color: "#009c3b" },
+                { id: "ZAR", label: "Rand Sul-Africano", flag: "🇿🇦", symbol: "R", field: "zar_rate", color: "#007B40" },
+              ].map(cur => {
+                const autoVal = parseFloat(rate[cur.field]) || 0;
+                const manualOverride = manualRates[cur.id];
+                const finalVal = manualOverride !== undefined && manualOverride !== "" ? manualOverride : autoVal;
+                return (
+                  <div key={cur.id} style={{
+                    display: "flex", alignItems: "center", justifyContent: "space-between",
+                    padding: "10px 12px", borderRadius: 10,
+                    background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)",
+                    marginBottom: 8
+                  }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                      <span style={{ fontSize: 18 }}>{cur.flag}</span>
+                      <div>
+                        <div style={{ fontSize: 11.5, fontWeight: 800, color: "#e2e8f0" }}>{cur.id}</div>
+                        <div style={{ fontSize: 9, color: "#64748b" }}>{cur.label}</div>
+                      </div>
+                    </div>
+                    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                      <div style={{ textAlign: "right" }}>
+                        <div style={{ fontSize: 13, fontWeight: 900, color: cur.color }}>
+                          {autoVal > 0 ? `${autoVal.toLocaleString("pt-AO")} Kz` : "—"}
+                        </div>
+                        <div style={{ fontSize: 8, color: "#475569" }}>auto</div>
+                      </div>
+                      <input
+                        className="adm-inp"
+                        style={{ width: 90, padding: 6, fontSize: 11, marginBottom: 0 }}
+                        type="number"
+                        placeholder="manual"
+                        value={manualRates[cur.id] || ""}
+                        onChange={e => setManualRates(prev => ({ ...prev, [cur.id]: e.target.value }))}
+                      />
+                    </div>
+                  </div>
+                );
+              })}
+
+              <button
+                className="adm-btn"
+                style={{ marginTop: 4, background: "rgba(99,102,241,.12)", color: "#a5b4fc" }}
+                onClick={async () => {
+                  const updates = {};
+                  if (manualRates.EUR) updates.eur_rate = parseFloat(manualRates.EUR);
+                  if (manualRates.BRL) updates.brl_rate = parseFloat(manualRates.BRL);
+                  if (manualRates.ZAR) updates.zar_rate = parseFloat(manualRates.ZAR);
+                  if (Object.keys(updates).length === 0) { toast_("Nenhum valor manual definido", "err"); return; }
+                  const { error } = await sb.from("exchange_rates").insert({
+                    base_rate: rate.base_rate, margin: rate.margin, source: "manual_multicurrency",
+                    eur_rate: updates.eur_rate ?? rate.eur_rate,
+                    brl_rate: updates.brl_rate ?? rate.brl_rate,
+                    zar_rate: updates.zar_rate ?? rate.zar_rate,
+                    auto_sync_enabled: false
+                  });
+                  if (error) { toast_("Erro: " + error.message, "err"); }
+                  else { toast_("Taxas manuais publicadas", "ok"); setManualRates({}); }
+                }}
+              >
+                Forçar valores manuais
               </button>
             </div>
           </>

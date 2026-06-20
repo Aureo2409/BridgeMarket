@@ -1,5 +1,5 @@
 import { useState, useRef } from "react";
-import { DESTS } from "../../lib/constants.js";
+import { DESTS, CURRENCIES } from "../../lib/constants.js";
 import { StatusPill, Icon } from "../shared/UI.jsx";
 import { uploadBiometricVideo } from "../../lib/supabase.js";
 import { ANGOLAN_BANKS } from "./Calculator.jsx";
@@ -175,27 +175,103 @@ function BiometricCapture({ orderId, orderRef, amountUsd, currentUserId, onCaptu
 export function OrderList({ orders, onCancel, currentUserId, onTransact, isMarket, onSelect }) {
   const [activeTxId, setActiveTxId] = useState(null);
   const [showBiometric, setShowBiometric] = useState(false);
+  const [currencyFilter, setCurrencyFilter] = useState("ALL");
 
-  const filteredOrders = isMarket
+  const baseFiltered = isMarket
     ? orders.filter(o => o.user_id !== currentUserId && (o.status === "awaiting_payment" || o.status === "pending"))
     : orders.filter(o => o.user_id === currentUserId || o.funder_id === currentUserId);
 
+  const filteredOrders = (isMarket && currencyFilter !== "ALL")
+    ? baseFiltered.filter(o => (o.currency || "USD") === currencyFilter)
+    : baseFiltered;
+
+  // Contagem de ofertas por moeda (para badges no filtro)
+  const currencyCounts = isMarket
+    ? baseFiltered.reduce((acc, o) => {
+        const c = o.currency || "USD";
+        acc[c] = (acc[c] || 0) + 1;
+        return acc;
+      }, {})
+    : {};
+
+  const CURRENCY_TABS = [
+    { id: "ALL", label: "Todas", flag: "🌐" },
+    { id: "USD", label: "USD", flag: "🇺🇸" },
+    { id: "EUR", label: "EUR", flag: "🇪🇺" },
+    { id: "BRL", label: "BRL", flag: "🇧🇷" },
+    { id: "ZAR", label: "ZAR", flag: "🇿🇦" },
+  ];
+
   if (filteredOrders.length === 0) {
     return (
-      <div className="card" style={{ textAlign: "center", padding: "36px 18px" }}>
-        <div style={{ marginBottom: 16, display: "flex", justifyContent: "center" }}><Icon name="inbox" size={40} color="#9ca3af" /></div>
-        <div style={{ fontSize: 14, fontWeight: 800, color: "#1e1b4b", marginBottom: 4 }}>
-          {isMarket ? "Sem ofertas disponíveis" : "Sem pedidos ainda"}
+      <>
+        {isMarket && (
+          <div style={{ display: "flex", gap: 6, overflowX: "auto", paddingBottom: 10, marginBottom: 4 }}>
+            {CURRENCY_TABS.map(t => (
+              <button
+                key={t.id}
+                onClick={() => setCurrencyFilter(t.id)}
+                style={{
+                  flexShrink: 0, padding: "7px 14px", borderRadius: 20, fontSize: 11.5, fontWeight: 800,
+                  border: currencyFilter === t.id ? "1.5px solid #6366f1" : "1.5px solid #e5e7eb",
+                  background: currencyFilter === t.id ? "rgba(99,102,241,.08)" : "#fff",
+                  color: currencyFilter === t.id ? "#4f46e5" : "#64748b",
+                  cursor: "pointer", display: "flex", alignItems: "center", gap: 5, transition: "all .15s"
+                }}
+              >
+                <span>{t.flag}</span>{t.label}
+                {t.id !== "ALL" && currencyCounts[t.id] > 0 && (
+                  <span style={{
+                    background: currencyFilter === t.id ? "#6366f1" : "#e5e7eb",
+                    color: currencyFilter === t.id ? "#fff" : "#64748b",
+                    borderRadius: 10, padding: "1px 6px", fontSize: 9.5, fontWeight: 900
+                  }}>{currencyCounts[t.id]}</span>
+                )}
+              </button>
+            ))}
+          </div>
+        )}
+        <div className="card" style={{ textAlign: "center", padding: "36px 18px" }}>
+          <div style={{ marginBottom: 16, display: "flex", justifyContent: "center" }}><Icon name="inbox" size={40} color="#9ca3af" /></div>
+          <div style={{ fontSize: 14, fontWeight: 800, color: "#1e1b4b", marginBottom: 4 }}>
+            {isMarket ? "Sem ofertas disponíveis" : "Sem pedidos ainda"}
+          </div>
+          <div style={{ fontSize: 12, color: "#9ca3af" }}>
+            {isMarket ? "Volta mais tarde para ver novas propostas P2P" : "Usa a calculadora para comprar dólar"}
+          </div>
         </div>
-        <div style={{ fontSize: 12, color: "#9ca3af" }}>
-          {isMarket ? "Volta mais tarde para ver novas propostas P2P" : "Usa a calculadora para comprar dólar"}
-        </div>
-      </div>
+      </>
     );
   }
 
   return (
     <>
+      {isMarket && (
+        <div style={{ display: "flex", gap: 6, overflowX: "auto", paddingBottom: 10, marginBottom: 4 }}>
+          {CURRENCY_TABS.map(t => (
+            <button
+              key={t.id}
+              onClick={() => setCurrencyFilter(t.id)}
+              style={{
+                flexShrink: 0, padding: "7px 14px", borderRadius: 20, fontSize: 11.5, fontWeight: 800,
+                border: currencyFilter === t.id ? "1.5px solid #6366f1" : "1.5px solid #e5e7eb",
+                background: currencyFilter === t.id ? "rgba(99,102,241,.08)" : "#fff",
+                color: currencyFilter === t.id ? "#4f46e5" : "#64748b",
+                cursor: "pointer", display: "flex", alignItems: "center", gap: 5, transition: "all .15s"
+              }}
+            >
+              <span>{t.flag}</span>{t.label}
+              {t.id !== "ALL" && currencyCounts[t.id] > 0 && (
+                <span style={{
+                  background: currencyFilter === t.id ? "#6366f1" : "#e5e7eb",
+                  color: currencyFilter === t.id ? "#fff" : "#64748b",
+                  borderRadius: 10, padding: "1px 6px", fontSize: 9.5, fontWeight: 900
+                }}>{currencyCounts[t.id]}</span>
+              )}
+            </button>
+          ))}
+        </div>
+      )}
       {filteredOrders.map(o => {
         const d = DESTS.find(x => x.id === o.destination);
         const isOwnOrder = o.user_id === currentUserId;
@@ -256,7 +332,7 @@ export function OrderList({ orders, onCancel, currentUserId, onTransact, isMarke
                 <div className="p2p-grid-col">
                   <div className="p2p-grid-label">Disponível / Limites</div>
                   <div className="p2p-grid-value limits">
-                    ${parseFloat(o.amount_usd).toFixed(2)} <span>USD</span>
+                    {CURRENCIES.find(c => c.id === (o.currency || "USD"))?.symbol || "$"}{parseFloat(o.amount_usd).toFixed(2)} <span>{o.currency || "USD"}</span>
                   </div>
                 </div>
               </div>
@@ -464,7 +540,7 @@ export function OrderList({ orders, onCancel, currentUserId, onTransact, isMarke
               </div>
               <div style={{ flex: 1 }}>
                 <div style={{ fontSize: 19, fontWeight: 900, color: "#1e1b4b", letterSpacing: -1 }}>
-                  ${parseFloat(o.amount_usd).toFixed(2)}
+                  {CURRENCIES.find(c => c.id === (o.currency || "USD"))?.symbol || "$"}{parseFloat(o.amount_usd).toFixed(2)}
                 </div>
                 <div style={{ fontSize: 11, color: "#9ca3af", fontWeight: 600, fontFamily: "monospace" }}>
                   {parseFloat(o.amount_aoa).toLocaleString("pt-AO")} Kz

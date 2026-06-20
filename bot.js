@@ -500,16 +500,69 @@ const supabase = (supabaseUrl && supabaseKey) ? createClient(supabaseUrl, supaba
 // ── GEMINI AI ─────────────────────────────────────────────────────────────────
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
-// Taxa de câmbio em memória
+// ── TAXAS DE CÂMBIO EM MEMÓRIA ────────────────────────────────────────────────
 let currentRateStr = "1165";
+let currentRates = { USD: 1165, EUR: 0, BRL: 0, ZAR: 0 };
+
 supabase.from('exchange_rates')
-    .select('applied_rate')
+    .select('applied_rate, eur_rate, brl_rate, zar_rate')
     .order('fetched_at', { ascending: false })
     .limit(1)
     .maybeSingle()
     .then(({ data }) => {
-        if (data) currentRateStr = parseFloat(data.applied_rate).toLocaleString('pt-AO');
+        if (data) {
+            currentRateStr = parseFloat(data.applied_rate).toLocaleString('pt-AO');
+            currentRates.USD = parseFloat(data.applied_rate) || 1165;
+            if (data.eur_rate) currentRates.EUR = parseFloat(data.eur_rate);
+            if (data.brl_rate) currentRates.BRL = parseFloat(data.brl_rate);
+            if (data.zar_rate) currentRates.ZAR = parseFloat(data.zar_rate);
+        }
     });
+
+// ── MOTOR CAMBIAL AUTOMÁTICO — sincronização cruzada via open.er-api.com ─────
+async function syncCrossRates() {
+    try {
+        const aoaRate = currentRates.USD;
+        if (!aoaRate || aoaRate <= 0) return;
+
+        // Buscar taxas externas USD → outras moedas
+        const res = await fetch('https://open.er-api.com/v6/latest/USD');
+        if (!res.ok) return;
+        const data = await res.json();
+
+        if (data.result !== 'success') return;
+
+        const rates = data.rates;
+        // Calcular cruzamentos: MOEDA/AOA = (USD/AOA) / (USD/MOEDA)
+        const eurAoa = aoaRate / (rates.EUR || 1.08);
+        const brlAoa = aoaRate / (rates.BRL || 5.0);
+        const zarAoa = aoaRate / (rates.ZAR || 18.5);
+
+        // Actualizar memória
+        currentRates.EUR = Math.round(eurAoa);
+        currentRates.BRL = Math.round(brlAoa * 100) / 100;
+        currentRates.ZAR = Math.round(zarAoa * 100) / 100;
+
+        // Persistir no Supabase
+        await supabase.from('exchange_rates')
+            .update({
+                eur_rate: currentRates.EUR,
+                brl_rate: currentRates.BRL,
+                zar_rate: currentRates.ZAR,
+                last_auto_sync: new Date().toISOString()
+            })
+            .order('fetched_at', { ascending: false })
+            .limit(1);
+
+        console.log(`🔄 Taxas sincronizadas: EUR=${currentRates.EUR} BRL=${currentRates.BRL} ZAR=${currentRates.ZAR} AOA`);
+    } catch (err) {
+        console.error('Erro no sync de taxas:', err.message);
+    }
+}
+
+// Sincronizar ao arranque e de hora em hora
+syncCrossRates();
+setInterval(syncCrossRates, 60 * 60 * 1000);
 
 // Número do administrador
 const ADMIN_PHONE = process.env.ADMIN_PHONE_NUMBER || '244976344207';

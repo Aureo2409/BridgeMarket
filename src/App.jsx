@@ -672,15 +672,15 @@ function ClientApp({ user, onLogout }) {
   }
 
 
-  async function handleCalcSubmit({ usd, aoa, dest, account, appliedRate, side, bank }) {
+  async function handleCalcSubmit({ usd, aoa, dest, account, appliedRate, side, bank, currency }) {
     // Guardar dados do pedido e mostrar modal de motivo cambial (exigência BNA)
-    setPendingCalcData({ usd, aoa, dest, account, appliedRate, side, bank });
+    setPendingCalcData({ usd, aoa, dest, account, appliedRate, side, bank, currency });
     setPendingExchangeReason("IM");
     setPendingExchangeReasonDetail("");
     setShowExchangeReasonModal(true);
   }
 
-  async function handleCalcSubmitFinal({ usd, aoa, dest, account, appliedRate, side, bank }) {
+  async function handleCalcSubmitFinal({ usd, aoa, dest, account, appliedRate, side, bank, currency }) {
     const minUsd = parseFloat(config?.min_amount_usd) || 10;
     const maxUsd = parseFloat(config?.max_amount_usd) || 5000;
 
@@ -762,6 +762,8 @@ function ClientApp({ user, onLogout }) {
         status: "awaiting_payment",
         side: side || "buy",
         payment_method: bank || "bai",
+        currency: currency || "USD",
+        currency_symbol: ({ USD: "$", EUR: "€", BRL: "R$", ZAR: "R" })[currency || "USD"],
         exchange_reason: pendingExchangeReason || "OU",
         exchange_reason_detail: pendingExchangeReasonDetail || null
       }).select().single();

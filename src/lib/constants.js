@@ -208,6 +208,82 @@ export const DESTS = [
       <rect x="0.5" y="0.5" width="39" height="39" rx="7.5" stroke="rgba(255, 255, 255, 0.08)" stroke-width="1" fill="none"/>
     </svg>`,
   },
+
+  // ── MB WAY (EUR — Portugal) ───────────────────────────────────────────────
+  {
+    id:    "mbway",
+    label: "MB WAY",
+    color: "#E8001C",
+    bg:    "#fff0f2",
+    desc:  "Transferência instantânea MB WAY",
+    hint:  "Número de telemóvel associado ao MB WAY (+351...)",
+    logo:  "https://upload.wikimedia.org/wikipedia/commons/thumb/a/a6/MB_WAY_logo.png/320px-MB_WAY_logo.png",
+    logoBg: "#E8001C",
+    currencies: ["EUR"],
+  },
+
+  // ── PIX (BRL — Brasil) ────────────────────────────────────────────────────
+  {
+    id:    "pix",
+    label: "Pix",
+    color: "#00BDAE",
+    bg:    "#f0fdfc",
+    desc:  "Transferência instantânea Pix (Brasil)",
+    hint:  "Chave Pix: CPF, email, telefone ou chave aleatória",
+    logo:  "https://upload.wikimedia.org/wikipedia/commons/thumb/a/a2/Logo—pix_powered_by_Banco_Central_%28Brazil%2C_2020%29.svg/320px-Logo—pix_powered_by_Banco_Central_%28Brazil%2C_2020%29.svg.png",
+    logoBg: "#00BDAE",
+    currencies: ["BRL"],
+  },
+
+  // ── EFT Sul Africano (ZAR) ────────────────────────────────────────────────
+  {
+    id:    "eft_zar",
+    label: "EFT — FNB / Capitec",
+    color: "#007B40",
+    bg:    "#f0fdf4",
+    desc:  "Transferência bancária EFT (África do Sul)",
+    hint:  "Número de conta bancária FNB, Capitec ou Standard Bank ZA",
+    logo:  "https://upload.wikimedia.org/wikipedia/commons/thumb/3/38/Flag_of_South_Africa.svg/320px-Flag_of_South_Africa.svg.png",
+    logoBg: "#007B40",
+    currencies: ["ZAR"],
+  },
+];
+
+// ── Definições de Moedas Suportadas ──────────────────────────────────────────
+export const CURRENCIES = [
+  {
+    id:     "USD",
+    label:  "Dólar Americano",
+    symbol: "$",
+    flag:   "🇺🇸",
+    color:  "#1a3a6e",
+    // destinos disponíveis para USD (todos os padrão)
+    dests:  null, // null = mostrar todos
+  },
+  {
+    id:     "EUR",
+    label:  "Euro",
+    symbol: "€",
+    flag:   "🇪🇺",
+    color:  "#003399",
+    dests:  ["mbway", "iban_eu", "wise", "paypal", "binance", "visa_virtual", "mastercard"],
+  },
+  {
+    id:     "BRL",
+    label:  "Real Brasileiro",
+    symbol: "R$",
+    flag:   "🇧🇷",
+    color:  "#009c3b",
+    dests:  ["pix", "wise", "binance"],
+  },
+  {
+    id:     "ZAR",
+    label:  "Rand Sul-Africano",
+    symbol: "R",
+    flag:   "🇿🇦",
+    color:  "#007B40",
+    dests:  ["eft_zar", "wise", "binance"],
+  },
 ];
 
 // ── Estados dos pedidos ───────────────────────────────────────────────────────
