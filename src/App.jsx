@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { sb, checkIsAdmin, fetchLatestRate, fetchAdminConfig, uploadKycDocument, uploadAvatar, uploadAccessProof } from "./lib/supabase.js";
-import { CSS, DESTS } from "./lib/constants.js";
+import { CSS, DESTS, CURRENCIES } from "./lib/constants.js";
 import { Toast, StepBar, Header, Icon, ConfirmModal } from "./components/shared/UI.jsx";
 import { Calculator } from "./components/client/Calculator.jsx";
 import { ProofUpload } from "./components/client/ProofUpload.jsx";
@@ -463,6 +463,7 @@ function ClientApp({ user, onLogout }) {
 
   const [showProfile, setShowProfile] = useState(false);
   const [isEditingProfile, setIsEditingProfile] = useState(false);
+  const [destCurrencyFilter, setDestCurrencyFilter] = useState("ALL");
   const [showKycTrigger, setShowKycTrigger] = useState(false);
   const [newPwd, setNewPwd] = useState("");
   const [pwdLoad, setPwdLoad] = useState(false);
@@ -1374,7 +1375,12 @@ function ClientApp({ user, onLogout }) {
                           }}
                         >
                           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                            <div style={{ width: 28, height: 28, borderRadius: 8, background: d.bg, display: "flex", alignItems: "center", justifyContent: "center" }} dangerouslySetInnerHTML={{ __html: d.svg }} />
+                            <div style={{ width: 28, height: 28, borderRadius: 8, background: d.logoBg || d.bg, display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden", flexShrink: 0 }}>
+                              {d.logo
+                                ? <img src={d.logo} alt={d.label} style={{ width: 28, height: 28, objectFit: "contain" }} onError={e => { e.target.style.display = "none"; }} />
+                                : d.svg ? <div dangerouslySetInnerHTML={{ __html: d.svg }} /> : null
+                              }
+                            </div>
                             <div style={{ fontSize: 12, fontWeight: 800, color: "#1e1b4b" }}>{d.label}</div>
                           </div>
                           <div style={{ fontSize: 11, color: "#64748b", fontFamily: "monospace", marginTop: 12, wordBreak: "break-all" }}>{info.value}</div>
@@ -1391,8 +1397,31 @@ function ClientApp({ user, onLogout }) {
                 /* Configurator form */
                 <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
                   <div style={{ fontSize: 13, fontWeight: 900, color: "#1e1b4b", marginBottom: 4 }}>Gerir Métodos de Recebimento</div>
+                  <div style={{ display: "flex", gap: 6, overflowX: "auto", paddingBottom: 4 }}>
+                    {[{ id: "ALL", label: "Todos", flag: "🌐" }, ...CURRENCIES].map(c => (
+                      <button
+                        key={c.id}
+                        type="button"
+                        onClick={() => setDestCurrencyFilter(c.id)}
+                        style={{
+                          flexShrink: 0, padding: "6px 12px", borderRadius: 18, fontSize: 11, fontWeight: 800,
+                          border: (destCurrencyFilter || "ALL") === c.id ? "1.5px solid #6366f1" : "1.5px solid #e5e7eb",
+                          background: (destCurrencyFilter || "ALL") === c.id ? "rgba(99,102,241,.08)" : "#fff",
+                          color: (destCurrencyFilter || "ALL") === c.id ? "#4f46e5" : "#64748b",
+                          cursor: "pointer", display: "flex", alignItems: "center", gap: 4
+                        }}
+                      >
+                        <span>{c.flag}</span>{c.id === "ALL" ? c.label : c.id}
+                      </button>
+                    ))}
+                  </div>
                   <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-                    {DESTS.map(d => {
+                    {DESTS.filter(d => {
+                      const filt = destCurrencyFilter || "ALL";
+                      if (filt === "ALL") return true;
+                      const curDef = CURRENCIES.find(c => c.id === filt);
+                      return curDef && (curDef.dests === null || curDef.dests.includes(d.id));
+                    }).map(d => {
                       const active = !!profile.payment_destinations?.[d.id]?.active;
                       const val = profile.payment_destinations?.[d.id]?.value || "";
                       return (
@@ -1410,8 +1439,18 @@ function ClientApp({ user, onLogout }) {
                               }}
                             />
                             <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
-                              <div style={{ width: 24, height: 24, borderRadius: 6, background: d.bg, display: "flex", alignItems: "center", justifyContent: "center" }} dangerouslySetInnerHTML={{ __html: d.svg }} fill="none" />
+                              <div style={{ width: 24, height: 24, borderRadius: 6, background: d.logoBg || d.bg, display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden", flexShrink: 0 }}>
+                                {d.logo
+                                  ? <img src={d.logo} alt={d.label} style={{ width: 24, height: 24, objectFit: "contain" }} onError={e => { e.target.style.display = "none"; }} />
+                                  : d.svg ? <div dangerouslySetInnerHTML={{ __html: d.svg }} /> : null
+                                }
+                              </div>
                               <span style={{ fontSize: 12, fontWeight: 800, color: "#1e1b4b" }}>{d.label}</span>
+                              <div style={{ display: "flex", gap: 3, marginLeft: 2 }}>
+                                {CURRENCIES.filter(c => c.dests === null || c.dests.includes(d.id)).map(c => (
+                                  <span key={c.id} title={c.label} style={{ fontSize: 10, opacity: 0.7 }}>{c.flag}</span>
+                                ))}
+                              </div>
                             </div>
                           </div>
                           {active && (
