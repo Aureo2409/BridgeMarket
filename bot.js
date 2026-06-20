@@ -543,16 +543,34 @@ async function syncCrossRates() {
         currentRates.BRL = Math.round(brlAoa * 100) / 100;
         currentRates.ZAR = Math.round(zarAoa * 100) / 100;
 
-        // Persistir no Supabase
-        await supabase.from('exchange_rates')
+        // Buscar o ID da linha de taxa mais recente — .update() exige um filtro específico,
+        // não é possível encadear .order().limit() directamente num update()
+        const { data: latest, error: fetchErr } = await supabase
+            .from('exchange_rates')
+            .select('id')
+            .order('fetched_at', { ascending: false })
+            .limit(1)
+            .maybeSingle();
+
+        if (fetchErr || !latest) {
+            console.error('Erro ao localizar taxa mais recente para sync:', fetchErr?.message);
+            return;
+        }
+
+        // Persistir no Supabase — agora com filtro correto por ID
+        const { error: updateErr } = await supabase.from('exchange_rates')
             .update({
                 eur_rate: currentRates.EUR,
                 brl_rate: currentRates.BRL,
                 zar_rate: currentRates.ZAR,
                 last_auto_sync: new Date().toISOString()
             })
-            .order('fetched_at', { ascending: false })
-            .limit(1);
+            .eq('id', latest.id);
+
+        if (updateErr) {
+            console.error('Erro ao gravar taxas multi-moeda:', updateErr.message);
+            return;
+        }
 
         console.log(`🔄 Taxas sincronizadas: EUR=${currentRates.EUR} BRL=${currentRates.BRL} ZAR=${currentRates.ZAR} AOA`);
     } catch (err) {

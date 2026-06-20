@@ -66,7 +66,11 @@ export function AdminPanel({ user, onLogout }) {
   const [newBase, setNB] = useState("");
   const [newMargin, setNM] = useState("");
   const [rateLoad, setRL] = useState(false);
-  const [manualRates, setManualRates] = useState({});
+  const [currencyDrafts, setCurrencyDrafts] = useState({
+    EUR: { base: "", margin: "" },
+    BRL: { base: "", margin: "" },
+    ZAR: { base: "", margin: "" },
+  });
   const [toast, setToast] = useState(null);
   const [kycs, setKycs] = useState([]);
   const [rejectedKycs, setRejectedKycs] = useState([]);
@@ -261,7 +265,15 @@ export function AdminPanel({ user, onLogout }) {
     const margin = parseFloat(newMargin) || parseFloat(rate.margin);
     if (!base || base <= 0) { toast_("Taxa inválida", "err"); return; }
     setRL(true);
-    const { error } = await sb.from("exchange_rates").insert({ base_rate: base, margin, source: "manual" });
+    // Herdar as taxas multi-moeda actuais (EUR/BRL/ZAR) para a nova linha,
+    // caso contrário ficam a zero até o bot sincronizar de novo (até 1h de atraso)
+    const { error } = await sb.from("exchange_rates").insert({
+      base_rate: base, margin, source: "manual",
+      eur_rate: rate.eur_rate || null,
+      brl_rate: rate.brl_rate || null,
+      zar_rate: rate.zar_rate || null,
+      last_auto_sync: rate.last_auto_sync || null,
+    });
     setRL(false);
     if (error) { toast_(error.message, "err"); return; }
     toast_("Câmbio publicado!"); setNB(""); setNM("");
@@ -668,81 +680,101 @@ export function AdminPanel({ user, onLogout }) {
               </button>
             </div>
 
-            {/* ── GRELHA MULTI-MOEDA — EUR / BRL / ZAR sincronizadas automaticamente ── */}
-            <span className="adm-section" style={{ marginTop: 18 }}>Taxas Multi-Moeda (auto-sync)</span>
-            <div className="adm-card" style={{ cursor: "default" }}>
-              <div style={{ fontSize: 10, color: "#64748b", marginBottom: 12, lineHeight: 1.5 }}>
-                Sincronizado automaticamente via open.er-api.com a partir da taxa USD/AOA acima.
-                {rate.last_auto_sync && (
-                  <span> Última sync: {new Date(rate.last_auto_sync).toLocaleString("pt-AO")}</span>
-                )}
-              </div>
+            {/* ── CÂMBIO POR MOEDA — EUR / BRL / ZAR, mesma UX do USD acima ── */}
+            <span className="adm-section" style={{ marginTop: 18 }}>Câmbio por Moeda</span>
+            <div style={{ fontSize: 10, color: "#64748b", marginBottom: 10, lineHeight: 1.5, padding: "0 2px" }}>
+              Sincronização automática a cada hora via open.er-api.com, com base na taxa USD/AOA acima.
+              {rate.last_auto_sync && (
+                <span> · Última sync automática: {new Date(rate.last_auto_sync).toLocaleString("pt-AO")}</span>
+              )}
+            </div>
 
-              {[
-                { id: "EUR", label: "Euro", flag: "🇪🇺", symbol: "€", field: "eur_rate", color: "#003399" },
-                { id: "BRL", label: "Real Brasileiro", flag: "🇧🇷", symbol: "R$", field: "brl_rate", color: "#009c3b" },
-                { id: "ZAR", label: "Rand Sul-Africano", flag: "🇿🇦", symbol: "R", field: "zar_rate", color: "#007B40" },
-              ].map(cur => {
-                const autoVal = parseFloat(rate[cur.field]) || 0;
-                const manualOverride = manualRates[cur.id];
-                const finalVal = manualOverride !== undefined && manualOverride !== "" ? manualOverride : autoVal;
-                return (
-                  <div key={cur.id} style={{
-                    display: "flex", alignItems: "center", justifyContent: "space-between",
-                    padding: "10px 12px", borderRadius: 10,
-                    background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)",
-                    marginBottom: 8
-                  }}>
+            {[
+              { id: "EUR", label: "Euro", flag: "🇪🇺", symbol: "€", field: "eur_rate", color: "#003399" },
+              { id: "BRL", label: "Real Brasileiro", flag: "🇧🇷", symbol: "R$", field: "brl_rate", color: "#009c3b" },
+              { id: "ZAR", label: "Rand Sul-Africano", flag: "🇿🇦", symbol: "R", field: "zar_rate", color: "#007B40" },
+            ].map(cur => {
+              const autoVal = parseFloat(rate[cur.field]) || 0;
+              const draft = currencyDrafts[cur.id] || { base: "", margin: "" };
+              const finalRate = (parseFloat(draft.base) || autoVal || 0) + (parseFloat(draft.margin) || 0);
+              return (
+                <div key={cur.id} className="adm-card" style={{ cursor: "default", marginBottom: 10 }}>
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
                     <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                      <span style={{ fontSize: 18 }}>{cur.flag}</span>
+                      <span style={{ fontSize: 20 }}>{cur.flag}</span>
                       <div>
-                        <div style={{ fontSize: 11.5, fontWeight: 800, color: "#e2e8f0" }}>{cur.id}</div>
-                        <div style={{ fontSize: 9, color: "#64748b" }}>{cur.label}</div>
+                        <div style={{ fontSize: 13, fontWeight: 900, color: "#e2e8f0" }}>{cur.id}</div>
+                        <div style={{ fontSize: 9.5, color: "#64748b" }}>{cur.label}</div>
                       </div>
                     </div>
-                    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                      <div style={{ textAlign: "right" }}>
-                        <div style={{ fontSize: 13, fontWeight: 900, color: cur.color }}>
-                          {autoVal > 0 ? `${autoVal.toLocaleString("pt-AO")} Kz` : "—"}
-                        </div>
-                        <div style={{ fontSize: 8, color: "#475569" }}>auto</div>
+                    <div style={{ textAlign: "right" }}>
+                      <div style={{ fontSize: 18, fontWeight: 900, color: cur.color }}>
+                        {autoVal > 0 ? `${autoVal.toLocaleString("pt-AO")} Kz` : "— Kz"}
                       </div>
+                      <div style={{ fontSize: 8.5, color: "#475569" }}>taxa actual publicada</div>
+                    </div>
+                  </div>
+
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 10 }}>
+                    <div>
+                      <label style={{ fontSize: 9, color: "#64748b", fontWeight: 700, display: "block", marginBottom: 4 }}>BASE (KZ)</label>
                       <input
                         className="adm-inp"
-                        style={{ width: 90, padding: 6, fontSize: 11, marginBottom: 0 }}
+                        style={{ marginBottom: 0 }}
                         type="number"
-                        placeholder="manual"
-                        value={manualRates[cur.id] || ""}
-                        onChange={e => setManualRates(prev => ({ ...prev, [cur.id]: e.target.value }))}
+                        placeholder={autoVal > 0 ? autoVal.toString() : "ex: 1230"}
+                        value={draft.base}
+                        onChange={e => setCurrencyDrafts(prev => ({ ...prev, [cur.id]: { ...draft, base: e.target.value } }))}
+                      />
+                    </div>
+                    <div>
+                      <label style={{ fontSize: 9, color: "#64748b", fontWeight: 700, display: "block", marginBottom: 4 }}>MARGEM (KZ)</label>
+                      <input
+                        className="adm-inp"
+                        style={{ marginBottom: 0 }}
+                        type="number"
+                        placeholder="ex: 10"
+                        value={draft.margin}
+                        onChange={e => setCurrencyDrafts(prev => ({ ...prev, [cur.id]: { ...draft, margin: e.target.value } }))}
                       />
                     </div>
                   </div>
-                );
-              })}
 
-              <button
-                className="adm-btn"
-                style={{ marginTop: 4, background: "rgba(99,102,241,.12)", color: "#a5b4fc" }}
-                onClick={async () => {
-                  const updates = {};
-                  if (manualRates.EUR) updates.eur_rate = parseFloat(manualRates.EUR);
-                  if (manualRates.BRL) updates.brl_rate = parseFloat(manualRates.BRL);
-                  if (manualRates.ZAR) updates.zar_rate = parseFloat(manualRates.ZAR);
-                  if (Object.keys(updates).length === 0) { toast_("Nenhum valor manual definido", "err"); return; }
-                  const { error } = await sb.from("exchange_rates").insert({
-                    base_rate: rate.base_rate, margin: rate.margin, source: "manual_multicurrency",
-                    eur_rate: updates.eur_rate ?? rate.eur_rate,
-                    brl_rate: updates.brl_rate ?? rate.brl_rate,
-                    zar_rate: updates.zar_rate ?? rate.zar_rate,
-                    auto_sync_enabled: false
-                  });
-                  if (error) { toast_("Erro: " + error.message, "err"); }
-                  else { toast_("Taxas manuais publicadas", "ok"); setManualRates({}); }
-                }}
-              >
-                Forçar valores manuais
-              </button>
-            </div>
+                  {(draft.base || draft.margin) && (
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "8px 10px", background: "rgba(99,102,241,.08)", borderRadius: 8, marginBottom: 10 }}>
+                      <span style={{ fontSize: 10, color: "#a5b4fc", fontWeight: 700 }}>Nova taxa final</span>
+                      <span style={{ fontSize: 13, fontWeight: 900, color: "#c7d2fe" }}>{finalRate.toLocaleString("pt-AO")} Kz</span>
+                    </div>
+                  )}
+
+                  <button
+                    className="adm-btn"
+                    style={{ background: `linear-gradient(135deg, ${cur.color}, ${cur.color}cc)` }}
+                    disabled={!draft.base && !draft.margin}
+                    onClick={async () => {
+                      const newBaseVal = parseFloat(draft.base) || autoVal;
+                      const newMarginVal = parseFloat(draft.margin) || 0;
+                      if (!newBaseVal || newBaseVal <= 0) { toast_(`Define uma base válida para ${cur.id}`, "err"); return; }
+                      const finalValue = newBaseVal + newMarginVal;
+                      const { error } = await sb.from("exchange_rates").insert({
+                        base_rate: rate.base_rate, margin: rate.margin, source: `manual_${cur.id.toLowerCase()}`,
+                        eur_rate: cur.id === "EUR" ? finalValue : rate.eur_rate,
+                        brl_rate: cur.id === "BRL" ? finalValue : rate.brl_rate,
+                        zar_rate: cur.id === "ZAR" ? finalValue : rate.zar_rate,
+                        last_auto_sync: rate.last_auto_sync || null,
+                      });
+                      if (error) { toast_("Erro: " + error.message, "err"); return; }
+                      toast_(`Câmbio ${cur.id} publicado — propaga em realtime`, "ok");
+                      setCurrencyDrafts(prev => ({ ...prev, [cur.id]: { base: "", margin: "" } }));
+                    }}
+                  >
+                    <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}>
+                      <Icon name="chart" size={14} /> Publicar {cur.id} — propaga em realtime
+                    </div>
+                  </button>
+                </div>
+              );
+            })}
           </>
         )}
 

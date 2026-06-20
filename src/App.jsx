@@ -1680,6 +1680,7 @@ function ClientApp({ user, onLogout }) {
             profile={profile}
             appliedRate={applied}
             rate={rate}
+            multiRates={{ EUR: parseFloat(rate.eur_rate) || null, BRL: parseFloat(rate.brl_rate) || null, ZAR: parseFloat(rate.zar_rate) || null }}
             loading={orderLoad}
             kycStep={kycStep}
           />
@@ -2207,6 +2208,7 @@ function ClientApp({ user, onLogout }) {
               
               {step === 0 && (
                 <Calculator appliedRate={applied} rate={rate} onSubmit={handleCalcSubmit}
+                  multiRates={{ EUR: parseFloat(rate.eur_rate) || null, BRL: parseFloat(rate.brl_rate) || null, ZAR: parseFloat(rate.zar_rate) || null }}
                   loading={orderLoad} user={user} kycStep={kycStep} config={config} />
               )}
 

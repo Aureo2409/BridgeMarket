@@ -343,6 +343,7 @@ export function Calculator({ appliedRate, rate, onSubmit, loading, user, kycStep
 
   // Taxa actual para a moeda seleccionada
   const currentCurrencyDef = CURRENCIES.find(c => c.id === currency) || CURRENCIES[0];
+  const currencyRateAvailable = currency === "USD" || !!multiRates?.[currency];
   const currentRate = currency === "USD"
     ? applied
     : (multiRates?.[currency] || applied);
@@ -547,6 +548,11 @@ export function Calculator({ appliedRate, rate, onSubmit, loading, user, kycStep
           <span style={{ fontSize: 11, color: "#6b7280", fontWeight: 600 }}>Taxa aplicada</span>
           <span className="rate-val" style={{ display: "flex", alignItems: "center", gap: 6 }}><Icon name="chart" size={14} /> 1 {currency} = {currentRate.toLocaleString("pt-AO")} Kz</span>
         </div>
+        {!currencyRateAvailable && (
+          <div style={{ marginTop: 8, padding: "8px 12px", background: "#fffbeb", border: "1px solid #fde68a", borderRadius: 10, fontSize: 10.5, color: "#92400e", fontWeight: 600, display: "flex", alignItems: "center", gap: 6 }}>
+            ⚠️ Taxa {currency} ainda não foi sincronizada pelo admin — a usar taxa USD como referência temporária.
+          </div>
+        )}
       </div>
 
       {/* Currency Selector Bottom Sheet Modal */}
