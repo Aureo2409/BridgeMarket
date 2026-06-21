@@ -392,6 +392,44 @@ function KycOnboarding({ user, currentStep, kycRecord, onLogout, onBack }) {
   );
 }
 
+// ── RATES GRID — mini-card com as taxas de todas as moedas (USD/EUR/BRL/ZAR) ──
+function RatesGrid({ applied, rate }) {
+  const rates = [
+    { id: "USD", flag: "🇺🇸", color: "#1a3a6e", value: applied },
+    { id: "EUR", flag: "🇪🇺", color: "#003399", value: parseFloat(rate?.eur_rate) || null },
+    { id: "BRL", flag: "🇧🇷", color: "#009c3b", value: parseFloat(rate?.brl_rate) || null },
+    { id: "ZAR", flag: "🇿🇦", color: "#007B40", value: parseFloat(rate?.zar_rate) || null },
+  ];
+  return (
+    <div className="metric-card" style={{ flexDirection: "column", alignItems: "stretch", gap: 10 }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+        <div className="metric-icon-box green">
+          <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" strokeWidth="2.5">
+            <line x1="7" y1="17" x2="17" y2="7" />
+            <polyline points="7 7 17 7 17 17" />
+          </svg>
+        </div>
+        <div className="metric-label">Taxas de Hoje</div>
+      </div>
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6 }}>
+        {rates.map(r => (
+          <div key={r.id} style={{
+            display: "flex", alignItems: "center", justifyContent: "space-between",
+            padding: "6px 10px", borderRadius: 9, background: "#f8fafc", border: "1px solid #f1f5f9"
+          }}>
+            <span style={{ fontSize: 11, fontWeight: 800, color: r.color, display: "flex", alignItems: "center", gap: 4 }}>
+              <span style={{ fontSize: 13 }}>{r.flag}</span>{r.id}
+            </span>
+            <span style={{ fontSize: 11.5, fontWeight: 900, color: "#1e1b4b" }}>
+              {r.value ? r.value.toLocaleString("pt-AO") : "—"} Kz
+            </span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 
 // ── CLIENT ────────────────────────────────────────────────────────────────────
 function ClientApp({ user, onLogout }) {
@@ -470,9 +508,9 @@ function ClientApp({ user, onLogout }) {
   const [profile, setProfile] = useState(() => {
     try {
       const cached = localStorage.getItem("bridge_profile");
-      return cached ? JSON.parse(cached) : { full_name: "", phone: "", date_of_birth: "", nationality: "", whatsapp: "", address: "", kyc_status: "", avatar_url: "", access_status: "inactive", access_expires_at: null, payment_destinations: {}, cancelled_count: 0, last_cancelled_at: null };
+      return cached ? JSON.parse(cached) : { full_name: "", phone: "", date_of_birth: "", nationality: "", whatsapp: "", address: "", kyc_status: "", avatar_url: "", payment_destinations: {}, cancelled_count: 0, last_cancelled_at: null, credits_balance: 0, credits_reserved: 0, total_spent_kz: 0 };
     } catch {
-      return { full_name: "", phone: "", date_of_birth: "", nationality: "", whatsapp: "", address: "", kyc_status: "", avatar_url: "", access_status: "inactive", access_expires_at: null, payment_destinations: {}, cancelled_count: 0, last_cancelled_at: null };
+      return { full_name: "", phone: "", date_of_birth: "", nationality: "", whatsapp: "", address: "", kyc_status: "", avatar_url: "", payment_destinations: {}, cancelled_count: 0, last_cancelled_at: null, credits_balance: 0, credits_reserved: 0, total_spent_kz: 0 };
     }
   });
   const [profileLoad, setProfileLoad] = useState(false);
@@ -480,6 +518,8 @@ function ClientApp({ user, onLogout }) {
   const [avatarUploading, setAvatarUploading] = useState(false);
   const [accessFile, setAccessFile] = useState(null);
   const [accessFileLoad, setAccessFileLoad] = useState(false);
+  const [recharges, setRecharges] = useState([]);
+  const [selectedCreditPackage, setSelectedCreditPackage] = useState("standard");
 
   const [userRating, setUserRating] = useState({ avg: 0, total: 0 });
   const [isDesktop, setIsDesktop] = useState(window.innerWidth >= 768);
@@ -532,14 +572,8 @@ function ClientApp({ user, onLogout }) {
       localStorage.setItem("bridge_config", JSON.stringify(c));
     }).catch(() => { });
 
-    sb.from("profiles").select("full_name, phone, date_of_birth, nationality, whatsapp, address, kyc_status, avatar_url, access_status, access_expires_at, payment_destinations, cancelled_count, last_cancelled_at").eq("id", user.id).maybeSingle().then(({ data }) => {
+    sb.from("profiles").select("full_name, phone, date_of_birth, nationality, whatsapp, address, kyc_status, avatar_url, payment_destinations, cancelled_count, last_cancelled_at, credits_balance, credits_reserved, total_spent_kz").eq("id", user.id).maybeSingle().then(({ data }) => {
       if (data) {
-        let currentStatus = data.access_status || "inactive";
-        if (data.access_expires_at && new Date() > new Date(data.access_expires_at) && (currentStatus === "active" || currentStatus === "expiring_soon")) {
-          currentStatus = "expired";
-          sb.from("profiles").update({ access_status: "expired" }).eq("id", user.id).then();
-        }
-        
         const p = {
           full_name: data.full_name || "",
           phone: data.phone || "",
@@ -549,15 +583,21 @@ function ClientApp({ user, onLogout }) {
           address: data.address || "",
           kyc_status: data.kyc_status || "",
           avatar_url: data.avatar_url || "",
-          access_status: currentStatus,
-          access_expires_at: data.access_expires_at || null,
           payment_destinations: data.payment_destinations || {},
           cancelled_count: data.cancelled_count || 0,
-          last_cancelled_at: data.last_cancelled_at || null
+          last_cancelled_at: data.last_cancelled_at || null,
+          credits_balance: data.credits_balance || 0,
+          credits_reserved: data.credits_reserved || 0,
+          total_spent_kz: data.total_spent_kz || 0
         };
         setProfile(p);
         localStorage.setItem("bridge_profile", JSON.stringify(p));
       }
+    }).catch(() => { });
+
+    // Carregar recargas pendentes do utilizador (para mostrar o ecrã "Recarga em Validação" ao recarregar a página)
+    sb.from("credit_recharges").select("*").eq("user_id", user.id).order("created_at", { ascending: false }).then(({ data }) => {
+      if (data) setRecharges(data);
     }).catch(() => { });
 
     const kycTimeout = setTimeout(() => {
@@ -701,8 +741,9 @@ function ClientApp({ user, onLogout }) {
       return;
     }
 
-    const hasActiveAccess = profile?.access_status === "active" || profile?.access_status === "expiring_soon";
-    if (!hasActiveAccess) {
+    // ── SISTEMA DE CRÉDITOS — 1 crédito = 500 Kz = direito a 1 transacção ──
+    const availableCreditsBuyer = (parseInt(profile?.credits_balance || 0, 10) - parseInt(profile?.credits_reserved || 0, 10));
+    if (availableCreditsBuyer < 1) {
       setShowActivationScreen(true);
       return;
     }
@@ -806,6 +847,19 @@ function ClientApp({ user, onLogout }) {
       if (error) {
         toast_(error.message, "err");
       } else {
+        // ── Reservar 1 crédito do comprador para esta transacção ──
+        const newReserved = (parseInt(profile?.credits_reserved || 0, 10)) + 1;
+        const { error: reserveErr } = await sb.from("profiles")
+          .update({ credits_reserved: newReserved })
+          .eq("id", user.id);
+        if (!reserveErr) {
+          setProfile(prev => ({ ...prev, credits_reserved: newReserved }));
+          await sb.from("orders").update({ buyer_credit_reserved: true }).eq("id", data.id);
+          await sb.from("credit_transactions").insert({
+            user_id: user.id, order_id: data.id, type: "reserve", amount: -1,
+            balance_after: (parseInt(profile?.credits_balance || 0, 10)) - newReserved
+          });
+        }
         setOrder(data); setStep(1);
         toast_("Pedido criado! Admin notificado.");
       }
@@ -832,6 +886,22 @@ function ClientApp({ user, onLogout }) {
         if (error) { toast_("Erro ao cancelar: " + error.message, "err"); }
         else {
           toast_("Pedido cancelado.");
+
+          // ── Devolver o crédito reservado, caso ainda não tenha sido debitado ──
+          const cancelledOrder = orders.find(o => o.id === orderId) || currentOrder;
+          if (cancelledOrder?.buyer_credit_reserved && !cancelledOrder?.fee_debited_at) {
+            const newReservedBack = Math.max(0, (parseInt(profile?.credits_reserved || 0, 10)) - 1);
+            const { error: refundErr } = await sb.from("profiles")
+              .update({ credits_reserved: newReservedBack })
+              .eq("id", user.id);
+            if (!refundErr) {
+              setProfile(prev => ({ ...prev, credits_reserved: newReservedBack }));
+              await sb.from("credit_transactions").insert({
+                user_id: user.id, order_id: orderId, type: "refund", amount: 1,
+                balance_after: (parseInt(profile?.credits_balance || 0, 10)) - newReservedBack
+              });
+            }
+          }
 
           // Incrementar contador de cancelamentos no perfil
           const currentCount = parseInt(profile?.cancelled_count || 0, 10);
@@ -868,8 +938,8 @@ function ClientApp({ user, onLogout }) {
   }
 
   async function handleTransactOrder(orderId) {
-    const hasActiveAccess = profile?.access_status === "active" || profile?.access_status === "expiring_soon";
-    if (!hasActiveAccess) {
+    const availableCreditsSeller = (parseInt(profile?.credits_balance || 0, 10) - parseInt(profile?.credits_reserved || 0, 10));
+    if (availableCreditsSeller < 1) {
       setShowActivationScreen(true);
       return;
     }
@@ -887,7 +957,21 @@ function ClientApp({ user, onLogout }) {
           toast_("Erro ao iniciar correspondência: " + error.message, "err");
         } else {
           toast_("Correspondência iniciada com sucesso!");
-          
+
+          // ── Reservar 1 crédito do vendedor para esta transacção ──
+          const newReservedSeller = (parseInt(profile?.credits_reserved || 0, 10)) + 1;
+          const { error: reserveErr } = await sb.from("profiles")
+            .update({ credits_reserved: newReservedSeller })
+            .eq("id", user.id);
+          if (!reserveErr) {
+            setProfile(prev => ({ ...prev, credits_reserved: newReservedSeller }));
+            await sb.from("orders").update({ seller_credit_reserved: true }).eq("id", orderId);
+            await sb.from("credit_transactions").insert({
+              user_id: user.id, order_id: orderId, type: "reserve", amount: -1,
+              balance_after: (parseInt(profile?.credits_balance || 0, 10)) - newReservedSeller
+            });
+          }
+
           if (orderData) {
             await sb.from("chat_messages").insert({
               order_id: orderId,
@@ -1042,7 +1126,8 @@ function ClientApp({ user, onLogout }) {
                          kycRecord?.liveness_status === "passed");
 
   // SE KYC ESTÁ COMPLETO, MAS O ACESSO SEMANAL NÃO ESTÁ ACTIVO
-  const hasActiveAccess = profile?.access_status === "active" || profile?.access_status === "expiring_soon";
+  const userCredits = (parseInt(profile?.credits_balance || 0, 10) - parseInt(profile?.credits_reserved || 0, 10));
+  const hasActiveAccess = userCredits >= 1;
 
   function renderSettingsTabs() {
     return (
@@ -1492,7 +1577,7 @@ function ClientApp({ user, onLogout }) {
   }
 
   function renderActivationCard() {
-    const isPending = profile?.access_status === "pending_payment";
+    const isPending = recharges.find(r => r.status === "pending_payment");
 
     if (isPending) {
       return (
@@ -1500,15 +1585,15 @@ function ClientApp({ user, onLogout }) {
           <div style={{ width: 56, height: 56, borderRadius: "50%", background: "rgba(245,158,11,0.08)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 16px", color: "#f59e0b" }}>
             <Icon name="clock" size={28} />
           </div>
-          
+
           <h2 style={{ fontSize: 18, fontWeight: 900, color: "#1e1b4b", letterSpacing: "-0.4px", marginBottom: 6 }}>
-            Acesso em Fase de Validação
+            Recarga em Validação
           </h2>
           <div style={{ fontSize: 12, color: "#f59e0b", fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 12 }}>
-            Aguardando Aprovação (500 Kz)
+            Aguardando Aprovação ({isPending.amount_kz?.toLocaleString("pt-AO")} Kz · {isPending.credits_added} créditos)
           </div>
           <p style={{ fontSize: 12, color: "#6b7280", lineHeight: 1.6, marginBottom: 20, fontWeight: 500 }}>
-            O teu comprovativo de pagamento foi enviado com sucesso e está sob análise. A validação e ativação da conta pode demorar até 24 horas, embora geralmente ocorra em poucos minutos. Agradecemos a paciência!
+            O teu comprovativo de pagamento foi enviado com sucesso e está sob análise. A validação dos créditos pode demorar até 24 horas, embora geralmente ocorra em poucos minutos. Agradecemos a paciência!
           </p>
 
           <button
@@ -1523,22 +1608,17 @@ function ClientApp({ user, onLogout }) {
             className="btn"
             onClick={async () => {
               triggerConfirm(
-                "Cancelar Solicitação",
-                "Tens a certeza que queres cancelar esta solicitação para enviar outro comprovativo?",
+                "Cancelar Recarga",
+                "Tens a certeza que queres cancelar esta recarga para enviar outro comprovativo?",
                 async () => {
                   setAccessFileLoad(true);
-                  const { error } = await sb.from("profiles").update({
-                    access_status: "inactive",
-                    access_proof_url: null
-                  }).eq("id", user.id);
+                  const { error } = await sb.from("credit_recharges").update({ status: "cancelled" }).eq("id", isPending.id);
                   setAccessFileLoad(false);
                   if (error) {
                     toast_("Erro ao cancelar: " + error.message, "err");
                   } else {
-                    toast_("Solicitação cancelada. Podes carregar outro comprovativo.");
-                    const updatedP = { ...profile, access_status: "inactive", access_proof_url: null };
-                    setProfile(updatedP);
-                    localStorage.setItem("bridge_profile", JSON.stringify(updatedP));
+                    toast_("Recarga cancelada. Podes carregar outro comprovativo.");
+                    setRecharges(prev => prev.filter(r => r.id !== isPending.id));
                     setAccessFile(null);
                   }
                 }
@@ -1553,25 +1633,65 @@ function ClientApp({ user, onLogout }) {
       );
     }
 
+    const CREDIT_PACKAGES = [
+      { id: "starter",  label: "Starter",  price: 2000,  credits: 4,  bonus: 0, popular: false },
+      { id: "standard", label: "Standard", price: 5000,  credits: 11, bonus: 1, popular: true  },
+      { id: "pro",      label: "Pro",      price: 10000, credits: 24, bonus: 4, popular: false },
+      { id: "business", label: "Business", price: 25000, credits: 65, bonus: 15, popular: false },
+    ];
+    const selectedPkg = CREDIT_PACKAGES.find(p => p.id === selectedCreditPackage) || CREDIT_PACKAGES[1];
+
     return (
-      <div className="card" style={{ padding: "28px 22px", textAlign: "center", border: "1.5px solid #6366f1", borderRadius: 20, maxWidth: 500, margin: "20px auto" }}>
+      <div className="card" style={{ padding: "28px 22px", textAlign: "center", border: "1.5px solid #6366f1", borderRadius: 20, maxWidth: 520, margin: "20px auto" }}>
         <div style={{ width: 56, height: 56, borderRadius: "50%", background: "rgba(99,102,241,0.08)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 16px", color: "#6366f1" }}>
-          <Icon name="shield" size={28} />
+          <Icon name="creditCard" size={28} />
         </div>
-        
+
         <h2 style={{ fontSize: 18, fontWeight: 900, color: "#1e1b4b", letterSpacing: "-0.4px", marginBottom: 6 }}>
-          Acesso Semanal Pré-Pago
+          Carteira de Créditos
         </h2>
-        <div style={{ fontSize: 12, color: "#64748b", fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 12 }}>
-          Taxa de Acesso: 500 Kz
+        <div style={{ fontSize: 12, color: "#64748b", fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 4 }}>
+          Tens {userCredits} {userCredits === 1 ? "crédito" : "créditos"} disponíveis
         </div>
         <p style={{ fontSize: 12, color: "#6b7280", lineHeight: 1.6, marginBottom: 20, fontWeight: 500 }}>
-          Paga apenas 500 Kz e obtém 7 dias de acesso ativo e ilimitado para comprar ou vender dólares sem qualquer comissão por transação!
+          Cada crédito custa 500 Kz e dá direito a 1 transacção completa — sem subscrição, sem mensalidade.
+          Recarrega uma vez e usa os créditos quando quiseres.
         </p>
-        
+
+        {/* Pacotes de créditos */}
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 20 }}>
+          {CREDIT_PACKAGES.map(pkg => {
+            const isSel = selectedCreditPackage === pkg.id || (!selectedCreditPackage && pkg.id === "standard");
+            return (
+              <div
+                key={pkg.id}
+                onClick={() => setSelectedCreditPackage(pkg.id)}
+                style={{
+                  position: "relative",
+                  border: isSel ? "2px solid #6366f1" : "1.5px solid #e5e7eb",
+                  background: isSel ? "#f5f6ff" : "#fff",
+                  borderRadius: 14, padding: "14px 12px", cursor: "pointer", textAlign: "left",
+                  transition: "all 0.15s"
+                }}
+              >
+                {pkg.popular && (
+                  <div style={{ position: "absolute", top: -9, right: 10, background: "#6366f1", color: "#fff", fontSize: 8.5, fontWeight: 900, padding: "2px 8px", borderRadius: 6, letterSpacing: 0.3 }}>
+                    MAIS POPULAR
+                  </div>
+                )}
+                <div style={{ fontSize: 12, fontWeight: 900, color: "#1e1b4b" }}>{pkg.label}</div>
+                <div style={{ fontSize: 17, fontWeight: 900, color: "#4f46e5", marginTop: 4 }}>{pkg.price.toLocaleString("pt-AO")} Kz</div>
+                <div style={{ fontSize: 10.5, color: "#64748b", fontWeight: 700, marginTop: 3 }}>
+                  {pkg.credits} créditos {pkg.bonus > 0 && <span style={{ color: "#16a34a" }}>(+{pkg.bonus} bónus)</span>}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
         <div style={{ background: "#f8fafc", border: "1px dashed #cbd5e1", borderRadius: 12, padding: 14, textAlign: "left", marginBottom: 20 }}>
           <div style={{ fontSize: 11, fontWeight: 800, color: "#475569", textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 6 }}>
-            Dados para Transferência
+            Dados para Transferência — {selectedPkg.price.toLocaleString("pt-AO")} Kz
           </div>
           <div style={{ display: "flex", flexDirection: "column", gap: 6, fontSize: 12, color: "#1e1b4b", fontWeight: 600 }}>
             <div>Canal: <span style={{ color: "#4f46e5" }}>Multicaixa Express</span></div>
@@ -1610,18 +1730,21 @@ function ClientApp({ user, onLogout }) {
             setAccessFileLoad(true);
             try {
               const { path } = await uploadAccessProof(user.id, accessFile);
-              const { error } = await sb.from("profiles").update({
-                access_status: "pending_payment",
-                access_proof_url: path
-              }).eq("id", user.id);
-              
+              const pkg = selectedPkg;
+              const { data: rechargeData, error } = await sb.from("credit_recharges").insert({
+                user_id: user.id,
+                package_id: pkg.id,
+                amount_kz: pkg.price,
+                credits_added: pkg.credits + pkg.bonus,
+                proof_url: path,
+                status: "pending_payment"
+              }).select().single();
+
               if (error) {
                 toast_("Erro ao enviar comprovativo: " + error.message, "err");
               } else {
                 toast_("Comprovativo enviado para validação com sucesso!");
-                const updatedP = { ...profile, access_status: "pending_payment", access_proof_url: path };
-                setProfile(updatedP);
-                localStorage.setItem("bridge_profile", JSON.stringify(updatedP));
+                setRecharges(prev => [...prev, rechargeData]);
                 setAccessFile(null);
               }
             } catch (err) {
@@ -1633,7 +1756,7 @@ function ClientApp({ user, onLogout }) {
           disabled={accessFileLoad || !accessFile}
           style={{ width: "100%", background: "linear-gradient(135deg,#6366f1,#8b5cf6)", boxShadow: "0 6px 16px rgba(99,102,241,0.2)" }}
         >
-          {accessFileLoad ? "A enviar..." : "Enviar Comprovativo e Solicitar Acesso"}
+          {accessFileLoad ? "A enviar..." : `Enviar Comprovativo — ${selectedPkg.credits + selectedPkg.bonus} créditos`}
         </button>
 
         <button
@@ -1643,9 +1766,9 @@ function ClientApp({ user, onLogout }) {
         >
           Voltar ao Mercado
         </button>
-        
+
         <div style={{ fontSize: 10, color: "#94a3b8", fontWeight: 700, marginTop: 10 }}>
-          Nota: O acesso expira automaticamente após 7 dias de uso ativo
+          Nota: 1 crédito = 500 Kz = direito a 1 transacção completa. Sem expiração, sem mensalidade.
         </div>
       </div>
     );
@@ -1718,20 +1841,7 @@ function ClientApp({ user, onLogout }) {
       <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
         {/* Metric banner matching Airtm Dashboard center */}
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
-          <div className="metric-card">
-            <div className="metric-icon-box green">
-              <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" strokeWidth="2.5">
-                <line x1="7" y1="17" x2="17" y2="7" />
-                <polyline points="7 7 17 7 17 17" />
-              </svg>
-            </div>
-            <div className="metric-content">
-              <div className="metric-label">Taxa de Hoje</div>
-              <div className="metric-value">
-                {applied.toFixed(2)} <span>AOA/USD</span>
-              </div>
-            </div>
-          </div>
+          <RatesGrid applied={applied} rate={rate} />
 
           <div className="metric-card">
             <div className="metric-icon-box blue">
@@ -2278,20 +2388,7 @@ function ClientApp({ user, onLogout }) {
             /* Home/Market dashboard view active */
             <>
               {/* Branded metrics cards matching Screenshot 1 */}
-              <div className="metric-card">
-                <div className="metric-icon-box green">
-                  <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" strokeWidth="2.8" strokeLinecap="round" strokeLinejoin="round">
-                    <line x1="7" y1="17" x2="17" y2="7" />
-                    <polyline points="7 7 17 7 17 17" />
-                  </svg>
-                </div>
-                <div className="metric-content">
-                  <div className="metric-label">Taxa de Hoje</div>
-                  <div className="metric-value">
-                    {applied.toFixed(2)} <span>AOA/USD</span>
-                  </div>
-                </div>
-              </div>
+              <RatesGrid applied={applied} rate={rate} />
 
               <div className="metric-card">
                 <div className="metric-icon-box blue">

@@ -103,14 +103,14 @@ export function AdminPanel({ user, onLogout }) {
       })
       .on("postgres_changes", { event: "*", schema: "public", table: "kyc_verifications" }, () => fetchKycs())
       .on("postgres_changes", { event: "*", schema: "public", table: "orders" }, () => { fetchOrders(); fetchStats(); })
-      .on("postgres_changes", { event: "*", schema: "public", table: "profiles" }, () => fetchAccessRequests())
+      .on("postgres_changes", { event: "*", schema: "public", table: "credit_recharges" }, () => fetchPendingRecharges())
       .on("postgres_changes", { event: "INSERT", schema: "public", table: "exchange_rates" }, p => setRate(p.new))
       .subscribe();
     return () => sb.removeChannel(ch);
   }, []);
 
   async function boot() {
-    await Promise.all([fetchAlerts(), fetchOrders(), fetchProofs(), fetchStats(), fetchConfig(), fetchKycs(), fetchAccessRequests()]);
+    await Promise.all([fetchAlerts(), fetchOrders(), fetchProofs(), fetchStats(), fetchConfig(), fetchKycs(), fetchPendingRecharges()]);
     const { data } = await sb.from("exchange_rates").select("*").order("fetched_at", { ascending: false }).limit(1).maybeSingle();
     if (data) setRate(data);
   }
@@ -160,26 +160,37 @@ export function AdminPanel({ user, onLogout }) {
     if (rData) setRejectedKycs(rData);
   }
 
-  async function fetchAccessRequests() {
+  async function fetchPendingRecharges() {
     const { data, error } = await sb
-      .from("profiles")
-      .select("id, full_name, phone, access_proof_url, updated_at")
-      .eq("access_status", "pending_payment")
-      .order("updated_at", { ascending: false });
-    
+      .from("credit_recharges")
+      .select("id, user_id, package_id, amount_kz, credits_added, proof_url, created_at, profiles!credit_recharges_user_id_fkey(full_name, phone)")
+      .eq("status", "pending_payment")
+      .order("created_at", { ascending: false });
+
     if (error) {
-      console.error("Erro ao buscar solicitações de acesso:", error);
+      console.error("Erro ao buscar recargas pendentes:", error);
       return;
     }
 
     if (data) {
-      const requestsWithUrls = await Promise.all(data.map(async (p) => {
-        let signedUrl = p.access_proof_url;
-        if (p.access_proof_url && !p.access_proof_url.startsWith("http")) {
-          const { data: sData } = await sb.storage.from("comprovantes de pagamento").createSignedUrl(p.access_proof_url, 3600);
+      const requestsWithUrls = await Promise.all(data.map(async (r) => {
+        let signedUrl = r.proof_url;
+        if (r.proof_url && !r.proof_url.startsWith("http")) {
+          const { data: sData } = await sb.storage.from("comprovantes de pagamento").createSignedUrl(r.proof_url, 3600);
           if (sData) signedUrl = sData.signedUrl;
         }
-        return { ...p, signedUrl };
+        return {
+          id: r.id,
+          user_id: r.user_id,
+          full_name: r.profiles?.full_name,
+          phone: r.profiles?.phone,
+          package_id: r.package_id,
+          amount_kz: r.amount_kz,
+          credits_added: r.credits_added,
+          proof_url: r.proof_url,
+          created_at: r.created_at,
+          signedUrl
+        };
       }));
       setAccessRequests(requestsWithUrls);
     } else {
@@ -187,58 +198,84 @@ export function AdminPanel({ user, onLogout }) {
     }
   }
 
-  async function approveAccess(profileId) {
-    const expiryDate = new Date();
-    expiryDate.setDate(expiryDate.getDate() + 7);
-    const { error } = await sb.from("profiles").update({
-      access_status: "active",
-      access_expires_at: expiryDate.toISOString()
-    }).eq("id", profileId);
+  async function approveRecharge(recharge) {
+    setRL(true);
+    try {
+      // 1. Buscar saldo actual do utilizador
+      const { data: profileData, error: profErr } = await sb
+        .from("profiles")
+        .select("credits_balance")
+        .eq("id", recharge.user_id)
+        .maybeSingle();
+      if (profErr) throw profErr;
 
-    if (error) {
-      toast_("Erro ao aprovar acesso: " + error.message, "err");
-    } else {
-      toast_("Acesso semanal aprovado!");
-      fetchAccessRequests();
-      const userReq = accessRequests.find(r => r.id === profileId);
-      if (userReq && userReq.phone) {
+      const newBalance = (parseInt(profileData?.credits_balance || 0, 10)) + recharge.credits_added;
+
+      // 2. Creditar a carteira do utilizador
+      const { error: updErr } = await sb.from("profiles")
+        .update({ credits_balance: newBalance })
+        .eq("id", recharge.user_id);
+      if (updErr) throw updErr;
+
+      // 3. Marcar recarga como confirmada
+      const { error: rechErr } = await sb.from("credit_recharges")
+        .update({ status: "confirmed", confirmed_at: new Date().toISOString() })
+        .eq("id", recharge.id);
+      if (rechErr) throw rechErr;
+
+      // 4. Log de auditoria
+      await sb.from("credit_transactions").insert({
+        user_id: recharge.user_id,
+        recharge_id: recharge.id,
+        type: "recharge",
+        amount: recharge.credits_added,
+        balance_after: newBalance
+      });
+
+      // 5. Notificar o utilizador via WhatsApp
+      if (recharge.phone) {
         await sb.from("notifications").insert({
-          user_id: profileId,
+          user_id: recharge.user_id,
           channel: "whatsapp",
-          recipient_phone: userReq.phone,
-          message_body: `Olá ${userReq.full_name || "Cliente"}, o teu comprovativo de pagamento de 500 Kz foi validado com sucesso! O teu acesso de 7 dias à plataforma BridgeP2P já está ativo. Bons negócios!`,
+          recipient_phone: recharge.phone,
+          message_body: `Olá ${recharge.full_name || "Cliente"}, a tua recarga de ${recharge.amount_kz?.toLocaleString("pt-AO")} Kz foi confirmada! ${recharge.credits_added} créditos já estão disponíveis na tua conta — cada crédito dá direito a 1 transacção completa na Bridge. Bons negócios!`,
           status: "pending"
         });
       }
+
+      toast_(`Recarga aprovada — ${recharge.credits_added} créditos creditados!`, "ok");
+      fetchPendingRecharges();
+    } catch (err) {
+      toast_("Erro ao aprovar recarga: " + err.message, "err");
+    } finally {
+      setRL(false);
     }
   }
 
-  async function rejectAccess(profileId, proofUrl) {
+  async function rejectRecharge(recharge) {
     const reason = window.prompt("Motivo da rejeição (será enviado por notificação):");
     if (reason === null) return;
 
-    const { error } = await sb.from("profiles").update({
-      access_status: "inactive",
-      access_proof_url: null
-    }).eq("id", profileId);
+    const { error } = await sb.from("credit_recharges")
+      .update({ status: "rejected", rejection_reason: reason || "Comprovativo inválido ou ilegível" })
+      .eq("id", recharge.id);
 
     if (error) {
       toast_("Erro ao rejeitar: " + error.message, "err");
     } else {
-      toast_("Acesso semanal rejeitado.");
-      fetchAccessRequests();
+      toast_("Recarga rejeitada.");
+      fetchPendingRecharges();
 
-      if (proofUrl && !proofUrl.startsWith("http")) {
-        await sb.storage.from("comprovantes de pagamento").remove([proofUrl]);
+      if (recharge.proof_url && !recharge.proof_url.startsWith("http")) {
+        await sb.storage.from("comprovantes de pagamento").remove([recharge.proof_url]);
       }
 
-      const userReq = accessRequests.find(r => r.id === profileId);
-      if (userReq && userReq.phone) {
+      if (recharge.phone) {
         await sb.from("notifications").insert({
-          user_id: profileId,
+          user_id: recharge.user_id,
           channel: "whatsapp",
-          recipient_phone: userReq.phone,
-          message_body: `Olá ${userReq.full_name || "Cliente"}, o teu comprovativo de pagamento de 500 Kz foi recusado. Motivo: ${reason || "Comprovativo inválido ou ilegível"}. Por favor, tenta novamente submetendo o comprovativo correto.`,
+          recipient_phone: recharge.phone,
+          message_body: `Olá ${recharge.full_name || "Cliente"}, a tua recarga de ${recharge.amount_kz?.toLocaleString("pt-AO")} Kz foi recusada. Motivo: ${reason || "Comprovativo inválido ou ilegível"}. Por favor, tenta novamente submetendo o comprovativo correto.`,
           status: "pending"
         });
       }
@@ -814,19 +851,19 @@ export function AdminPanel({ user, onLogout }) {
 
         {tab === "kyc" && (
           <>
-            <span className="adm-section">Acessos Semanais Pendentes (500 Kz)</span>
-            {accessRequests.length === 0 && <div style={{ textAlign: "center", padding: "24px 0", color: "#94a3b8", fontWeight: 600, fontSize: 13 }}>Nenhuma solicitação de acesso pendente.</div>}
+            <span className="adm-section">Recargas de Créditos Pendentes</span>
+            {accessRequests.length === 0 && <div style={{ textAlign: "center", padding: "24px 0", color: "#94a3b8", fontWeight: 600, fontSize: 13 }}>Nenhuma recarga de créditos pendente.</div>}
             {accessRequests.map(r => (
               <div key={r.id} className="adm-card">
                 <div style={{ fontSize: 13, fontWeight: 800, color: "#1e1b4b" }}>{r.full_name || "Utilizador"}</div>
                 <div style={{ fontSize: 11, color: "#64748b", marginBottom: 10 }}>
-                  Telefone: {r.phone || "Sem telefone"} · Enviado: {new Date(r.updated_at).toLocaleString("pt-AO")}
+                  Telefone: {r.phone || "Sem telefone"} · {r.amount_kz?.toLocaleString("pt-AO")} Kz · {r.credits_added} créditos · Enviado: {new Date(r.created_at).toLocaleString("pt-AO")}
                 </div>
-                
+
                 {r.signedUrl && (
                   <div style={{ marginBottom: 12 }}>
                     <div style={{ fontSize: 9, color: "#64748b", marginBottom: 4, fontWeight: 700, textTransform: "uppercase" }}>Comprovativo</div>
-                    {r.access_proof_url?.match(/\.pdf$/i) ? (
+                    {r.proof_url?.match(/\.pdf$/i) ? (
                       <a href={r.signedUrl} target="_blank" rel="noreferrer" style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", height: 80, borderRadius: 6, border: "1px solid #cbd5e1", background: "rgba(0,0,0,0.15)", textDecoration: "none", color: "#6366f1" }}>
                         <Icon name="file" size={24} />
                         <span style={{ fontSize: 9, fontWeight: 800, marginTop: 4, color: "#e2e8f0" }}>Ver PDF</span>
@@ -840,8 +877,8 @@ export function AdminPanel({ user, onLogout }) {
                 )}
 
                 <div style={{ display: "flex", gap: 8 }}>
-                  <button className="adm-btn" style={{ background: "#10b981", flex: 1, color: "#fff", border: "none" }} onClick={() => approveAccess(r.id)}>Aprovar Acesso</button>
-                  <button className="adm-btn" style={{ background: "#ef4444", flex: 1, color: "#fff", border: "none" }} onClick={() => rejectAccess(r.id, r.access_proof_url)}>Rejeitar</button>
+                  <button className="adm-btn" style={{ background: "#10b981", flex: 1, color: "#fff", border: "none" }} onClick={() => approveRecharge(r)}>Aprovar — Creditar {r.credits_added}</button>
+                  <button className="adm-btn" style={{ background: "#ef4444", flex: 1, color: "#fff", border: "none" }} onClick={() => rejectRecharge(r)}>Rejeitar</button>
                 </div>
               </div>
             ))}

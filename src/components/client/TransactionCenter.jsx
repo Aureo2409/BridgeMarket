@@ -232,6 +232,38 @@ export function TransactionCenter({ order, user, onBack, onCancel }) {
     if (error) {
       alert("Erro ao concluir transação: " + error.message);
     } else {
+      // ── Débito definitivo de 1 crédito de cada parte (comprador + vendedor) ──
+      // Cada crédito reservado em handleCalcSubmitFinal/handleTransactOrder agora é debitado de facto.
+      try {
+        const buyerId = currentOrder.user_id;
+        const sellerId = currentOrder.funder_id;
+
+        const { data: buyerProfile } = await sb.from("profiles").select("credits_balance, credits_reserved").eq("id", buyerId).maybeSingle();
+        const { data: sellerProfile } = await sb.from("profiles").select("credits_balance, credits_reserved").eq("id", sellerId).maybeSingle();
+
+        if (buyerProfile) {
+          const newBalance = Math.max(0, (parseInt(buyerProfile.credits_balance || 0, 10)) - 1);
+          const newReserved = Math.max(0, (parseInt(buyerProfile.credits_reserved || 0, 10)) - 1);
+          await sb.from("profiles").update({ credits_balance: newBalance, credits_reserved: newReserved }).eq("id", buyerId);
+          await sb.from("credit_transactions").insert({
+            user_id: buyerId, order_id: currentOrder.id, type: "debit", amount: -1, balance_after: newBalance
+          });
+        }
+
+        if (sellerId && sellerProfile) {
+          const newBalanceS = Math.max(0, (parseInt(sellerProfile.credits_balance || 0, 10)) - 1);
+          const newReservedS = Math.max(0, (parseInt(sellerProfile.credits_reserved || 0, 10)) - 1);
+          await sb.from("profiles").update({ credits_balance: newBalanceS, credits_reserved: newReservedS }).eq("id", sellerId);
+          await sb.from("credit_transactions").insert({
+            user_id: sellerId, order_id: currentOrder.id, type: "debit", amount: -1, balance_after: newBalanceS
+          });
+        }
+
+        await sb.from("orders").update({ fee_debited_at: new Date().toISOString() }).eq("id", currentOrder.id);
+      } catch (creditErr) {
+        console.error("Erro ao debitar créditos na conclusão:", creditErr);
+      }
+
       // Send auto chat notification message
       await sb.from("chat_messages").insert({
         order_id: currentOrder.id,
