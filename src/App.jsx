@@ -930,14 +930,18 @@ function ClientApp({ user, onLogout }) {
   }
 
   async function handleTransactOrder(orderId) {
-    const availableCreditsSeller = (parseInt(profile?.credits_balance || 0, 10) - parseInt(profile?.credits_reserved || 0, 10));
-    if (availableCreditsSeller < 1) {
+    // NOTA IMPORTANTE: quem clica "Negociar" pode ser tanto o comprador como o
+    // vendedor de USD — depende do lado do pedido original (side: "buy"/"sell").
+    // O débito de crédito acontece para AMBAS as partes assim que o matching
+    // ocorre, independentemente de quem tomou a iniciativa de aceitar o pedido.
+    const availableCreditsPartner = (parseInt(profile?.credits_balance || 0, 10) - parseInt(profile?.credits_reserved || 0, 10));
+    if (availableCreditsPartner < 1) {
       setShowActivationScreen(true);
       return;
     }
     triggerConfirm(
       "Iniciar Negociação P2P",
-      "Confirmas que queres aceitar este pedido P2P e iniciar a correspondência com o comprador? Este passo desconta 1 crédito (500 Kz) da tua carteira — é o que abre o canal de comunicação seguro entre vocês.",
+      "Confirmas que queres aceitar este pedido P2P e iniciar a correspondência com a outra parte? Este passo desconta 1 crédito (500 Kz) da tua carteira — é o que abre o canal de comunicação seguro entre vocês.",
       async () => {
         const { data: orderData, error } = await sb.from("orders").update({
           status: "processing",
@@ -952,38 +956,41 @@ function ClientApp({ user, onLogout }) {
           // O crédito é debitado AQUI, não na criação do pedido nem na conclusão.
           // É neste instante que a Bridge entrega o valor real: liga duas identidades
           // verificadas e abre um canal de comunicação seguro entre elas.
+          // Acontece sempre dos DOIS lados — quem clicou "Negociar" agora (funder_id)
+          // E quem criou o pedido originalmente (user_id) — não importa qual dos
+          // dois é o "comprador" ou "vendedor" de USD nesta transacção específica.
           try {
-            // Débito do vendedor (quem está a aceitar agora)
-            const sellerNewBalance = Math.max(0, (parseInt(profile?.credits_balance || 0, 10)) - 1);
-            await sb.from("profiles").update({ credits_balance: sellerNewBalance }).eq("id", user.id);
-            setProfile(prev => ({ ...prev, credits_balance: sellerNewBalance }));
+            // Débito de quem está a aceitar o pedido agora (clicou "Negociar")
+            const partnerNewBalance = Math.max(0, (parseInt(profile?.credits_balance || 0, 10)) - 1);
+            await sb.from("profiles").update({ credits_balance: partnerNewBalance }).eq("id", user.id);
+            setProfile(prev => ({ ...prev, credits_balance: partnerNewBalance }));
             await sb.from("credit_transactions").insert({
-              user_id: user.id, order_id: orderId, type: "debit_matching", amount: -1, balance_after: sellerNewBalance
+              user_id: user.id, order_id: orderId, type: "debit_matching", amount: -1, balance_after: partnerNewBalance
             });
 
-            // Débito do comprador (dono original do pedido)
+            // Débito de quem criou o pedido originalmente
             if (orderData?.user_id) {
-              const { data: buyerProfile } = await sb.from("profiles")
+              const { data: creatorProfile } = await sb.from("profiles")
                 .select("credits_balance, credits_reserved")
                 .eq("id", orderData.user_id)
                 .maybeSingle();
-              if (buyerProfile) {
-                const buyerAvailable = (parseInt(buyerProfile.credits_balance || 0, 10)) - (parseInt(buyerProfile.credits_reserved || 0, 10));
-                if (buyerAvailable < 1) {
-                  // O comprador ficou sem créditos entre a criação do pedido e agora.
-                  // Não bloqueamos o vendedor — ele já pagou e o canal já abriu — mas
-                  // registamos a situação para o admin acompanhar e avisamos o comprador.
+              if (creatorProfile) {
+                const creatorAvailable = (parseInt(creatorProfile.credits_balance || 0, 10)) - (parseInt(creatorProfile.credits_reserved || 0, 10));
+                if (creatorAvailable < 1) {
+                  // O criador do pedido ficou sem créditos entre a criação e agora.
+                  // Não bloqueamos quem aceitou — já pagou e o canal já abriu — mas
+                  // registamos a situação para o admin acompanhar.
                   await sb.from("admin_alerts").insert({
                     type: "credit_warning",
-                    title: "Comprador sem créditos no matching",
-                    body: `O comprador da transacção ${orderId} ficou sem créditos disponíveis no momento do matching. Pode ser necessário intervir.`,
+                    title: "Criador do pedido sem créditos no matching",
+                    body: `O utilizador que criou a transacção ${orderId} ficou sem créditos disponíveis no momento do matching. Pode ser necessário intervir.`,
                     order_id: orderId
                   });
                 } else {
-                  const buyerNewBalance = Math.max(0, (parseInt(buyerProfile.credits_balance || 0, 10)) - 1);
-                  await sb.from("profiles").update({ credits_balance: buyerNewBalance }).eq("id", orderData.user_id);
+                  const creatorNewBalance = Math.max(0, (parseInt(creatorProfile.credits_balance || 0, 10)) - 1);
+                  await sb.from("profiles").update({ credits_balance: creatorNewBalance }).eq("id", orderData.user_id);
                   await sb.from("credit_transactions").insert({
-                    user_id: orderData.user_id, order_id: orderId, type: "debit_matching", amount: -1, balance_after: buyerNewBalance
+                    user_id: orderData.user_id, order_id: orderId, type: "debit_matching", amount: -1, balance_after: creatorNewBalance
                   });
                 }
               }
