@@ -741,12 +741,9 @@ function ClientApp({ user, onLogout }) {
       return;
     }
 
-    // ── SISTEMA DE CRÉDITOS — 1 crédito = 500 Kz = direito a 1 transacção ──
-    const availableCreditsBuyer = (parseInt(profile?.credits_balance || 0, 10) - parseInt(profile?.credits_reserved || 0, 10));
-    if (availableCreditsBuyer < 1) {
-      setShowActivationScreen(true);
-      return;
-    }
+    // NOTA: criar pedido é GRATUITO — não bloqueia por falta de créditos.
+    // O crédito só é exigido e descontado no momento do matching (handleTransactOrder),
+    // quando o vendedor aceita e o canal de comunicação é aberto entre as partes.
 
     // Verificar suspensão por excesso de cancelamentos (>= 3 cancelamentos nos últimos 30 dias)
     const cancelledCount = parseInt(profile?.cancelled_count || 0, 10);
@@ -847,19 +844,10 @@ function ClientApp({ user, onLogout }) {
       if (error) {
         toast_(error.message, "err");
       } else {
-        // ── Reservar 1 crédito do comprador para esta transacção ──
-        const newReserved = (parseInt(profile?.credits_reserved || 0, 10)) + 1;
-        const { error: reserveErr } = await sb.from("profiles")
-          .update({ credits_reserved: newReserved })
-          .eq("id", user.id);
-        if (!reserveErr) {
-          setProfile(prev => ({ ...prev, credits_reserved: newReserved }));
-          await sb.from("orders").update({ buyer_credit_reserved: true }).eq("id", data.id);
-          await sb.from("credit_transactions").insert({
-            user_id: user.id, order_id: data.id, type: "reserve", amount: -1,
-            balance_after: (parseInt(profile?.credits_balance || 0, 10)) - newReserved
-          });
-        }
+        // Criar pedido é GRATUITO — sem desconto de crédito.
+        // O crédito só é cobrado no momento do matching (ver handleTransactOrder),
+        // porque é aí que a Bridge entrega o serviço real: abre o canal de
+        // comunicação seguro entre as duas partes verificadas.
         setOrder(data); setStep(1);
         toast_("Pedido criado! Admin notificado.");
       }
@@ -887,18 +875,22 @@ function ClientApp({ user, onLogout }) {
         else {
           toast_("Pedido cancelado.");
 
-          // ── Devolver o crédito reservado, caso ainda não tenha sido debitado ──
+          // ── Devolver crédito do comprador, SE o cancelamento acontecer depois do
+          // matching (ou seja, o crédito já foi debitado em handleTransactOrder).
+          // Se o pedido ainda estava só no mercado sem vendedor (awaiting_payment/pending),
+          // nunca houve cobrança — criar pedido continua a ser gratuito.
           const cancelledOrder = orders.find(o => o.id === orderId) || currentOrder;
-          if (cancelledOrder?.buyer_credit_reserved && !cancelledOrder?.fee_debited_at) {
-            const newReservedBack = Math.max(0, (parseInt(profile?.credits_reserved || 0, 10)) - 1);
+          if (cancelledOrder?.fee_debited_at) {
+            const { data: freshProfile } = await sb.from("profiles").select("credits_balance").eq("id", user.id).maybeSingle();
+            const newBalanceBack = (parseInt(freshProfile?.credits_balance || 0, 10)) + 1;
             const { error: refundErr } = await sb.from("profiles")
-              .update({ credits_reserved: newReservedBack })
+              .update({ credits_balance: newBalanceBack })
               .eq("id", user.id);
             if (!refundErr) {
-              setProfile(prev => ({ ...prev, credits_reserved: newReservedBack }));
+              setProfile(prev => ({ ...prev, credits_balance: newBalanceBack }));
               await sb.from("credit_transactions").insert({
-                user_id: user.id, order_id: orderId, type: "refund", amount: 1,
-                balance_after: (parseInt(profile?.credits_balance || 0, 10)) - newReservedBack
+                user_id: user.id, order_id: orderId, type: "refund_cancel", amount: 1,
+                balance_after: newBalanceBack
               });
             }
           }
@@ -945,7 +937,7 @@ function ClientApp({ user, onLogout }) {
     }
     triggerConfirm(
       "Iniciar Negociação P2P",
-      "Confirmas que queres aceitar este pedido P2P e iniciar a correspondência com o comprador?",
+      "Confirmas que queres aceitar este pedido P2P e iniciar a correspondência com o comprador? Este passo desconta 1 crédito (500 Kz) da tua carteira — é o que abre o canal de comunicação seguro entre vocês.",
       async () => {
         const { data: orderData, error } = await sb.from("orders").update({
           status: "processing",
@@ -956,21 +948,57 @@ function ClientApp({ user, onLogout }) {
         if (error) {
           toast_("Erro ao iniciar correspondência: " + error.message, "err");
         } else {
-          toast_("Correspondência iniciada com sucesso!");
-
-          // ── Reservar 1 crédito do vendedor para esta transacção ──
-          const newReservedSeller = (parseInt(profile?.credits_reserved || 0, 10)) + 1;
-          const { error: reserveErr } = await sb.from("profiles")
-            .update({ credits_reserved: newReservedSeller })
-            .eq("id", user.id);
-          if (!reserveErr) {
-            setProfile(prev => ({ ...prev, credits_reserved: newReservedSeller }));
-            await sb.from("orders").update({ seller_credit_reserved: true }).eq("id", orderId);
+          // ── COBRANÇA NO MATCHING — momento em que o serviço é entregue de facto ──
+          // O crédito é debitado AQUI, não na criação do pedido nem na conclusão.
+          // É neste instante que a Bridge entrega o valor real: liga duas identidades
+          // verificadas e abre um canal de comunicação seguro entre elas.
+          try {
+            // Débito do vendedor (quem está a aceitar agora)
+            const sellerNewBalance = Math.max(0, (parseInt(profile?.credits_balance || 0, 10)) - 1);
+            await sb.from("profiles").update({ credits_balance: sellerNewBalance }).eq("id", user.id);
+            setProfile(prev => ({ ...prev, credits_balance: sellerNewBalance }));
             await sb.from("credit_transactions").insert({
-              user_id: user.id, order_id: orderId, type: "reserve", amount: -1,
-              balance_after: (parseInt(profile?.credits_balance || 0, 10)) - newReservedSeller
+              user_id: user.id, order_id: orderId, type: "debit_matching", amount: -1, balance_after: sellerNewBalance
             });
+
+            // Débito do comprador (dono original do pedido)
+            if (orderData?.user_id) {
+              const { data: buyerProfile } = await sb.from("profiles")
+                .select("credits_balance, credits_reserved")
+                .eq("id", orderData.user_id)
+                .maybeSingle();
+              if (buyerProfile) {
+                const buyerAvailable = (parseInt(buyerProfile.credits_balance || 0, 10)) - (parseInt(buyerProfile.credits_reserved || 0, 10));
+                if (buyerAvailable < 1) {
+                  // O comprador ficou sem créditos entre a criação do pedido e agora.
+                  // Não bloqueamos o vendedor — ele já pagou e o canal já abriu — mas
+                  // registamos a situação para o admin acompanhar e avisamos o comprador.
+                  await sb.from("admin_alerts").insert({
+                    type: "credit_warning",
+                    title: "Comprador sem créditos no matching",
+                    body: `O comprador da transacção ${orderId} ficou sem créditos disponíveis no momento do matching. Pode ser necessário intervir.`,
+                    order_id: orderId
+                  });
+                } else {
+                  const buyerNewBalance = Math.max(0, (parseInt(buyerProfile.credits_balance || 0, 10)) - 1);
+                  await sb.from("profiles").update({ credits_balance: buyerNewBalance }).eq("id", orderData.user_id);
+                  await sb.from("credit_transactions").insert({
+                    user_id: orderData.user_id, order_id: orderId, type: "debit_matching", amount: -1, balance_after: buyerNewBalance
+                  });
+                }
+              }
+            }
+
+            await sb.from("orders").update({
+              buyer_credit_reserved: true,
+              seller_credit_reserved: true,
+              fee_debited_at: new Date().toISOString()
+            }).eq("id", orderId);
+          } catch (creditErr) {
+            console.error("Erro ao debitar créditos no matching:", creditErr);
           }
+
+          toast_("Correspondência iniciada — canal de chat desbloqueado!");
 
           if (orderData) {
             await sb.from("chat_messages").insert({
@@ -1654,7 +1682,8 @@ function ClientApp({ user, onLogout }) {
           Tens {userCredits} {userCredits === 1 ? "crédito" : "créditos"} disponíveis
         </div>
         <p style={{ fontSize: 12, color: "#6b7280", lineHeight: 1.6, marginBottom: 20, fontWeight: 500 }}>
-          Cada crédito custa 500 Kz e dá direito a 1 transacção completa — sem subscrição, sem mensalidade.
+          Criar um pedido é sempre grátis. O crédito (500 Kz) só é descontado quando encontras um
+          parceiro e o canal de chat seguro é aberto — sem subscrição, sem mensalidade.
           Recarrega uma vez e usa os créditos quando quiseres.
         </p>
 
@@ -1768,7 +1797,7 @@ function ClientApp({ user, onLogout }) {
         </button>
 
         <div style={{ fontSize: 10, color: "#94a3b8", fontWeight: 700, marginTop: 10 }}>
-          Nota: 1 crédito = 500 Kz = direito a 1 transacção completa. Sem expiração, sem mensalidade.
+          Nota: 1 crédito = 500 Kz, descontado apenas no momento do matching com um parceiro. Sem expiração, sem mensalidade.
         </div>
       </div>
     );
@@ -1891,8 +1920,6 @@ function ClientApp({ user, onLogout }) {
             onClick={() => {
               if (!isKycComplete) {
                 setShowKycTrigger(true);
-              } else if (!hasActiveAccess) {
-                setShowActivationScreen(true);
               } else {
                 resetFlow();
                 setShowCalculator(true);
@@ -2481,8 +2508,6 @@ function ClientApp({ user, onLogout }) {
                                          kycRecord?.liveness_status === "passed");
                       if (!isKycComp) {
                         setShowKycTrigger(true);
-                      } else if (!hasActiveAccess) {
-                        setShowActivationScreen(true);
                       } else {
                         resetFlow();
                         setShowCalculator(true);
