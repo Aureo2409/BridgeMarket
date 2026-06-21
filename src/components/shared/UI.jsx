@@ -76,7 +76,7 @@ export function StatusPill({ status }) {
   );
 }
 
-export function Header({ appliedRate, rateAnim, onOrdersClick, showOrders, user, onLogout, onProfileClick, showProfile, avatarUrl }) {
+export function Header({ appliedRate, rateAnim, onOrdersClick, showOrders, user, onLogout, onProfileClick, showProfile, avatarUrl, creditsBalance, onCreditsClick }) {
   return (
     <div className="hdr" style={{ position: "sticky", top: 0, zIndex: 1000 }}>
       <div className="logo">
@@ -102,6 +102,24 @@ export function Header({ appliedRate, rateAnim, onOrdersClick, showOrders, user,
         </div>
         {user && (
           <>
+            {typeof creditsBalance === "number" && (
+              <button
+                className="btn-g"
+                onClick={onCreditsClick}
+                title="A Minha Carteira de Créditos"
+                style={{
+                  display: "flex", alignItems: "center", gap: 5,
+                  height: 30, padding: "0 10px", borderRadius: 8,
+                  background: creditsBalance > 0 ? "rgba(16,185,129,0.1)" : "rgba(239,68,68,0.08)",
+                  border: "none", cursor: "pointer", transition: "all 0.2s"
+                }}
+              >
+                <Icon name="creditCard" size={13} color={creditsBalance > 0 ? "#059669" : "#dc2626"} />
+                <span style={{ fontSize: 12, fontWeight: 800, color: creditsBalance > 0 ? "#059669" : "#dc2626" }}>
+                  {creditsBalance}
+                </span>
+              </button>
+            )}
             <button className="btn-g" onClick={onOrdersClick} title="Os Meus Pedidos" style={{ display: "flex", alignItems: "center", justifyContent: "center", width: 30, height: 30, borderRadius: 8, background: showOrders && !showProfile ? "rgba(99,102,241,0.12)" : "rgba(99,102,241,0.06)", border: "none", color: "#6366f1", cursor: "pointer", transition: "all 0.2s" }}>
               <Icon name="list" size={14} />
             </button>

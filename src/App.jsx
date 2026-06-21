@@ -2137,7 +2137,9 @@ function ClientApp({ user, onLogout }) {
           showOrders={showOrders} showProfile={showProfile}
           onOrdersClick={handleOrdersClick}
           onProfileClick={handleProfileClick}
-          avatarUrl={profile?.avatar_url} />
+          avatarUrl={profile?.avatar_url}
+          creditsBalance={Math.max(0, (parseInt(profile?.credits_balance || 0, 10)) - (parseInt(profile?.credits_reserved || 0, 10)))}
+          onCreditsClick={() => setShowActivationScreen(true)} />
         <KycOnboarding user={user} currentStep={kycStep} kycRecord={kycRecord} onLogout={onLogout} onBack={() => setShowKycTrigger(false)} />
       </div>
     );
@@ -2268,7 +2270,9 @@ function ClientApp({ user, onLogout }) {
           showOrders={showOrders} showProfile={showProfile}
           onOrdersClick={handleOrdersClick}
           onProfileClick={handleProfileClick}
-          avatarUrl={profile?.avatar_url} />
+          avatarUrl={profile?.avatar_url}
+          creditsBalance={Math.max(0, (parseInt(profile?.credits_balance || 0, 10)) - (parseInt(profile?.credits_reserved || 0, 10)))}
+          onCreditsClick={() => setShowActivationScreen(true)} />
         
         <div style={{ flex: 1, display: "flex", flexDirection: "column", justifyContent: "center", padding: "24px 20px" }}>
           {renderActivationCard()}
@@ -2287,7 +2291,9 @@ function ClientApp({ user, onLogout }) {
         showOrders={showOrders} showProfile={showProfile}
         onOrdersClick={handleOrdersClick}
         onProfileClick={handleProfileClick}
-        avatarUrl={profile?.avatar_url} />
+        avatarUrl={profile?.avatar_url}
+        creditsBalance={Math.max(0, (parseInt(profile?.credits_balance || 0, 10)) - (parseInt(profile?.credits_reserved || 0, 10)))}
+        onCreditsClick={() => setShowActivationScreen(true)} />
 
       <div className="pg" style={{ flex: 1, overflowY: "auto" }}>
         {activeTab === "perfil" ? (
