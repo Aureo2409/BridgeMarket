@@ -2093,11 +2093,6 @@ function ClientApp({ user, onLogout }) {
             </div>
             
             <div className="topbar-right">
-              <div className="rate-chip" style={{ marginRight: 8 }}>
-                <div className="live-dot" />
-                {parseFloat(applied).toLocaleString("pt-AO")} Kz/$
-              </div>
-              
               <button
                 className="notification-bell"
                 onClick={() => toast_("Não tem novas notificações", "ok")}

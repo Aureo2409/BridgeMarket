@@ -46,7 +46,10 @@ function BiometricCapture({ orderId, orderRef, amountUsd, currentUserId, onCaptu
   function startRecording() {
     if (!stream) return;
     chunksRef.current = [];
-    const mediaRecorder = new MediaRecorder(stream, { mimeType: "video/webm" });
+    const mediaRecorder = new MediaRecorder(stream, { 
+      mimeType: "video/webm",
+      videoBitsPerSecond: 250000
+    });
     mediaRecorderRef.current = mediaRecorder;
 
     mediaRecorder.ondataavailable = (e) => {

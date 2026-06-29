@@ -96,10 +96,6 @@ export function Header({ appliedRate, rateAnim, onOrdersClick, showOrders, user,
         </div>
       </div>
       <div style={{ display: "flex", alignItems: "center", gap: 7 }}>
-        <div className="rate-chip">
-          <div className="live-dot" />
-          {parseFloat(appliedRate).toLocaleString("pt-AO")} Kz/$
-        </div>
         {user && (
           <>
             {typeof creditsBalance === "number" && (
