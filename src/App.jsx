@@ -93,7 +93,7 @@ function AuthScreen() {
       <div className="blob b1" /><div className="blob b2" />
       <div style={{ position: "relative", zIndex: 2, padding: "44px 22px" }}>
         <div style={{ textAlign: "center", marginBottom: 28 }}>
-          <img src="/logo.jpg" alt="Logo" style={{ width: 62, height: 62, borderRadius: 18, margin: "0 auto 12px", display: "block", boxShadow: "0 10px 28px rgba(99,102,241,.15)", objectFit: "cover" }} />
+          <img src="/logo.svg" alt="Logo" style={{ width: 68, height: 68, margin: "0 auto 12px", display: "block", objectFit: "contain" }} />
           <div style={{ fontSize: 24, fontWeight: 900, color: "#1e1b4b", letterSpacing: -1 }}>Bridge</div>
           <div style={{ fontSize: 12, color: "#6b7280", fontWeight: 600, marginTop: 3 }}>MarketPlace de Câmbio Angola</div>
         </div>
@@ -2016,7 +2016,7 @@ function ClientApp({ user, onLogout }) {
         {/* Left Sidebar */}
         <div className="sidebar">
           <div className="sidebar-logo">
-            <img src="/logo.jpg" alt="Logo" className="logo-mark" style={{ objectFit: "cover" }} />
+            <img src="/logo.svg" alt="Logo" className="logo-mark" style={{ objectFit: "contain", background: "none", boxShadow: "none" }} />
             <div>
               <div className="logo-text">Bridge</div>
               <div className="logo-sub">Câmbio Angola</div>

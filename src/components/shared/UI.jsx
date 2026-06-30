@@ -80,7 +80,7 @@ export function Header({ appliedRate, rateAnim, onOrdersClick, showOrders, user,
   return (
     <div className="hdr" style={{ position: "sticky", top: 0, zIndex: 1000 }}>
       <div className="logo">
-        <img src="/logo.jpg" alt="Logo" className="logo-mark" style={{ objectFit: "cover" }} />
+        <img src="/logo.svg" alt="Logo" className="logo-mark" style={{ objectFit: "contain", background: "none", boxShadow: "none" }} />
         <div>
           <div className="logo-text">Bridge</div>
           <div className="logo-sub">Câmbio Angola</div>
