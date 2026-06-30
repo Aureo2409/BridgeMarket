@@ -93,18 +93,9 @@ function AuthScreen() {
       <div className="blob b1" /><div className="blob b2" />
       <div style={{ position: "relative", zIndex: 2, padding: "44px 22px" }}>
         <div style={{ textAlign: "center", marginBottom: 28 }}>
-          <div style={{ width: 62, height: 62, borderRadius: 18, background: "linear-gradient(135deg,#6366f1,#8b5cf6)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 12px", boxShadow: "0 10px 28px rgba(99,102,241,.45)" }}>
-            <svg viewBox="185 -45 500 500" width="34" height="34">
-              <path d="M 230,300 C 230,170 310,120 375,120 C 420,120 445,160 445,210" fill="none" stroke="#fff" strokeWidth="36" strokeLinecap="butt" strokeLinejoin="round" />
-              <path d="M 425,210 C 425,160 450,120 495,120 C 560,120 640,170 640,300" fill="none" stroke="#fff" strokeWidth="36" strokeLinecap="butt" strokeLinejoin="round" />
-              <path d="M 375,120 C 375,170 350,260 350,300" fill="none" stroke="#fff" strokeWidth="36" strokeLinecap="butt" strokeLinejoin="round" />
-              <path d="M 362,210 C 390,190 410,165 445,150" fill="none" stroke="#fff" strokeWidth="36" strokeLinecap="butt" strokeLinejoin="round" />
-              <path d="M 362,210 C 390,230 435,260 490,300" fill="none" stroke="#fff" strokeWidth="36" strokeLinecap="round" strokeLinejoin="round" />
-              <path d="M 200,210 L 670,210" fill="none" stroke="#fff" strokeWidth="36" strokeLinecap="butt" strokeLinejoin="round" />
-            </svg>
-          </div>
+          <img src="/logo.jpg" alt="Logo" style={{ width: 62, height: 62, borderRadius: 18, margin: "0 auto 12px", display: "block", boxShadow: "0 10px 28px rgba(99,102,241,.15)", objectFit: "cover" }} />
           <div style={{ fontSize: 24, fontWeight: 900, color: "#1e1b4b", letterSpacing: -1 }}>Bridge</div>
-          <div style={{ fontSize: 12, color: "#6b7280", fontWeight: 600, marginTop: 3 }}>Marketplace AOA/USD · Angola</div>
+          <div style={{ fontSize: 12, color: "#6b7280", fontWeight: 600, marginTop: 3 }}>MarketPlace de Câmbio Angola</div>
         </div>
 
         <div className="card" style={{ background: "rgba(255,255,255,.96)" }}>
@@ -2025,19 +2016,10 @@ function ClientApp({ user, onLogout }) {
         {/* Left Sidebar */}
         <div className="sidebar">
           <div className="sidebar-logo">
-            <div className="logo-mark">
-              <svg viewBox="185 -45 500 500" width="18" height="18">
-                <path d="M 230,300 C 230,170 310,120 375,120 C 420,120 445,160 445,210" fill="none" stroke="#fff" strokeWidth="36" strokeLinecap="butt" strokeLinejoin="round" />
-                <path d="M 425,210 C 425,160 450,120 495,120 C 560,120 640,170 640,300" fill="none" stroke="#fff" strokeWidth="36" strokeLinecap="butt" strokeLinejoin="round" />
-                <path d="M 375,120 C 375,170 350,260 350,300" fill="none" stroke="#fff" strokeWidth="36" strokeLinecap="butt" strokeLinejoin="round" />
-                <path d="M 362,210 C 390,190 410,165 445,150" fill="none" stroke="#fff" strokeWidth="36" strokeLinecap="butt" strokeLinejoin="round" />
-                <path d="M 362,210 C 390,230 435,260 490,300" fill="none" stroke="#fff" strokeWidth="36" strokeLinecap="round" strokeLinejoin="round" />
-                <path d="M 200,210 L 670,210" fill="none" stroke="#fff" strokeWidth="36" strokeLinecap="butt" strokeLinejoin="round" />
-              </svg>
-            </div>
+            <img src="/logo.jpg" alt="Logo" className="logo-mark" style={{ objectFit: "cover" }} />
             <div>
               <div className="logo-text">Bridge</div>
-              <div className="logo-sub">AOA / USD</div>
+              <div className="logo-sub">Câmbio Angola</div>
             </div>
           </div>
           
