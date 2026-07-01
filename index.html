@@ -1,1 +1,35 @@
-<!doctype html><html lang="pt"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1.0"/><link rel="icon" type="image/svg+xml" href="/favicon.svg" /><title>Bridge Marketplace — AOA/USD</title></head><body><div id="root"></div><script type="module" src="/src/main.jsx"></script></body></html>
+<!doctype html><html lang="pt"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1.0,viewport-fit=cover"/>
+
+<!-- PWA — manifest e tema -->
+<link rel="manifest" href="/manifest.json"/>
+<meta name="theme-color" content="#4a3296"/>
+<meta name="background-color" content="#fbf8f3"/>
+
+<!-- Ícones -->
+<link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+<link rel="icon" type="image/png" sizes="192x192" href="/icons/icon-192.png"/>
+<link rel="icon" type="image/png" sizes="512x512" href="/icons/icon-512.png"/>
+<link rel="apple-touch-icon" href="/icons/apple-touch-icon.png"/>
+
+<!-- iOS: comportamento de app instalada (Adicionar ao ecrã principal) -->
+<meta name="apple-mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-status-bar-style" content="default"/>
+<meta name="apple-mobile-web-app-title" content="Bridge"/>
+
+<!-- Android/Chrome: comportamento de app instalada -->
+<meta name="mobile-web-app-capable" content="yes"/>
+
+<title>Bridge Marketplace — AOA/USD</title>
+</head><body><div id="root"></div><script type="module" src="/src/main.jsx"></script>
+<script>
+  // Regista o service worker apenas em produção (build), para não
+  // interferir com o hot-reload durante o desenvolvimento local.
+  if ("serviceWorker" in navigator && location.hostname !== "localhost") {
+    window.addEventListener("load", () => {
+      navigator.serviceWorker.register("/sw.js").catch((err) => {
+        console.warn("Falha ao registar o service worker:", err);
+      });
+    });
+  }
+</script>
+</body></html>
