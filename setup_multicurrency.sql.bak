@@ -1,0 +1,46 @@
+-- ─────────────────────────────────────────────────────────────────────────────
+-- Bridge Marketplace — Script de Suporte Multi-Moedas & Chaves de Pagamento (DICT)
+-- Executar no Supabase Dashboard → SQL Editor ou via aplicação de migração
+-- ─────────────────────────────────────────────────────────────────────────────
+
+-- 1. Adicionar coluna 'currency' às ordens e taxas de câmbio
+ALTER TABLE public.orders
+  ADD COLUMN IF NOT EXISTS currency TEXT DEFAULT 'USD';
+
+ALTER TABLE public.exchange_rates
+  ADD COLUMN IF NOT EXISTS currency TEXT DEFAULT 'USD';
+
+-- Índices para otimização de busca por moeda
+CREATE INDEX IF NOT EXISTS idx_orders_currency ON public.orders (currency);
+CREATE INDEX IF NOT EXISTS idx_exchange_rates_currency ON public.exchange_rates (currency, fetched_at DESC);
+
+-- 2. Tabela de Chaves de Pagamento (DICT)
+CREATE TABLE IF NOT EXISTS public.payment_keys (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
+    key_type TEXT NOT NULL,          -- 'pix', 'mbway', 'iban', 'phone', 'email'
+    key_value TEXT NOT NULL UNIQUE,  -- Chave (CPF, Email, Telemóvel)
+    bank_name TEXT NOT NULL,         -- Nome do Banco (ex: BAI, BFA, Millenium, Nubank)
+    iban TEXT NOT NULL,              -- IBAN, Número de Conta ou Telemóvel do MB WAY
+    account_holder_name TEXT NOT NULL,
+    fraud_flagged BOOLEAN DEFAULT false, -- Identificação de contas laranjas/burla
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Índices rápidos de lookup do DICT
+CREATE INDEX IF NOT EXISTS idx_payment_keys_lookup ON public.payment_keys (key_value) WHERE fraud_flagged = false;
+CREATE INDEX IF NOT EXISTS idx_payment_keys_user ON public.payment_keys (user_id);
+
+-- 3. Configurar Row Level Security (RLS) para payment_keys
+ALTER TABLE public.payment_keys ENABLE ROW LEVEL SECURITY;
+
+-- Política: Qualquer utilizador autenticado pode ler chaves para transferir
+DROP POLICY IF EXISTS "Permitir leitura de chaves por autenticados" ON public.payment_keys;
+CREATE POLICY "Permitir leitura de chaves por autenticados" ON public.payment_keys
+  FOR SELECT TO authenticated USING (true);
+
+-- Política: Um utilizador só pode gerir/inserir as suas próprias chaves
+DROP POLICY IF EXISTS "Permitir controle total de chaves pelo dono" ON public.payment_keys;
+CREATE POLICY "Permitir controle total de chaves pelo dono" ON public.payment_keys
+  FOR ALL TO authenticated USING (user_id = auth.uid()) WITH CHECK (user_id = auth.uid());

@@ -97,7 +97,7 @@ function AuthScreen() {
             <img src="/logo.svg" alt="Bridge — Angola" style={{ width: "100%", height: "100%", objectFit: "contain" }} />
           </div>
           <div style={{ fontSize: 24, fontWeight: 900, color: "#1e1b4b", letterSpacing: -1 }}>Bridge</div>
-          <div style={{ fontSize: 12, color: "#6b7280", fontWeight: 600, marginTop: 3 }}>Marketplace AOA/USD · Angola</div>
+          <div style={{ fontSize: 12, color: "#6b7280", fontWeight: 600, marginTop: 3 }}>MarketPlace de Câmbio Angola</div>
         </div>
 
         <div className="card" style={{ background: "rgba(255,255,255,.96)" }}>
@@ -2018,19 +2018,10 @@ function ClientApp({ user, onLogout }) {
         {/* Left Sidebar */}
         <div className="sidebar">
           <div className="sidebar-logo">
-            <div className="logo-mark">
-              <svg viewBox="185 -45 500 500" width="18" height="18">
-                <path d="M 230,300 C 230,170 310,120 375,120 C 420,120 445,160 445,210" fill="none" stroke="#fff" strokeWidth="36" strokeLinecap="butt" strokeLinejoin="round" />
-                <path d="M 425,210 C 425,160 450,120 495,120 C 560,120 640,170 640,300" fill="none" stroke="#fff" strokeWidth="36" strokeLinecap="butt" strokeLinejoin="round" />
-                <path d="M 375,120 C 375,170 350,260 350,300" fill="none" stroke="#fff" strokeWidth="36" strokeLinecap="butt" strokeLinejoin="round" />
-                <path d="M 362,210 C 390,190 410,165 445,150" fill="none" stroke="#fff" strokeWidth="36" strokeLinecap="butt" strokeLinejoin="round" />
-                <path d="M 362,210 C 390,230 435,260 490,300" fill="none" stroke="#fff" strokeWidth="36" strokeLinecap="round" strokeLinejoin="round" />
-                <path d="M 200,210 L 670,210" fill="none" stroke="#fff" strokeWidth="36" strokeLinecap="butt" strokeLinejoin="round" />
-              </svg>
-            </div>
+            <img src="/logo.svg" alt="Logo" className="logo-mark" style={{ objectFit: "contain", background: "none", boxShadow: "none" }} />
             <div>
               <div className="logo-text">Bridge</div>
-              <div className="logo-sub">AOA / USD</div>
+              <div className="logo-sub">Câmbio Angola</div>
             </div>
           </div>
           
@@ -2086,11 +2077,6 @@ function ClientApp({ user, onLogout }) {
             </div>
             
             <div className="topbar-right">
-              <div className="rate-chip" style={{ marginRight: 8 }}>
-                <div className="live-dot" />
-                {parseFloat(applied).toLocaleString("pt-AO")} Kz/$
-              </div>
-              
               <button
                 className="notification-bell"
                 onClick={() => toast_("Não tem novas notificações", "ok")}
