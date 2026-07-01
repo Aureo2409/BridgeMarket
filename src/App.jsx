@@ -7,6 +7,7 @@ import { ProofUpload } from "./components/client/ProofUpload.jsx";
 import { OrderList } from "./components/client/OrderList.jsx";
 import { TransactionCenter } from "./components/client/TransactionCenter.jsx";
 import { AdminPanel } from "./components/admin/AdminPanel.jsx";
+import { UserManual } from "./components/shared/UserManual.jsx";
 
 const API_URL = import.meta.env.VITE_API_URL || window.location.origin;
 
@@ -496,6 +497,8 @@ function ClientApp({ user, onLogout }) {
   const [isEditingProfile, setIsEditingProfile] = useState(false);
   const [destCurrencyFilter, setDestCurrencyFilter] = useState("ALL");
   const [showKycTrigger, setShowKycTrigger] = useState(false);
+  const [showManual, setShowManual] = useState(false);
+  const [manualAutoShown, setManualAutoShown] = useState(false);
   const [newPwd, setNewPwd] = useState("");
   const [pwdLoad, setPwdLoad] = useState(false);
   const [profile, setProfile] = useState(() => {
@@ -565,7 +568,7 @@ function ClientApp({ user, onLogout }) {
       localStorage.setItem("bridge_config", JSON.stringify(c));
     }).catch(() => { });
 
-    sb.from("profiles").select("full_name, phone, date_of_birth, nationality, whatsapp, address, kyc_status, avatar_url, payment_destinations, cancelled_count, last_cancelled_at, credits_balance, credits_reserved, total_spent_kz").eq("id", user.id).maybeSingle().then(({ data }) => {
+    sb.from("profiles").select("full_name, phone, date_of_birth, nationality, whatsapp, address, kyc_status, avatar_url, payment_destinations, cancelled_count, last_cancelled_at, credits_balance, credits_reserved, total_spent_kz, manual_seen_at").eq("id", user.id).maybeSingle().then(({ data }) => {
       if (data) {
         const p = {
           full_name: data.full_name || "",
@@ -581,10 +584,20 @@ function ClientApp({ user, onLogout }) {
           last_cancelled_at: data.last_cancelled_at || null,
           credits_balance: data.credits_balance || 0,
           credits_reserved: data.credits_reserved || 0,
-          total_spent_kz: data.total_spent_kz || 0
+          total_spent_kz: data.total_spent_kz || 0,
+          manual_seen_at: data.manual_seen_at || null
         };
         setProfile(p);
         localStorage.setItem("bridge_profile", JSON.stringify(p));
+
+        // ── Mostrar o Manual automaticamente na primeira vez do utilizador ──
+        // manual_seen_at é NULL apenas antes de ele ver o manual pela primeira
+        // vez; depois disso fica sempre acessível pelo botão de Ajuda, mas
+        // não volta a aparecer sozinho.
+        if (!data.manual_seen_at && !manualAutoShown) {
+          setManualAutoShown(true);
+          setShowManual(true);
+        }
       }
     }).catch(() => { });
 
@@ -2152,7 +2165,8 @@ function ClientApp({ user, onLogout }) {
           onProfileClick={handleProfileClick}
           avatarUrl={profile?.avatar_url}
           creditsBalance={Math.max(0, (parseInt(profile?.credits_balance || 0, 10)) - (parseInt(profile?.credits_reserved || 0, 10)))}
-          onCreditsClick={() => setShowActivationScreen(true)} />
+          onCreditsClick={() => setShowActivationScreen(true)}
+          onHelpClick={() => setShowManual(true)} />
         <KycOnboarding user={user} currentStep={kycStep} kycRecord={kycRecord} onLogout={onLogout} onBack={() => setShowKycTrigger(false)} />
       </div>
     );
@@ -2285,7 +2299,8 @@ function ClientApp({ user, onLogout }) {
           onProfileClick={handleProfileClick}
           avatarUrl={profile?.avatar_url}
           creditsBalance={Math.max(0, (parseInt(profile?.credits_balance || 0, 10)) - (parseInt(profile?.credits_reserved || 0, 10)))}
-          onCreditsClick={() => setShowActivationScreen(true)} />
+          onCreditsClick={() => setShowActivationScreen(true)}
+          onHelpClick={() => setShowManual(true)} />
         
         <div style={{ flex: 1, display: "flex", flexDirection: "column", justifyContent: "center", padding: "24px 20px" }}>
           {renderActivationCard()}
@@ -2306,7 +2321,8 @@ function ClientApp({ user, onLogout }) {
         onProfileClick={handleProfileClick}
         avatarUrl={profile?.avatar_url}
         creditsBalance={Math.max(0, (parseInt(profile?.credits_balance || 0, 10)) - (parseInt(profile?.credits_reserved || 0, 10)))}
-        onCreditsClick={() => setShowActivationScreen(true)} />
+        onCreditsClick={() => setShowActivationScreen(true)}
+        onHelpClick={() => setShowManual(true)} />
 
       <div className="pg" style={{ flex: 1, overflowY: "auto" }}>
         {activeTab === "perfil" ? (
@@ -2583,6 +2599,10 @@ function ClientApp({ user, onLogout }) {
         onConfirm={confirmState.onConfirm}
         onCancel={confirmState.onCancel}
       />
+
+      {showManual && (
+        <UserManual onClose={handleCloseManual} onDownloadPdf={handleDownloadManualPdf} />
+      )}
     </div>
   );
 }
@@ -2656,6 +2676,31 @@ export default function App() {
     });
     return () => subscription.unsubscribe();
   }, []);
+
+  async function handleCloseManual() {
+    setShowManual(false);
+    // Marca como visto apenas se ainda não estava marcado — evita escritas
+    // desnecessárias no Supabase de cada vez que o utilizador reabre o manual
+    // pelo botão de Ajuda depois da primeira vez.
+    if (!profile?.manual_seen_at && user?.id) {
+      const nowIso = new Date().toISOString();
+      const { error } = await sb.from("profiles").update({ manual_seen_at: nowIso }).eq("id", user.id);
+      if (!error) {
+        setProfile(prev => ({ ...prev, manual_seen_at: nowIso }));
+      }
+    }
+  }
+
+  function handleDownloadManualPdf() {
+    // O PDF do manual está disponível como ficheiro estático em /manual/,
+    // servido directamente pelo Vercel a partir da pasta public/.
+    const link = document.createElement("a");
+    link.href = "/manual/bridge_manual_utilizador.pdf";
+    link.download = "Bridge-Manual-do-Utilizador.pdf";
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  }
 
   async function handleLogout() {
     try {

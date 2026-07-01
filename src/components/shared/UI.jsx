@@ -24,6 +24,7 @@ export function Icon({ name, size = 16, color = "currentColor", className, style
     shield: <><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" /></>,
     creditCard: <><rect x="1" y="4" width="22" height="16" rx="2" ry="2" /><line x1="1" y1="10" x2="23" y2="10" /></>,
     x: <><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></>,
+    helpCircle: <><circle cx="12" cy="12" r="10" /><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3" /><line x1="12" y1="17" x2="12.01" y2="17" /></>,
     bell: <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9 M13.73 21a2 2 0 0 1-3.46 0" />,
     bellOff: <><path d="M13.73 21a2 2 0 0 1-3.46 0" /><path d="M18.63 13A17.89 17.89 0 0 1 18 8" /><path d="M6.26 6.26A5.86 5.86 0 0 0 6 8c0 7-3 9-3 9h14" /><path d="M18 8a6 6 0 0 0-9.33-5" /><line x1="1" y1="1" x2="23" y2="23" /></>,
     ban: <><circle cx="12" cy="12" r="10" /><line x1="4.93" y1="4.93" x2="19.07" y2="19.07" /></>,
@@ -77,7 +78,7 @@ export function StatusPill({ status }) {
   );
 }
 
-export function Header({ appliedRate, rateAnim, onOrdersClick, showOrders, user, onLogout, onProfileClick, showProfile, avatarUrl, creditsBalance, onCreditsClick }) {
+export function Header({ appliedRate, rateAnim, onOrdersClick, showOrders, user, onLogout, onProfileClick, showProfile, avatarUrl, creditsBalance, onCreditsClick, onHelpClick }) {
   return (
     <div className="hdr" style={{ position: "sticky", top: 0, zIndex: 1000 }}>
       <div className="logo">
@@ -90,6 +91,21 @@ export function Header({ appliedRate, rateAnim, onOrdersClick, showOrders, user,
       <div style={{ display: "flex", alignItems: "center", gap: 7 }}>
         {user && (
           <>
+            {onHelpClick && (
+              <button
+                className="btn-g"
+                onClick={onHelpClick}
+                title="Manual do Utilizador"
+                style={{
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                  width: 30, height: 30, borderRadius: 8,
+                  background: "rgba(99,102,241,0.06)", border: "none",
+                  color: "#6366f1", cursor: "pointer", transition: "all 0.2s"
+                }}
+              >
+                <Icon name="helpCircle" size={15} />
+              </button>
+            )}
             {typeof creditsBalance === "number" && (
               <button
                 className="btn-g"
