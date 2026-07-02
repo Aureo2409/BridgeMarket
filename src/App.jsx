@@ -2092,6 +2092,15 @@ function ClientApp({ user, onLogout }) {
             <div className="topbar-right">
               <button
                 className="notification-bell"
+                onClick={() => setShowManual(true)}
+                title="Manual do Utilizador"
+                style={{ marginRight: 4 }}
+              >
+                <Icon name="helpCircle" size={20} />
+              </button>
+
+              <button
+                className="notification-bell"
                 onClick={() => toast_("Não tem novas notificações", "ok")}
                 title="Notificações"
               >

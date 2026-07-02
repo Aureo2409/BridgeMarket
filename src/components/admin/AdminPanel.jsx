@@ -302,14 +302,18 @@ export function AdminPanel({ user, onLogout }) {
     const margin = parseFloat(newMargin) || parseFloat(rate.margin);
     if (!base || base <= 0) { toast_("Taxa inválida", "err"); return; }
     setRL(true);
-    // Herdar as taxas multi-moeda actuais (EUR/BRL/ZAR) para a nova linha,
-    // caso contrário ficam a zero até o bot sincronizar de novo (até 1h de atraso)
+    // Buscar a linha mais recente directamente da BD (não confiar apenas no
+    // estado local 'rate'), para herdar as taxas EUR/BRL/ZAR mais actuais
+    // possíveis e nunca reverter uma publicação recente de outra moeda.
+    const { data: freshRate } = await sb.from("exchange_rates")
+      .select("*").order("fetched_at", { ascending: false }).limit(1).maybeSingle();
+    const current = freshRate || rate;
     const { error } = await sb.from("exchange_rates").insert({
       base_rate: base, margin, source: "manual",
-      eur_rate: rate.eur_rate || null,
-      brl_rate: rate.brl_rate || null,
-      zar_rate: rate.zar_rate || null,
-      last_auto_sync: rate.last_auto_sync || null,
+      eur_rate: current.eur_rate || null,
+      brl_rate: current.brl_rate || null,
+      zar_rate: current.zar_rate || null,
+      last_auto_sync: current.last_auto_sync || null,
     });
     setRL(false);
     if (error) { toast_(error.message, "err"); return; }
@@ -793,12 +797,22 @@ export function AdminPanel({ user, onLogout }) {
                       const newMarginVal = parseFloat(draft.margin) || 0;
                       if (!newBaseVal || newBaseVal <= 0) { toast_(`Define uma base válida para ${cur.id}`, "err"); return; }
                       const finalValue = newBaseVal + newMarginVal;
+
+                      // Buscar a linha mais recente DIRECTAMENTE da base de dados antes
+                      // de publicar — não confiar no estado local 'rate', que pode estar
+                      // desactualizado se outra moeda tiver sido publicada há poucos
+                      // segundos e o realtime ainda não tiver reflectido essa alteração
+                      // aqui no browser (isto evita reverter valores de outras moedas).
+                      const { data: freshRate } = await sb.from("exchange_rates")
+                        .select("*").order("fetched_at", { ascending: false }).limit(1).maybeSingle();
+                      const base = freshRate || rate;
+
                       const { error } = await sb.from("exchange_rates").insert({
-                        base_rate: rate.base_rate, margin: rate.margin, source: `manual_${cur.id.toLowerCase()}`,
-                        eur_rate: cur.id === "EUR" ? finalValue : rate.eur_rate,
-                        brl_rate: cur.id === "BRL" ? finalValue : rate.brl_rate,
-                        zar_rate: cur.id === "ZAR" ? finalValue : rate.zar_rate,
-                        last_auto_sync: rate.last_auto_sync || null,
+                        base_rate: base.base_rate, margin: base.margin, source: `manual_${cur.id.toLowerCase()}`,
+                        eur_rate: cur.id === "EUR" ? finalValue : base.eur_rate,
+                        brl_rate: cur.id === "BRL" ? finalValue : base.brl_rate,
+                        zar_rate: cur.id === "ZAR" ? finalValue : base.zar_rate,
+                        last_auto_sync: base.last_auto_sync || null,
                       });
                       if (error) { toast_("Erro: " + error.message, "err"); return; }
                       toast_(`Câmbio ${cur.id} publicado — propaga em realtime`, "ok");

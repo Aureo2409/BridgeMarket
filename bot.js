@@ -522,8 +522,30 @@ supabase.from('exchange_rates')
 // ── MOTOR CAMBIAL AUTOMÁTICO — sincronização cruzada via open.er-api.com ─────
 async function syncCrossRates() {
     try {
-        const aoaRate = currentRates.USD;
+        // CORREÇÃO CRÍTICA: reler sempre a taxa USD mais recente da base de
+        // dados, em vez de usar currentRates.USD (que só era definido uma vez
+        // no arranque do bot e nunca mais actualizado). Sem isto, se o admin
+        // publicasse uma nova taxa USD manualmente, o bot continuava a
+        // calcular EUR/BRL/ZAR a partir do valor antigo em memória, e ao
+        // gravar sobre a linha mais recente acabava por "reverter" os
+        // valores que o admin tinha acabado de definir.
+        const { data: latestRow, error: latestErr } = await supabase
+            .from('exchange_rates')
+            .select('id, applied_rate, base_rate, margin')
+            .order('fetched_at', { ascending: false })
+            .limit(1)
+            .maybeSingle();
+
+        if (latestErr || !latestRow) {
+            console.error('Erro ao ler taxa mais recente antes do sync:', latestErr?.message);
+            return;
+        }
+
+        const aoaRate = parseFloat(latestRow.applied_rate) || parseFloat(latestRow.base_rate) || currentRates.USD;
         if (!aoaRate || aoaRate <= 0) return;
+
+        // Manter a memória sempre alinhada com a base de dados
+        currentRates.USD = aoaRate;
 
         // Buscar taxas externas USD → outras moedas
         const res = await fetch('https://open.er-api.com/v6/latest/USD');
@@ -543,21 +565,10 @@ async function syncCrossRates() {
         currentRates.BRL = Math.round(brlAoa * 100) / 100;
         currentRates.ZAR = Math.round(zarAoa * 100) / 100;
 
-        // Buscar o ID da linha de taxa mais recente — .update() exige um filtro específico,
-        // não é possível encadear .order().limit() directamente num update()
-        const { data: latest, error: fetchErr } = await supabase
-            .from('exchange_rates')
-            .select('id')
-            .order('fetched_at', { ascending: false })
-            .limit(1)
-            .maybeSingle();
-
-        if (fetchErr || !latest) {
-            console.error('Erro ao localizar taxa mais recente para sync:', fetchErr?.message);
-            return;
-        }
-
-        // Persistir no Supabase — agora com filtro correto por ID
+        // Persistir no Supabase — na MESMA linha que acabámos de ler,
+        // preservando explicitamente base_rate/margin/applied_rate dela
+        // (o .update() só toca nos campos listados, mas fica explícito
+        // para nunca mais haver dúvida sobre o que este passo altera)
         const { error: updateErr } = await supabase.from('exchange_rates')
             .update({
                 eur_rate: currentRates.EUR,
@@ -565,14 +576,14 @@ async function syncCrossRates() {
                 zar_rate: currentRates.ZAR,
                 last_auto_sync: new Date().toISOString()
             })
-            .eq('id', latest.id);
+            .eq('id', latestRow.id);
 
         if (updateErr) {
             console.error('Erro ao gravar taxas multi-moeda:', updateErr.message);
             return;
         }
 
-        console.log(`🔄 Taxas sincronizadas: EUR=${currentRates.EUR} BRL=${currentRates.BRL} ZAR=${currentRates.ZAR} AOA`);
+        console.log(`🔄 Taxas sincronizadas (base USD=${aoaRate}): EUR=${currentRates.EUR} BRL=${currentRates.BRL} ZAR=${currentRates.ZAR} AOA`);
     } catch (err) {
         console.error('Erro no sync de taxas:', err.message);
     }
