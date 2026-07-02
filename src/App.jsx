@@ -1159,6 +1159,17 @@ function ClientApp({ user, onLogout }) {
   const destInfo = DESTS.find(d => d.id === currentOrder?.destination);
   const applied = parseFloat(rate.applied_rate) || 1165;
 
+  // ── O Manual do Utilizador tem prioridade sobre qualquer outro ecrã ──
+  // Esta verificação fica ANTES de todos os outros 'return' condicionais da
+  // função (KYC pendente, calculadora aberta, transacção seleccionada, etc.)
+  // porque cada um desses states tem o seu próprio 'return' que interrompe
+  // a função antes de chegar ao JSX principal lá em baixo — e era exactamente
+  // aí que o UserManual estava colocado antes, por isso só abria quando o
+  // utilizador estava no ecrã "normal" do mercado, e nunca nos outros.
+  if (showManual) {
+    return <UserManual onClose={handleCloseManual} onDownloadPdf={handleDownloadManualPdf} />;
+  }
+
   if (kycLoading) return <div className="shell" style={{ display: "flex", alignItems: "center", justifyContent: "center", color: "#9ca3af", fontWeight: 600 }}>A verificar estado da conta...</div>;
 
   const isKycComplete = (profile?.kyc_status === "verified") || 
@@ -2608,10 +2619,6 @@ function ClientApp({ user, onLogout }) {
         onConfirm={confirmState.onConfirm}
         onCancel={confirmState.onCancel}
       />
-
-      {showManual && (
-        <UserManual onClose={handleCloseManual} onDownloadPdf={handleDownloadManualPdf} />
-      )}
     </div>
   );
 }

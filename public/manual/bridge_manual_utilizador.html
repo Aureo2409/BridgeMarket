@@ -1,0 +1,616 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Bridge Market — Manual do Utilizador</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #fbf8f3;
+  --ink: #1c1814;
+  --ink-soft: #5a5147;
+  --purple: #6c4fd6;
+  --purple-deep: #4a3296;
+  --teal: #1f8a7a;
+  --gold: #c08a2e;
+  --card: #ffffff;
+  --line: #e8e0d4;
+  --cream-deep: #f1ead9;
+  --sans: 'Plus Jakarta Sans', sans-serif;
+  --serif: 'Fraunces', serif;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--sans);
+  font-size: 16px;
+  line-height: 1.7;
+  -webkit-font-smoothing: antialiased;
+}
+
+svg { display: block; }
+
+/* ── HERO ── */
+.hero {
+  background: linear-gradient(170deg, var(--purple-deep) 0%, var(--purple) 55%, #8a6ce8 100%);
+  padding: 72px 24px 140px;
+  position: relative;
+  overflow: hidden;
+  text-align: center;
+}
+.hero::before {
+  content: '';
+  position: absolute;
+  top: -180px; right: -120px;
+  width: 480px; height: 480px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(255,255,255,0.12), transparent 70%);
+}
+.hero-eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  background: rgba(255,255,255,0.14);
+  border: 1px solid rgba(255,255,255,0.25);
+  padding: 7px 18px;
+  border-radius: 30px;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: #fff;
+  letter-spacing: 0.4px;
+  margin-bottom: 28px;
+}
+.hero-eyebrow svg { width: 16px; height: 16px; }
+.hero h1 {
+  font-family: var(--serif);
+  font-weight: 600;
+  font-size: clamp(36px, 6.5vw, 64px);
+  line-height: 1.05;
+  color: #fff;
+  letter-spacing: -1px;
+  max-width: 760px;
+  margin: 0 auto 20px;
+}
+.hero h1 em {
+  font-style: italic;
+  font-weight: 500;
+  color: #ffe9b3;
+}
+.hero-sub {
+  font-size: 17.5px;
+  color: rgba(255,255,255,0.88);
+  max-width: 480px;
+  margin: 0 auto;
+  font-weight: 400;
+}
+
+/* ── INTRO CARD (overlaps hero) ── */
+.intro-wrap {
+  max-width: 880px;
+  margin: -90px auto 0;
+  padding: 0 24px;
+  position: relative;
+  z-index: 5;
+}
+.intro-card {
+  background: var(--card);
+  border-radius: 28px;
+  padding: 44px 40px;
+  box-shadow: 0 30px 70px -30px rgba(74, 50, 150, 0.35);
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 32px;
+}
+.intro-item { text-align: center; }
+.intro-num {
+  font-family: var(--serif);
+  font-size: 38px;
+  font-weight: 600;
+  color: var(--purple);
+  margin-bottom: 8px;
+}
+.intro-label {
+  font-size: 13.5px;
+  color: var(--ink-soft);
+  font-weight: 500;
+  line-height: 1.5;
+}
+
+/* ── CONTAINER ── */
+.wrap {
+  max-width: 760px;
+  margin: 0 auto;
+  padding: 0 24px;
+}
+.content { padding: 90px 0 60px; }
+
+/* ── SECTION HEADER ── */
+.sec-eyebrow {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--purple);
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  margin-bottom: 12px;
+}
+.sec-title {
+  font-family: var(--serif);
+  font-size: clamp(28px, 4vw, 38px);
+  font-weight: 600;
+  color: var(--ink);
+  letter-spacing: -0.5px;
+  margin-bottom: 18px;
+  line-height: 1.15;
+}
+.sec-intro {
+  font-size: 16.5px;
+  color: var(--ink-soft);
+  max-width: 600px;
+  margin-bottom: 36px;
+}
+
+.section { margin-bottom: 90px; }
+.section:last-child { margin-bottom: 0; }
+
+/* ── STEP CARD ── */
+.steps { display: flex; flex-direction: column; gap: 0; }
+.step {
+  display: grid;
+  grid-template-columns: 56px 1fr;
+  gap: 22px;
+  padding: 30px 0;
+  border-bottom: 1px solid var(--line);
+  position: relative;
+}
+.step:last-child { border-bottom: none; padding-bottom: 0; }
+.step:first-child { padding-top: 0; }
+.step-marker {
+  width: 56px; height: 56px;
+  border-radius: 16px;
+  background: var(--cream-deep);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--serif);
+  font-size: 22px;
+  font-weight: 600;
+  color: var(--purple);
+  flex-shrink: 0;
+}
+.step-title {
+  font-family: var(--serif);
+  font-size: 21px;
+  font-weight: 600;
+  color: var(--ink);
+  margin-bottom: 8px;
+}
+.step-body { font-size: 15.5px; color: var(--ink-soft); line-height: 1.75; }
+.step-body strong { color: var(--ink); font-weight: 600; }
+.step-tip {
+  margin-top: 14px;
+  background: var(--cream-deep);
+  border-radius: 12px;
+  padding: 13px 16px;
+  font-size: 14px;
+  color: var(--ink-soft);
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+}
+.step-tip svg { flex-shrink: 0; width: 17px; height: 17px; margin-top: 2px; color: var(--gold); }
+
+/* ── TWO COL FEATURE ── */
+.feature-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 18px;
+}
+.feature-card {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  padding: 26px 24px;
+}
+.feature-icon {
+  width: 42px; height: 42px;
+  border-radius: 12px;
+  display: flex; align-items: center; justify-content: center;
+  margin-bottom: 16px;
+}
+.feature-icon svg { width: 21px; height: 21px; }
+.feature-title {
+  font-family: var(--serif);
+  font-size: 17px;
+  font-weight: 600;
+  color: var(--ink);
+  margin-bottom: 8px;
+}
+.feature-body { font-size: 14px; color: var(--ink-soft); line-height: 1.65; }
+
+/* ── CREDIT TABLE ── */
+.credit-box {
+  background: linear-gradient(135deg, #2d1f5e, #4a3296);
+  border-radius: 24px;
+  padding: 38px 36px;
+  color: #fff;
+}
+.credit-box-head { margin-bottom: 28px; }
+.credit-box-eyebrow {
+  font-size: 12.5px;
+  font-weight: 700;
+  color: #ffe9b3;
+  letter-spacing: 1.2px;
+  text-transform: uppercase;
+  margin-bottom: 10px;
+}
+.credit-box-title {
+  font-family: var(--serif);
+  font-size: 26px;
+  font-weight: 600;
+}
+.credit-rows { display: flex; flex-direction: column; gap: 0; }
+.credit-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 0;
+  border-bottom: 1px solid rgba(255,255,255,0.14);
+}
+.credit-row:last-child { border-bottom: none; padding-bottom: 0; }
+.credit-row-label { font-size: 15px; color: rgba(255,255,255,0.85); }
+.credit-row-val { font-family: var(--serif); font-size: 18px; font-weight: 600; color: #ffe9b3; }
+
+/* ── SAFETY LIST ── */
+.safety-list { display: flex; flex-direction: column; gap: 14px; }
+.safety-item {
+  display: flex;
+  gap: 16px;
+  align-items: flex-start;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  padding: 20px 22px;
+}
+.safety-ic {
+  width: 38px; height: 38px;
+  border-radius: 10px;
+  background: rgba(31,138,122,0.1);
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+}
+.safety-ic svg { width: 19px; height: 19px; color: var(--teal); }
+.safety-text { font-size: 15px; color: var(--ink-soft); line-height: 1.65; }
+.safety-text strong { color: var(--ink); }
+
+/* ── FAQ ── */
+.faq-item {
+  border-bottom: 1px solid var(--line);
+  padding: 22px 0;
+}
+.faq-item:last-child { border-bottom: none; }
+.faq-q {
+  font-family: var(--serif);
+  font-size: 17.5px;
+  font-weight: 600;
+  color: var(--ink);
+  margin-bottom: 8px;
+}
+.faq-a { font-size: 15px; color: var(--ink-soft); line-height: 1.7; }
+
+/* ── CALLOUT ── */
+.callout {
+  background: var(--cream-deep);
+  border-left: 3px solid var(--gold);
+  border-radius: 0 14px 14px 0;
+  padding: 18px 22px;
+  font-size: 14.5px;
+  color: var(--ink-soft);
+  margin-top: 16px;
+}
+.callout strong { color: var(--ink); }
+
+/* ── FOOTER ── */
+.footer {
+  background: var(--ink);
+  padding: 56px 24px;
+  text-align: center;
+}
+.footer-logo {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--serif);
+  font-size: 22px;
+  font-weight: 600;
+  color: #fff;
+  margin-bottom: 10px;
+}
+.footer-logo svg { width: 22px; height: 22px; }
+.footer-text { font-size: 13.5px; color: rgba(255,255,255,0.55); }
+
+@media (max-width: 640px) {
+  .hero { padding: 56px 18px 120px; }
+  .intro-card { grid-template-columns: 1fr; gap: 24px; padding: 32px 26px; }
+  .feature-grid { grid-template-columns: 1fr; }
+  .content { padding: 70px 0 40px; }
+  .step { grid-template-columns: 44px 1fr; gap: 16px; }
+  .step-marker { width: 44px; height: 44px; font-size: 18px; border-radius: 12px; }
+  .credit-box { padding: 28px 22px; }
+}
+</style>
+</head>
+<body>
+
+<!-- HERO -->
+<div class="hero">
+  <div class="hero-eyebrow">
+    <svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 20h20M4 20V10l8-6 8 6v10M9 20v-6h6v6"/></svg>
+    Manual do Utilizador
+  </div>
+  <h1>Tudo o que precisas de saber<br>para usar a <em>Bridge</em></h1>
+  <p class="hero-sub">Um guia simples, sem termos complicados, para comprares e venderes dólares com segurança em Angola.</p>
+</div>
+
+<!-- INTRO CARD -->
+<div class="intro-wrap">
+  <div class="intro-card">
+    <div class="intro-item">
+      <div class="intro-num">01</div>
+      <div class="intro-label">Regista-te e confirma a tua identidade</div>
+    </div>
+    <div class="intro-item">
+      <div class="intro-num">02</div>
+      <div class="intro-label">Vê o mercado e cria o teu pedido — é grátis</div>
+    </div>
+    <div class="intro-item">
+      <div class="intro-num">03</div>
+      <div class="intro-label">Negocia em segurança e recebe o teu dinheiro</div>
+    </div>
+  </div>
+</div>
+
+<div class="wrap"><div class="content">
+
+<!-- ══ O QUE É A BRIDGE ══ -->
+<div class="section">
+  <div class="sec-eyebrow">Para começar</div>
+  <div class="sec-title">O que é a Bridge?</div>
+  <p class="sec-intro">
+    A Bridge é um espaço onde pessoas em Angola compram e vendem dólares directamente umas às outras, 
+    de forma seria, transparente e protegida. Não precisas de ir ao banco nem de confiar num cambista 
+    desconhecido na rua — aqui falas com pessoas verificadas, a um preço justo e igual para todos.
+  </p>
+
+  <div class="feature-grid">
+    <div class="feature-card">
+      <div class="feature-icon" style="background:rgba(108,79,214,0.1); color:var(--purple);">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 1l4 4-4 4M3 11V9a4 4 0 0 1 4-4h14M7 23l-4-4 4-4M21 13v2a4 4 0 0 1-4 4H3"/></svg>
+      </div>
+      <div class="feature-title">Um preço, igual para todos</div>
+      <div class="feature-body">A taxa do dia é a mesma para qualquer pessoa na plataforma. Sem surpresas, sem negociar valores diferentes em segredo.</div>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon" style="background:rgba(31,138,122,0.1); color:var(--teal);">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+      </div>
+      <div class="feature-title">Pessoas verificadas</div>
+      <div class="feature-body">Todos os utilizadores confirmam a sua identidade antes de poderem negociar. Sabes sempre com quem estás a falar.</div>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon" style="background:rgba(192,138,46,0.1); color:var(--gold);">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+      </div>
+      <div class="feature-title">Conversa protegida</div>
+      <div class="feature-body">Cada negócio tem o seu próprio espaço de conversa, só entre ti e a outra pessoa, com avisos de segurança sempre visíveis.</div>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon" style="background:rgba(220,38,38,0.08); color:#dc2626;">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+      </div>
+      <div class="feature-title">Várias moedas</div>
+      <div class="feature-body">Para além do dólar, também podes negociar em Euro, Real e Rand, com os métodos de pagamento que usas no dia a dia.</div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ COMO COMEÇAR ══ -->
+<div class="section">
+  <div class="sec-eyebrow">Os primeiros passos</div>
+  <div class="sec-title">Como começar a usar a Bridge</div>
+  <p class="sec-intro">Cinco passos simples, do registo até à tua primeira negociação.</p>
+
+  <div class="steps">
+    <div class="step">
+      <div class="step-marker">1</div>
+      <div>
+        <div class="step-title">Cria a tua conta</div>
+        <div class="step-body">
+          Regista-te com o teu email, uma senha e o teu número de telemóvel. É rápido e simples — só 
+          pedimos o essencial para garantir que a tua conta é segura.
+        </div>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-marker">2</div>
+      <div>
+        <div class="step-title">Confirma quem és</div>
+        <div class="step-body">
+          Antes de poderes negociar, pedimos que confirmes a tua identidade — tira uma foto do teu 
+          Bilhete de Identidade ou Passaporte, e um pequeno vídeo a olhar para a câmara. Isto protege-te 
+          a ti e a todas as outras pessoas que usam a plataforma.
+        </div>
+        <div class="step-tip">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+          <span>Este processo demora poucos minutos. Assim que for aprovado, já podes começar a usar a Bridge livremente.</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-marker">3</div>
+      <div>
+        <div class="step-title">Explora o mercado, sem compromisso</div>
+        <div class="step-body">
+          Depois de confirmada a tua identidade, já podes ver todos os pedidos de compra e venda que 
+          estão activos na plataforma. <strong>Olhar é sempre grátis</strong> — não pagas nada só por explorar.
+        </div>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-marker">4</div>
+      <div>
+        <div class="step-title">Cria o teu pedido — também é grátis</div>
+        <div class="step-body">
+          Decide se queres <strong>comprar</strong> ou <strong>vender</strong> dólares, escreve o valor que 
+          pretendes, e escolhe onde queres receber ou de onde vais enviar o dinheiro (Multicaixa Express, 
+          PayPal, Pix, e outros). O teu pedido fica visível no mercado para outras pessoas o encontrarem.
+        </div>
+        <div class="step-tip">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18h6M10 22h4M12 2a7 7 0 0 0-4 12.7V17h8v-2.3A7 7 0 0 0 12 2z"/></svg>
+          <span><strong>Criar um pedido nunca tem custo.</strong> Só pagas quando, de facto, encontras alguém para negociar.</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-marker">5</div>
+      <div>
+        <div class="step-title">Negoceia e recebe o teu dinheiro</div>
+        <div class="step-body">
+          Quando alguém aceita o teu pedido — ou tu aceitas o pedido de outra pessoa — abre-se uma conversa 
+          privada entre vocês os dois. Combinam os detalhes, fazem a transferência, e confirmam quando 
+          o dinheiro chega. Simples assim.
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ CRÉDITOS ══ -->
+<div class="section">
+  <div class="sec-eyebrow">Como funciona o pagamento</div>
+  <div class="sec-title">Os créditos da Bridge</div>
+  <p class="sec-intro">
+    A Bridge não cobra mensalidade nem assinatura. Funciona com créditos — só pagas quando, de facto, 
+    encontras alguém para negociar.
+  </p>
+
+  <div class="credit-box">
+    <div class="credit-box-head">
+      <div class="credit-box-eyebrow">Como funciona</div>
+      <div class="credit-box-title">1 crédito = 500 Kz</div>
+    </div>
+    <div class="credit-rows">
+      <div class="credit-row">
+        <div class="credit-row-label">Ver o mercado e explorar pedidos</div>
+        <div class="credit-row-val">Grátis</div>
+      </div>
+      <div class="credit-row">
+        <div class="credit-row-label">Criar o teu próprio pedido</div>
+        <div class="credit-row-val">Grátis</div>
+      </div>
+      <div class="credit-row">
+        <div class="credit-row-label">Encontrar alguém e começar a negociar</div>
+        <div class="credit-row-val">1 crédito</div>
+      </div>
+      <div class="credit-row">
+        <div class="credit-row-label">Conversar e concluir o negócio</div>
+        <div class="credit-row-val">Incluído</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="callout">
+    <strong>Em palavras simples:</strong> só pagas quando a Bridge te liga de facto a outra pessoa para negociar.
+    Carrega créditos uma vez na tua carteira e usa-os quando quiseres — sem prazos, sem mensalidade.
+  </div>
+</div>
+
+<!-- ══ SEGURANÇA ══ -->
+<div class="section">
+  <div class="sec-eyebrow">A tua protecção</div>
+  <div class="sec-title">Como a Bridge te protege</div>
+  <p class="sec-intro">A confiança é a base de todo o negócio. Por isso, construímos várias camadas de protecção.</p>
+
+  <div class="safety-list">
+    <div class="safety-item">
+      <div class="safety-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="14" rx="2"/><path d="M3 8h18M7 12h2"/></svg></div>
+      <div class="safety-text"><strong>Todos confirmam quem são.</strong> Ninguém negoceia na Bridge sem ter confirmado a sua identidade primeiro.</div>
+    </div>
+    <div class="safety-item">
+      <div class="safety-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 7l-7 5 7 5V7z"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg></div>
+      <div class="safety-text"><strong>Um pequeno vídeo antes de cada negócio.</strong> Quando alguém aceita negociar contigo, grava um vídeo curto a confirmar — assim sabes que é uma pessoa real, naquele preciso momento.</div>
+    </div>
+    <div class="safety-item">
+      <div class="safety-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg></div>
+      <div class="safety-text"><strong>O preço nunca muda a meio.</strong> O valor combinado no início fica fixo durante toda a conversa — ninguém pode tentar cobrar-te mais por fora.</div>
+    </div>
+    <div class="safety-item">
+      <div class="safety-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg></div>
+      <div class="safety-text"><strong>Tudo fica registado.</strong> A conversa entre ti e a outra pessoa fica guardada, para que, se algo correr mal, possas mostrar o que aconteceu.</div>
+    </div>
+  </div>
+
+  <div class="callout">
+    <strong>Importante:</strong> nunca partilhes números de telefone, IBANs ou outros contactos directamente 
+    na conversa da Bridge. Usa sempre os métodos de pagamento que já configuraste no teu perfil — é mais 
+    seguro para ti.
+  </div>
+</div>
+
+<!-- ══ FAQ ══ -->
+<div class="section">
+  <div class="sec-eyebrow">Dúvidas comuns</div>
+  <div class="sec-title">Perguntas frequentes</div>
+
+  <div class="faq-item">
+    <div class="faq-q">Quanto custa usar a Bridge?</div>
+    <div class="faq-a">Nada, até começares a negociar. Ver o mercado e criar pedidos é sempre grátis. Só pagas 1 crédito (500 Kz) quando, de facto, encontras alguém e começam a conversar.</div>
+  </div>
+
+  <div class="faq-item">
+    <div class="faq-q">Como sei que a pessoa do outro lado é de confiança?</div>
+    <div class="faq-a">Todas as pessoas na Bridge confirmaram a sua identidade antes de poderem usar a plataforma. Além disso, antes de cada negócio, há um pequeno vídeo de confirmação, para garantires que estás mesmo a falar com uma pessoa real.</div>
+  </div>
+
+  <div class="faq-item">
+    <div class="faq-q">Posso mudar o preço depois de combinado?</div>
+    <div class="faq-a">Não. O valor é definido pela taxa oficial do dia e fica fixo durante todo o negócio. Se alguém tentar cobrar-te mais ou propuser um preço diferente na conversa, a Bridge avisa-te automaticamente.</div>
+  </div>
+
+  <div class="faq-item">
+    <div class="faq-q">O que acontece se não houver ninguém para negociar comigo?</div>
+    <div class="faq-a">O teu pedido fica visível no mercado até alguém o encontrar. Como criar um pedido é grátis, não perdes nada por esperar — podes deixar vários pedidos activos se quiseres.</div>
+  </div>
+
+  <div class="faq-item">
+    <div class="faq-q">Onde posso receber o meu dinheiro?</div>
+    <div class="faq-a">Podes escolher entre vários métodos — Multicaixa Express, Unitel Money, PayPal, Pix, IBAN, Binance, e outros — consoante a moeda que estás a negociar. Configura os teus métodos preferidos no teu perfil.</div>
+  </div>
+
+  <div class="faq-item">
+    <div class="faq-q">Preciso de pagar para criar uma conta?</div>
+    <div class="faq-a">Não. Criar conta, confirmar a tua identidade e explorar o mercado são sempre gratuitos. Só pagas quando, de facto, encontras alguém para negociar.</div>
+  </div>
+</div>
+
+</div></div>
+
+<!-- FOOTER -->
+<div class="footer">
+  <div class="footer-logo">
+    <svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 20h20M4 20V10l8-6 8 6v10M9 20v-6h6v6"/></svg>
+    Bridge
+  </div>
+  <div class="footer-text">Manual do Utilizador · Bridge Market, Angola</div>
+</div>
+
+</body>
+</html>

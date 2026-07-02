@@ -350,19 +350,35 @@ export function UserManual({ onClose, onDownloadPdf }) {
           </div>
         ))}
 
-        {/* ── Download PDF ── */}
-        <button
-          onClick={onDownloadPdf}
-          style={{
-            width: "100%", marginTop: 20, padding: "14px", borderRadius: 12,
-            background: "#fff", border: "1.5px solid #6c4fd6", color: "#6c4fd6",
-            fontSize: 13, fontWeight: 800, cursor: "pointer",
-            display: "flex", alignItems: "center", justifyContent: "center", gap: 8
-          }}
-        >
-          <Icon name="download" size={15} />
-          Descarregar em PDF
-        </button>
+        {/* ── Download PDF + Ver HTML completo ── */}
+        <div style={{ display: "flex", gap: 10, marginTop: 20 }}>
+          <button
+            onClick={onDownloadPdf}
+            style={{
+              flex: 1, padding: "14px", borderRadius: 12,
+              background: "#fff", border: "1.5px solid #6c4fd6", color: "#6c4fd6",
+              fontSize: 12.5, fontWeight: 800, cursor: "pointer",
+              display: "flex", alignItems: "center", justifyContent: "center", gap: 6
+            }}
+          >
+            <Icon name="download" size={14} />
+            PDF
+          </button>
+          <a
+            href="/manual/bridge_manual_utilizador.html"
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{
+              flex: 1, padding: "14px", borderRadius: 12,
+              background: "#6c4fd6", border: "1.5px solid #6c4fd6", color: "#fff",
+              fontSize: 12.5, fontWeight: 800, cursor: "pointer", textDecoration: "none",
+              display: "flex", alignItems: "center", justifyContent: "center", gap: 6
+            }}
+          >
+            <ManualIcon kind="globe" size={14} color="#fff" />
+            Ver online
+          </a>
+        </div>
 
         {/* ── Rodapé ── */}
         <div style={{ textAlign: "center", marginTop: 40, paddingTop: 24, borderTop: "1px solid #e8e0d4" }}>
