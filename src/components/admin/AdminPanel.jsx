@@ -37,10 +37,149 @@ const CONFIG_FIELDS = [
   { key: "support_whatsapp", label: "WhatsApp suporte (intl.)", type: "text", ph: "244923000000" },
 ];
 
-function ConfigTab({ config, updateConfig }) {
+function TwoFactorSetup({ user }) {
+  const [factors, setFactors] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [enrolling, setEnrolling] = useState(false);
+  const [qrCode, setQrCode] = useState(null);
+  const [secret, setSecret] = useState(null);
+  const [factorId, setFactorId] = useState(null);
+  const [verifyCode, setVerifyCode] = useState("");
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
+
+  useEffect(() => {
+    refreshFactors();
+  }, []);
+
+  async function refreshFactors() {
+    setLoading(true);
+    const { data, error } = await sb.auth.mfa.listFactors();
+    if (!error && data) {
+      setFactors(data.totp || []);
+    }
+    setLoading(false);
+  }
+
+  async function startEnroll() {
+    setError(""); setSuccess("");
+    const { data, error } = await sb.auth.mfa.enroll({ factorType: "totp" });
+    if (error) { setError(error.message); return; }
+    setFactorId(data.id);
+    setQrCode(data.totp.qr_code);
+    setSecret(data.totp.secret);
+    setEnrolling(true);
+  }
+
+  async function confirmEnroll() {
+    setError("");
+    if (verifyCode.length !== 6) { setError("O código deve ter 6 dígitos."); return; }
+
+    const { data: challengeData, error: challengeError } = await sb.auth.mfa.challenge({ factorId });
+    if (challengeError) { setError(challengeError.message); return; }
+
+    const { error: verifyError } = await sb.auth.mfa.verify({
+      factorId, challengeId: challengeData.id, code: verifyCode
+    });
+    if (verifyError) { setError("Código inválido. Confirma que copiaste correctamente da app autenticadora."); return; }
+
+    setSuccess("Autenticação de dois factores activada com sucesso!");
+    setEnrolling(false);
+    setVerifyCode("");
+    refreshFactors();
+  }
+
+  async function removeFactor(id) {
+    if (!window.confirm("Tens a certeza que queres desactivar a autenticação de dois factores? Isto reduz a segurança da tua conta de administrador.")) return;
+    const { error } = await sb.auth.mfa.unenroll({ factorId: id });
+    if (error) { setError(error.message); return; }
+    setSuccess("Autenticação de dois factores desactivada.");
+    refreshFactors();
+  }
+
+  const isActive = factors.some(f => f.status === "verified");
+
+  return (
+    <div className="adm-card" style={{ cursor: "default", marginBottom: 12 }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 10 }}>
+        <div style={{
+          width: 34, height: 34, borderRadius: 9, flexShrink: 0,
+          background: isActive ? "rgba(16,185,129,0.12)" : "rgba(239,68,68,0.1)",
+          display: "flex", alignItems: "center", justifyContent: "center"
+        }}>
+          <Icon name="shield" size={17} color={isActive ? "#10b981" : "#ef4444"} />
+        </div>
+        <div>
+          <div style={{ fontSize: 13, fontWeight: 800, color: "#e2e8f0" }}>Autenticação de Dois Factores</div>
+          <div style={{ fontSize: 10, color: isActive ? "#10b981" : "#ef4444", fontWeight: 700 }}>
+            {loading ? "A verificar..." : isActive ? "Activa" : "Desactivada — recomendamos activar"}
+          </div>
+        </div>
+      </div>
+
+      <div style={{ fontSize: 10.5, color: "#64748b", marginBottom: 14, lineHeight: 1.5 }}>
+        Protege a conta de administrador com um código de 6 dígitos gerado por uma app como o
+        Google Authenticator ou Microsoft Authenticator, além da tua palavra-passe. Se alguém
+        conseguir a tua senha, ainda não consegue entrar sem este código.
+      </div>
+
+      {error && <div style={{ fontSize: 11, color: "#ef4444", background: "rgba(239,68,68,0.1)", padding: "8px 10px", borderRadius: 8, marginBottom: 10 }}>{error}</div>}
+      {success && <div style={{ fontSize: 11, color: "#10b981", background: "rgba(16,185,129,0.1)", padding: "8px 10px", borderRadius: 8, marginBottom: 10 }}>{success}</div>}
+
+      {!loading && !isActive && !enrolling && (
+        <button className="adm-btn" onClick={startEnroll}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}>
+            <Icon name="shield" size={14} /> Activar Autenticação de Dois Factores
+          </div>
+        </button>
+      )}
+
+      {enrolling && (
+        <div>
+          <div style={{ textAlign: "center", marginBottom: 14 }}>
+            {qrCode && <img src={qrCode} alt="QR Code para 2FA" style={{ width: 180, height: 180, borderRadius: 10, background: "#fff", padding: 8 }} />}
+          </div>
+          <div style={{ fontSize: 10, color: "#64748b", marginBottom: 10, textAlign: "center" }}>
+            Digitaliza este código com a tua app autenticadora, ou insere a chave manualmente:
+          </div>
+          <div style={{ fontSize: 10, fontFamily: "monospace", background: "rgba(255,255,255,0.05)", padding: "8px 10px", borderRadius: 8, marginBottom: 14, textAlign: "center", wordBreak: "break-all", color: "#a5b4fc" }}>
+            {secret}
+          </div>
+          <input
+            className="adm-inp"
+            placeholder="Código de 6 dígitos"
+            value={verifyCode}
+            onChange={e => setVerifyCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
+            style={{ textAlign: "center", fontSize: 18, letterSpacing: 4, marginBottom: 10 }}
+            maxLength={6}
+          />
+          <div style={{ display: "flex", gap: 8 }}>
+            <button className="adm-btn" style={{ flex: 1, background: "rgba(255,255,255,.06)" }} onClick={() => { setEnrolling(false); setVerifyCode(""); }}>Cancelar</button>
+            <button className="adm-btn" style={{ flex: 1 }} onClick={confirmEnroll}>Confirmar</button>
+          </div>
+        </div>
+      )}
+
+      {!loading && isActive && (
+        <button
+          className="adm-btn"
+          style={{ background: "rgba(239,68,68,.12)", color: "#f87171" }}
+          onClick={() => removeFactor(factors.find(f => f.status === "verified").id)}
+        >
+          Desactivar Autenticação de Dois Factores
+        </button>
+      )}
+    </div>
+  );
+}
+
+function ConfigTab({ config, updateConfig, user }) {
   return (
     <>
-      <span className="adm-section">Configurações do marketplace</span>
+      <span className="adm-section">Segurança da Conta</span>
+      <TwoFactorSetup user={user} />
+
+      <span className="adm-section" style={{ marginTop: 20 }}>Configurações do marketplace</span>
       {CONFIG_FIELDS.map(f => (
         <ConfigField key={f.key} field={f} initialValue={config[f.key]} onSave={updateConfig} />
       ))}
@@ -1050,7 +1189,7 @@ export function AdminPanel({ user, onLogout }) {
 
         {/* ── CONFIG ── */}
         {tab === "config" && (
-          <ConfigTab config={config} updateConfig={updateConfig} />
+          <ConfigTab config={config} updateConfig={updateConfig} user={user} />
         )}
 
       </div>

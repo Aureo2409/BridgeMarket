@@ -21,6 +21,28 @@ function AuthScreen() {
   const [err, setErr] = useState("");
   const [load, setLoad] = useState(false);
   const [termsAccepted, setTermsAccepted] = useState(false);
+  const [needsMfaCode, setNeedsMfaCode] = useState(false);
+  const [mfaCode, setMfaCode] = useState("");
+
+  // Ao montar o ecrã de login, verifica se já existe uma sessão válida do
+  // Supabase que ainda não passou o desafio de MFA — cobre o caso em que o
+  // gate de segurança do componente App (nível superior) forçou setUser(null)
+  // por a sessão ainda estar em AAL1, mas o utilizador já tinha autenticado
+  // com password correctamente e só falta o código de 6 dígitos.
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const { data: { session } } = await sb.auth.getSession();
+      if (!session) return;
+      try {
+        const { data } = await sb.auth.mfa.getAuthenticatorAssuranceLevel();
+        if (!cancelled && data && data.nextLevel === "aal2" && data.currentLevel !== "aal2") {
+          setNeedsMfaCode(true);
+        }
+      } catch { /* silencioso — se falhar, apenas não mostra o ecrã de MFA */ }
+    })();
+    return () => { cancelled = true; };
+  }, []);
 
   async function submit() {
     setLoad(true); setErr("");
@@ -69,9 +91,51 @@ function AuthScreen() {
       setErr("ok:Registo feito! Verifica o teu email para activar a conta.");
     } else {
       const { error } = await sb.auth.signInWithPassword({ email, password: pwd });
-      if (error) setErr("Email ou senha incorrectos.");
+      if (error) { setErr("Email ou senha incorrectos."); setLoad(false); return; }
+
+      // ── Verificar se a conta tem 2FA activo e ainda por confirmar nesta sessão ──
+      // aal1 = só password verificada; aal2 = password + MFA verificados.
+      // Se currentLevel !== nextLevel, há um factor MFA verificado na conta
+      // que ainda não foi desafiado nesta sessão específica — pedir o código.
+      const { data: aalData } = await sb.auth.mfa.getAuthenticatorAssuranceLevel();
+      if (aalData && aalData.nextLevel === "aal2" && aalData.currentLevel !== "aal2") {
+        setNeedsMfaCode(true);
+        setLoad(false);
+        return;
+      }
     }
     setLoad(false);
+  }
+
+  async function handleMfaVerify() {
+    setErr(""); setLoad(true);
+    const { data: factorsData, error: factorsError } = await sb.auth.mfa.listFactors();
+    if (factorsError || !factorsData?.totp?.length) {
+      setErr("Erro ao carregar o factor de autenticação. Tenta novamente.");
+      setLoad(false);
+      return;
+    }
+    const factorId = factorsData.totp[0].id;
+
+    const { data: challengeData, error: challengeError } = await sb.auth.mfa.challenge({ factorId });
+    if (challengeError) { setErr(challengeError.message); setLoad(false); return; }
+
+    const { error: verifyError } = await sb.auth.mfa.verify({
+      factorId, challengeId: challengeData.id, code: mfaCode
+    });
+    if (verifyError) {
+      setErr("Código inválido. Verifica na tua app autenticadora e tenta de novo.");
+      setLoad(false);
+      return;
+    }
+
+    setNeedsMfaCode(false);
+    setMfaCode("");
+    setLoad(false);
+    // Recarrega a página: garante que o componente App de nível superior
+    // reavalia a sessão (agora em AAL2) desde o início, e mostra o painel
+    // de administração correctamente sem qualquer estado desincronizado.
+    window.location.reload();
   }
 
   async function handleSocialLogin(providerName) {
@@ -86,6 +150,77 @@ function AuthScreen() {
       setErr("err:Erro ao ligar: " + error.message);
       setLoad(false);
     }
+  }
+
+  // ── Ecrã dedicado de verificação MFA — aparece por cima de tudo depois de
+  // um login com password bem sucedido, se a conta tiver 2FA activo ──
+  if (needsMfaCode) {
+    return (
+      <div className="shell">
+        <div className="blob b1" /><div className="blob b2" />
+        <div style={{ position: "relative", zIndex: 2, padding: "44px 22px" }}>
+          <div style={{ textAlign: "center", marginBottom: 28 }}>
+            <div style={{
+              width: 62, height: 62, borderRadius: 18, margin: "0 auto 14px",
+              background: "linear-gradient(135deg,#6366f1,#8b5cf6)",
+              display: "flex", alignItems: "center", justifyContent: "center",
+              boxShadow: "0 10px 28px rgba(99,102,241,.45)"
+            }}>
+              <Icon name="shield" size={30} color="#fff" />
+            </div>
+            <div style={{ fontSize: 20, fontWeight: 900, color: "#1e1b4b" }}>Verificação de Segurança</div>
+            <div style={{ fontSize: 12.5, color: "#6b7280", fontWeight: 600, marginTop: 6, lineHeight: 1.5, maxWidth: 280, margin: "6px auto 0" }}>
+              Esta conta tem autenticação de dois factores activa. Insere o código de 6 dígitos
+              gerado pela tua app autenticadora.
+            </div>
+          </div>
+
+          <div className="card" style={{ background: "rgba(255,255,255,.96)" }}>
+            {err && (
+              <div style={{
+                background: err.startsWith("ok:") ? "#f0fdf4" : "#fef2f2",
+                color: err.startsWith("ok:") ? "#16a34a" : "#dc2626",
+                padding: "10px 12px", borderRadius: 10, fontSize: 12.5, fontWeight: 600, marginBottom: 14
+              }}>
+                {err.replace(/^(ok|err|load):/, "")}
+              </div>
+            )}
+
+            <input
+              className="inp"
+              placeholder="000000"
+              value={mfaCode}
+              onChange={e => setMfaCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
+              style={{ textAlign: "center", fontSize: 24, letterSpacing: 8, marginBottom: 14 }}
+              maxLength={6}
+              autoFocus
+            />
+
+            <button
+              className="btn"
+              disabled={load || mfaCode.length !== 6}
+              onClick={handleMfaVerify}
+              style={{ opacity: (load || mfaCode.length !== 6) ? 0.6 : 1 }}
+            >
+              {load ? "A verificar..." : "Confirmar"}
+            </button>
+
+            <button
+              className="btn btn-o"
+              style={{ marginTop: 10 }}
+              onClick={async () => {
+                await sb.auth.signOut();
+                setNeedsMfaCode(false);
+                setMfaCode("");
+                setErr("");
+              }}
+            >
+              Cancelar e sair
+            </button>
+          </div>
+        </div>
+      </div>
+    );
   }
 
   return (
@@ -2647,10 +2782,31 @@ export default function App() {
       setReady(true);
     }, 2500);
 
+    // Verifica se a sessão actual já passou pelo nível de segurança exigido.
+    // Se a conta tem um factor MFA verificado mas a sessão ainda só tem AAL1
+    // (password), a conta NÃO deve ser considerada "logada" do ponto de vista
+    // da aplicação — fica bloqueada no AuthScreen até o código ser confirmado.
+    // Isto impede que o painel de administração apareça momentaneamente antes
+    // do MFA ser pedido, mesmo que o Supabase já tenha criado uma sessão válida.
+    async function sessionPassesMfaGate() {
+      try {
+        const { data } = await sb.auth.mfa.getAuthenticatorAssuranceLevel();
+        return !data || data.nextLevel !== "aal2" || data.currentLevel === "aal2";
+      } catch {
+        return true; // se a verificação falhar, não bloqueia (evita lock-out por erro de rede)
+      }
+    }
+
     sb.auth.getSession()
       .then(async ({ data }) => {
         try {
           const u = data?.session?.user ?? null;
+          if (u && !(await sessionPassesMfaGate())) {
+            // Sessão existe mas ainda não passou o MFA — não expor user/admin
+            setUser(null);
+            setAdmin(false);
+            return;
+          }
           setUser(u);
           if (u) setAdmin(await checkIsAdmin(u.id));
         } finally {
@@ -2667,6 +2823,13 @@ export default function App() {
     const { data: { subscription } } = sb.auth.onAuthStateChange(async (_e, s) => {
       const u = s?.user ?? null;
       if (u) {
+        if (!(await sessionPassesMfaGate())) {
+          // Mesma protecção no listener de mudanças de sessão — cobre o
+          // caso de signInWithPassword disparar este evento imediatamente
+          setUser(null);
+          setAdmin(false);
+          return;
+        }
         setUser(u);
         checkIsAdmin(u.id).then(isAdm => {
           setAdmin(isAdm);
