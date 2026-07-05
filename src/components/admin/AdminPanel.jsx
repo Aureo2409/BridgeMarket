@@ -75,6 +75,8 @@ export function AdminPanel({ user, onLogout }) {
   const [kycs, setKycs] = useState([]);
   const [rejectedKycs, setRejectedKycs] = useState([]);
   const [accessRequests, setAccessRequests] = useState([]);
+  const [auditLogs, setAuditLogs] = useState([]);
+  const [showAuditLogs, setShowAuditLogs] = useState(false);
   const [editingOrder, setEditingOrder] = useState(null);
   const [editForm, setEditForm] = useState({});
 
@@ -110,7 +112,7 @@ export function AdminPanel({ user, onLogout }) {
   }, []);
 
   async function boot() {
-    await Promise.all([fetchAlerts(), fetchOrders(), fetchProofs(), fetchStats(), fetchConfig(), fetchKycs(), fetchPendingRecharges()]);
+    await Promise.all([fetchAlerts(), fetchOrders(), fetchProofs(), fetchStats(), fetchConfig(), fetchKycs(), fetchPendingRecharges(), fetchAuditLogs()]);
     const { data } = await sb.from("exchange_rates").select("*").order("fetched_at", { ascending: false }).limit(1).maybeSingle();
     if (data) setRate(data);
   }
@@ -158,6 +160,20 @@ export function AdminPanel({ user, onLogout }) {
     // Puxar também o histórico de rejeitados
     const { data: rData } = await sb.from("kyc_verifications").select("*, profiles(full_name, phone)").eq("ocr_status", "rejected").order("updated_at", { ascending: false });
     if (rData) setRejectedKycs(rData);
+  }
+
+
+  async function fetchAuditLogs() {
+    const { data, error } = await sb
+      .from("audit_logs")
+      .select("*")
+      .order("created_at", { ascending: false })
+      .limit(100);
+    if (error) {
+      console.error("Erro ao buscar logs de auditoria:", error);
+      return;
+    }
+    setAuditLogs(data || []);
   }
 
   async function fetchPendingRecharges() {
@@ -488,6 +504,7 @@ export function AdminPanel({ user, onLogout }) {
     { id: "cancelled", icon: "ban" },
     { id: "rate", icon: "chart" },
     { id: "kyc", icon: "user" },
+    { id: "audit", icon: "shield" },
     { id: "config", icon: "settings" },
   ];
 
@@ -957,6 +974,77 @@ export function AdminPanel({ user, onLogout }) {
                 </div>
               </div>
             ))}
+          </>
+        )}
+
+        {/* ── AUDITORIA / SEGURANÇA ── */}
+        {tab === "audit" && (
+          <>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
+              <span className="adm-section" style={{ marginBottom: 0 }}>Logs de Auditoria</span>
+              <button onClick={fetchAuditLogs} style={{ background: "none", border: "none", fontSize: 10, fontWeight: 700, color: "#6366f1", cursor: "pointer" }}>
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}><Icon name="refresh" size={14} /> Actualizar</div>
+              </button>
+            </div>
+            <div style={{ fontSize: 10.5, color: "#64748b", marginBottom: 14, lineHeight: 1.5 }}>
+              Registo permanente e inalterável das acções administrativas mais sensíveis: alterações de
+              KYC, aprovação/rejeição de recargas de créditos, e publicação de taxas de câmbio.
+              Nenhuma entrada pode ser editada ou apagada depois de criada.
+            </div>
+
+            {auditLogs.length === 0 && (
+              <div style={{ textAlign: "center", padding: "36px 0", color: "#94a3b8", fontWeight: 600, fontSize: 13 }}>
+                Sem registos de auditoria ainda.
+              </div>
+            )}
+
+            {auditLogs.map(log => {
+              const actionLabels = {
+                kyc_status_changed: "Alteração de estado KYC",
+                recharge_status_changed: "Recarga de créditos",
+                exchange_rate_published: "Taxa de câmbio publicada",
+              };
+              const severityColors = {
+                info: { bg: "#f0fdf4", border: "#bbf7d0", text: "#16a34a" },
+                warning: { bg: "#fffbeb", border: "#fde68a", text: "#d97706" },
+                critical: { bg: "#fef2f2", border: "#fecaca", text: "#dc2626" },
+              };
+              const sc = severityColors[log.severity] || severityColors.info;
+
+              return (
+                <div key={log.id} className="adm-card" style={{ cursor: "default" }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 8 }}>
+                    <div>
+                      <div style={{ fontSize: 12.5, fontWeight: 800, color: "#1e1b4b" }}>
+                        {actionLabels[log.action] || log.action}
+                      </div>
+                      <div style={{ fontSize: 10, color: "#64748b", marginTop: 2 }}>
+                        {log.actor_email || "Sistema"} · {new Date(log.created_at).toLocaleString("pt-AO")}
+                      </div>
+                    </div>
+                    <span style={{
+                      fontSize: 8.5, fontWeight: 800, textTransform: "uppercase", letterSpacing: 0.4,
+                      padding: "3px 8px", borderRadius: 6,
+                      background: sc.bg, border: `1px solid ${sc.border}`, color: sc.text
+                    }}>
+                      {log.severity}
+                    </span>
+                  </div>
+
+                  {log.details && (
+                    <div style={{
+                      fontSize: 10.5, color: "#475569", background: "#f8fafc",
+                      borderRadius: 8, padding: "8px 10px", fontFamily: "monospace",
+                      whiteSpace: "pre-wrap", wordBreak: "break-word"
+                    }}>
+                      {Object.entries(log.details).map(([k, v]) => (
+                        <div key={k}><strong>{k}:</strong> {typeof v === "object" ? JSON.stringify(v) : String(v ?? "—")}</div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
           </>
         )}
 
