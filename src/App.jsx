@@ -109,16 +109,13 @@ function AuthScreen() {
       const { error } = await sb.auth.signInWithPassword({ email, password: pwd });
       if (error) { setErr("Email ou senha incorrectos."); setLoad(false); return; }
 
-      // ── Verificar se a conta tem 2FA activo e ainda por confirmar nesta sessão ──
-      // aal1 = só password verificada; aal2 = password + MFA verificados.
-      // Se currentLevel !== nextLevel, há um factor MFA verificado na conta
-      // que ainda não foi desafiado nesta sessão específica — pedir o código.
-      const { data: aalData } = await sb.auth.mfa.getAuthenticatorAssuranceLevel();
-      if (aalData && aalData.nextLevel === "aal2" && aalData.currentLevel !== "aal2") {
-        setNeedsMfaCode(true);
-        setLoad(false);
-        return;
-      }
+      // NOTA: a verificação de MFA acontece de forma centralizada no gate
+      // global do componente App (onAuthStateChange), não aqui. Isto evita
+      // ter duas verificações assíncronas independentes do mesmo estado a
+      // correr ao mesmo tempo (uma aqui, outra no listener), que causava uma
+      // condição de corrida onde o ecrã ficava preso em "A processar...".
+      // O useEffect deste componente (mais abaixo) trata de mostrar o ecrã
+      // de MFA quando necessário, assim que o gate global reagir à sessão.
     }
     setLoad(false);
   }
@@ -2258,6 +2255,27 @@ function ClientApp({ user, onLogout }) {
             </div>
             
             <div className="topbar-right">
+              {(() => {
+                const creditsBalance = Math.max(0, (parseInt(profile?.credits_balance || 0, 10)) - (parseInt(profile?.credits_reserved || 0, 10)));
+                return (
+                  <button
+                    onClick={() => setShowActivationScreen(true)}
+                    title="A Minha Carteira de Créditos"
+                    style={{
+                      display: "flex", alignItems: "center", gap: 5,
+                      height: 34, padding: "0 12px", borderRadius: 9,
+                      background: creditsBalance > 0 ? "rgba(16,185,129,0.1)" : "rgba(239,68,68,0.08)",
+                      border: "none", cursor: "pointer", transition: "all 0.2s", marginRight: 4
+                    }}
+                  >
+                    <Icon name="creditCard" size={15} color={creditsBalance > 0 ? "#059669" : "#dc2626"} />
+                    <span style={{ fontSize: 13, fontWeight: 800, color: creditsBalance > 0 ? "#059669" : "#dc2626" }}>
+                      {creditsBalance}
+                    </span>
+                  </button>
+                );
+              })()}
+
               <button
                 className="notification-bell"
                 onClick={() => setShowManual(true)}
