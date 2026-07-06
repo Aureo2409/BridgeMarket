@@ -67,6 +67,22 @@ function AuthScreen() {
         setLoad(false); return;
       }
 
+      // ── Exigência mínima de força da password ──
+      // O plano gratuito do Supabase não inclui a verificação automática
+      // contra bases de dados de passwords comprometidas (essa funcionalidade
+      // só existe no plano Pro). Como mitigação sem custo, exigimos aqui pelo
+      // menos 8 caracteres com uma combinação de letras e números, o que já
+      // elimina a maioria das passwords fracas mais comuns (ex: "12345678",
+      // "password", só números, etc.)
+      if (pwd.length < 8) {
+        setErr("err:A senha deve ter pelo menos 8 caracteres.");
+        setLoad(false); return;
+      }
+      if (!/[a-zA-Z]/.test(pwd) || !/[0-9]/.test(pwd)) {
+        setErr("err:A senha deve conter pelo menos uma letra e um número.");
+        setLoad(false); return;
+      }
+
       // Anti-SPAM: Previne múltiplas tentativas de registo seguidas
       const lastAttempt = localStorage.getItem("last_register_attempt");
       if (lastAttempt && Date.now() - parseInt(lastAttempt) < 60000) { // 60 segundos de bloqueio
@@ -282,9 +298,15 @@ function AuthScreen() {
           {mode !== "reset" && (
             <>
               <label className="lbl">Senha</label>
-              <input className="inp" style={{ marginBottom: mode === "login" ? 4 : (mode === "register" ? 8 : 14) }} type="password" placeholder="Mínimo 6 caracteres"
+              <input className="inp" style={{ marginBottom: mode === "register" ? 4 : (mode === "login" ? 4 : 14) }} type="password"
+                placeholder={mode === "register" ? "Mínimo 8 caracteres, letras e números" : "A tua senha"}
                 value={pwd} onChange={e => setPwd(e.target.value)}
                 onKeyDown={e => e.key === "Enter" && submit()} />
+              {mode === "register" && (
+                <div style={{ fontSize: 10.5, color: "#9ca3af", marginBottom: 14, lineHeight: 1.4 }}>
+                  Pelo menos 8 caracteres, com letras e números — para a tua conta ficar mais protegida.
+                </div>
+              )}
               {mode === "login" && (
                 <div style={{ textAlign: "right", marginBottom: 14 }}>
                   <button onClick={() => { setMode("reset"); setErr(""); }} style={{ background: "none", border: "none", color: "#6366f1", fontSize: 11, fontWeight: 700, cursor: "pointer" }}>Esqueci-me da senha</button>
