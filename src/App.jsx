@@ -25,10 +25,10 @@ function AuthScreen() {
   const [mfaCode, setMfaCode] = useState("");
 
   // Ao montar o ecrã de login, verifica se já existe uma sessão válida do
-  // Supabase que ainda não passou o desafio de MFA — cobre o caso em que o
-  // gate de segurança do componente App (nível superior) forçou setUser(null)
-  // por a sessão ainda estar em AAL1, mas o utilizador já tinha autenticado
-  // com password correctamente e só falta o código de 6 dígitos.
+  // Supabase que ainda não passou o desafio de MFA — cobre o caso de o
+  // utilizador recarregar a página a meio do processo (ex: depois de inserir
+  // a password mas antes de confirmar o código de 6 dígitos), garantindo que
+  // volta a ver o ecrã de MFA em vez do formulário de login normal.
   useEffect(() => {
     let cancelled = false;
     (async () => {
@@ -47,77 +47,100 @@ function AuthScreen() {
   async function submit() {
     setLoad(true); setErr("");
 
-    if (mode === "reset") {
-      if (!email.trim()) { setErr("Insere o teu email."); setLoad(false); return; }
-      setErr("load:A enviar link de recuperação...");
-      const { error } = await sb.auth.resetPasswordForEmail(email);
-      if (error) { setErr("Erro: " + error.message); }
-      else { setErr("ok:Enviámos um link de recuperação para o teu email."); }
-      setLoad(false); return;
+    // ── Toda a função está envolvida num try/finally ──
+    // Isto é a garantia definitiva: aconteça o que acontecer lá dentro —
+    // qualquer excepção não prevista, de qualquer chamada de rede, em
+    // qualquer ponto — o botão NUNCA MAIS fica preso em "A processar...".
+    // O finally corre sempre, mesmo que uma excepção seja lançada e não
+    // apanhada por nenhum catch interno.
+    try {
+      if (mode === "reset") {
+        if (!email.trim()) { setErr("Insere o teu email."); return; }
+        setErr("load:A enviar link de recuperação...");
+        const { error } = await sb.auth.resetPasswordForEmail(email);
+        if (error) { setErr("Erro: " + error.message); }
+        else { setErr("ok:Enviámos um link de recuperação para o teu email."); }
+        return;
+      }
+
+      if (mode === "register") {
+        if (!termsAccepted) { setErr("err:Precisas de aceitar os Termos e Condições para prosseguir."); return; }
+        if (!phone.trim()) { setErr("O número de telefone é obrigatório."); return; }
+
+        // Validação para números de Angola (+244)
+        const cleanPhone = phone.replace(/\D/g, "");
+        if (!((cleanPhone.length === 9 && cleanPhone.startsWith("9")) || (cleanPhone.length === 12 && cleanPhone.startsWith("2449")))) {
+          setErr("err:Apenas números válidos de Angola (+244) são permitidos.");
+          return;
+        }
+
+        // ── Exigência mínima de força da password ──
+        // O plano gratuito do Supabase não inclui a verificação automática
+        // contra bases de dados de passwords comprometidas (essa funcionalidade
+        // só existe no plano Pro). Como mitigação sem custo, exigimos aqui pelo
+        // menos 8 caracteres com uma combinação de letras e números, o que já
+        // elimina a maioria das passwords fracas mais comuns (ex: "12345678",
+        // "password", só números, etc.)
+        if (pwd.length < 8) {
+          setErr("err:A senha deve ter pelo menos 8 caracteres.");
+          return;
+        }
+        if (!/[a-zA-Z]/.test(pwd) || !/[0-9]/.test(pwd)) {
+          setErr("err:A senha deve conter pelo menos uma letra e um número.");
+          return;
+        }
+
+        // Anti-SPAM: Previne múltiplas tentativas de registo seguidas
+        const lastAttempt = localStorage.getItem("last_register_attempt");
+        if (lastAttempt && Date.now() - parseInt(lastAttempt) < 60000) { // 60 segundos de bloqueio
+          setErr("err:Aguarda 1 minuto antes de tentares criar outra conta.");
+          return;
+        }
+        localStorage.setItem("last_register_attempt", Date.now().toString());
+
+        // Garante que o número começa sempre por +244 antes de salvar na base de dados
+        const formattedPhone = cleanPhone.length === 9 ? `+244${cleanPhone}` : `+${cleanPhone}`;
+
+        setErr("load:A criar a conta...");
+        const { error, data } = await sb.auth.signUp({ email, password: pwd });
+        if (error) { setErr(error.message); return; }
+        if (data?.user) {
+          await sb.from("profiles").upsert({
+            id: data.user.id,
+            full_name: name || null,
+            phone: formattedPhone,
+          });
+        }
+        setErr("ok:Registo feito! Verifica o teu email para activar a conta.");
+      } else {
+        const { error } = await sb.auth.signInWithPassword({ email, password: pwd });
+        if (error) { setErr("Email ou senha incorrectos."); return; }
+
+        // Verificar se esta conta tem 2FA activo e ainda por confirmar nesta
+        // sessão específica. aal1 = só password verificada; aal2 = password +
+        // MFA verificados.
+        try {
+          const { data: aalData } = await sb.auth.mfa.getAuthenticatorAssuranceLevel();
+          if (aalData && aalData.nextLevel === "aal2" && aalData.currentLevel !== "aal2") {
+            setNeedsMfaCode(true);
+            return;
+          }
+        } catch (mfaErr) {
+          console.error("Erro ao verificar MFA (login continua sem exigir código):", mfaErr);
+          // Não bloqueia o login — se a verificação de MFA falhar tecnicamente,
+          // é mais seguro deixar o utilizador entrar (o admin pode reforçar
+          // manualmente depois) do que deixá-lo preso fora da própria conta.
+        }
+      }
+    } catch (unexpectedErr) {
+      // Rede de segurança final: qualquer excepção não prevista em qualquer
+      // ponto da função acima é apanhada aqui, evitando que o botão fique
+      // preso. Mostra um erro genérico em vez de rebentar silenciosamente.
+      console.error("Erro inesperado no submit() do login:", unexpectedErr);
+      setErr("err:Ocorreu um erro inesperado. Tenta novamente.");
+    } finally {
+      setLoad(false);
     }
-
-    if (mode === "register") {
-      if (!termsAccepted) { setErr("err:Precisas de aceitar os Termos e Condições para prosseguir."); setLoad(false); return; }
-      if (!phone.trim()) { setErr("O número de telefone é obrigatório."); setLoad(false); return; }
-
-      // Validação para números de Angola (+244)
-      const cleanPhone = phone.replace(/\D/g, "");
-      if (!((cleanPhone.length === 9 && cleanPhone.startsWith("9")) || (cleanPhone.length === 12 && cleanPhone.startsWith("2449")))) {
-        setErr("err:Apenas números válidos de Angola (+244) são permitidos.");
-        setLoad(false); return;
-      }
-
-      // ── Exigência mínima de força da password ──
-      // O plano gratuito do Supabase não inclui a verificação automática
-      // contra bases de dados de passwords comprometidas (essa funcionalidade
-      // só existe no plano Pro). Como mitigação sem custo, exigimos aqui pelo
-      // menos 8 caracteres com uma combinação de letras e números, o que já
-      // elimina a maioria das passwords fracas mais comuns (ex: "12345678",
-      // "password", só números, etc.)
-      if (pwd.length < 8) {
-        setErr("err:A senha deve ter pelo menos 8 caracteres.");
-        setLoad(false); return;
-      }
-      if (!/[a-zA-Z]/.test(pwd) || !/[0-9]/.test(pwd)) {
-        setErr("err:A senha deve conter pelo menos uma letra e um número.");
-        setLoad(false); return;
-      }
-
-      // Anti-SPAM: Previne múltiplas tentativas de registo seguidas
-      const lastAttempt = localStorage.getItem("last_register_attempt");
-      if (lastAttempt && Date.now() - parseInt(lastAttempt) < 60000) { // 60 segundos de bloqueio
-        setErr("err:Aguarda 1 minuto antes de tentares criar outra conta.");
-        setLoad(false); return;
-      }
-      localStorage.setItem("last_register_attempt", Date.now().toString());
-
-      // Garante que o número começa sempre por +244 antes de salvar na base de dados
-      const formattedPhone = cleanPhone.length === 9 ? `+244${cleanPhone}` : `+${cleanPhone}`;
-
-      setErr("load:A criar a conta...");
-      const { error, data } = await sb.auth.signUp({ email, password: pwd });
-      if (error) { setErr(error.message); setLoad(false); return; }
-      if (data?.user) {
-        await sb.from("profiles").upsert({
-          id: data.user.id,
-          full_name: name || null,
-          phone: formattedPhone,
-        });
-      }
-      setErr("ok:Registo feito! Verifica o teu email para activar a conta.");
-    } else {
-      const { error } = await sb.auth.signInWithPassword({ email, password: pwd });
-      if (error) { setErr("Email ou senha incorrectos."); setLoad(false); return; }
-
-      // NOTA: a verificação de MFA acontece de forma centralizada no gate
-      // global do componente App (onAuthStateChange), não aqui. Isto evita
-      // ter duas verificações assíncronas independentes do mesmo estado a
-      // correr ao mesmo tempo (uma aqui, outra no listener), que causava uma
-      // condição de corrida onde o ecrã ficava preso em "A processar...".
-      // O useEffect deste componente (mais abaixo) trata de mostrar o ecrã
-      // de MFA quando necessário, assim que o gate global reagir à sessão.
-    }
-    setLoad(false);
   }
 
   async function handleMfaVerify() {
@@ -2822,31 +2845,10 @@ export default function App() {
       setReady(true);
     }, 2500);
 
-    // Verifica se a sessão actual já passou pelo nível de segurança exigido.
-    // Se a conta tem um factor MFA verificado mas a sessão ainda só tem AAL1
-    // (password), a conta NÃO deve ser considerada "logada" do ponto de vista
-    // da aplicação — fica bloqueada no AuthScreen até o código ser confirmado.
-    // Isto impede que o painel de administração apareça momentaneamente antes
-    // do MFA ser pedido, mesmo que o Supabase já tenha criado uma sessão válida.
-    async function sessionPassesMfaGate() {
-      try {
-        const { data } = await sb.auth.mfa.getAuthenticatorAssuranceLevel();
-        return !data || data.nextLevel !== "aal2" || data.currentLevel === "aal2";
-      } catch {
-        return true; // se a verificação falhar, não bloqueia (evita lock-out por erro de rede)
-      }
-    }
-
     sb.auth.getSession()
       .then(async ({ data }) => {
         try {
           const u = data?.session?.user ?? null;
-          if (u && !(await sessionPassesMfaGate())) {
-            // Sessão existe mas ainda não passou o MFA — não expor user/admin
-            setUser(null);
-            setAdmin(false);
-            return;
-          }
           setUser(u);
           if (u) setAdmin(await checkIsAdmin(u.id));
         } finally {
@@ -2863,13 +2865,6 @@ export default function App() {
     const { data: { subscription } } = sb.auth.onAuthStateChange(async (_e, s) => {
       const u = s?.user ?? null;
       if (u) {
-        if (!(await sessionPassesMfaGate())) {
-          // Mesma protecção no listener de mudanças de sessão — cobre o
-          // caso de signInWithPassword disparar este evento imediatamente
-          setUser(null);
-          setAdmin(false);
-          return;
-        }
         setUser(u);
         checkIsAdmin(u.id).then(isAdm => {
           setAdmin(isAdm);
