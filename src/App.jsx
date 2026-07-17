@@ -1278,6 +1278,38 @@ function ClientApp({ user, onLogout }) {
     );
   }
 
+  // ── Manual do Utilizador ──
+  // NOTA: estas duas funções foram anteriormente colocadas por engano dentro
+  // do componente App de nível superior, onde 'profile', 'setProfile' e
+  // 'setShowManual' não existem — isso causava "ReferenceError: handleCloseManual
+  // is not defined" assim que o manual tentava fechar (o UserManual é renderizado
+  // dentro de ClientApp, e chamava uma função que só existia no escopo do
+  // componente pai App, invisível aqui). Movidas para o escopo correcto.
+  async function handleCloseManual() {
+    setShowManual(false);
+    // Marca como visto apenas se ainda não estava marcado — evita escritas
+    // desnecessárias no Supabase de cada vez que o utilizador reabre o manual
+    // pelo botão de Ajuda depois da primeira vez.
+    if (!profile?.manual_seen_at && user?.id) {
+      const nowIso = new Date().toISOString();
+      const { error } = await sb.from("profiles").update({ manual_seen_at: nowIso }).eq("id", user.id);
+      if (!error) {
+        setProfile(prev => ({ ...prev, manual_seen_at: nowIso }));
+      }
+    }
+  }
+
+  function handleDownloadManualPdf() {
+    // O PDF do manual está disponível como ficheiro estático em /manual/,
+    // servido directamente pelo Vercel a partir da pasta public/.
+    const link = document.createElement("a");
+    link.href = "/manual/bridge_manual_utilizador.pdf";
+    link.download = "Bridge-Manual-do-Utilizador.pdf";
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  }
+
   async function handleAvatarUpload(e) {
     const file = e.target.files[0];
     if (!file) return;
@@ -2890,31 +2922,6 @@ export default function App() {
     });
     return () => subscription.unsubscribe();
   }, []);
-
-  async function handleCloseManual() {
-    setShowManual(false);
-    // Marca como visto apenas se ainda não estava marcado — evita escritas
-    // desnecessárias no Supabase de cada vez que o utilizador reabre o manual
-    // pelo botão de Ajuda depois da primeira vez.
-    if (!profile?.manual_seen_at && user?.id) {
-      const nowIso = new Date().toISOString();
-      const { error } = await sb.from("profiles").update({ manual_seen_at: nowIso }).eq("id", user.id);
-      if (!error) {
-        setProfile(prev => ({ ...prev, manual_seen_at: nowIso }));
-      }
-    }
-  }
-
-  function handleDownloadManualPdf() {
-    // O PDF do manual está disponível como ficheiro estático em /manual/,
-    // servido directamente pelo Vercel a partir da pasta public/.
-    const link = document.createElement("a");
-    link.href = "/manual/bridge_manual_utilizador.pdf";
-    link.download = "Bridge-Manual-do-Utilizador.pdf";
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-  }
 
   async function handleLogout() {
     try {
