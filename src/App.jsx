@@ -105,6 +105,7 @@ function AuthScreen() {
         const { error, data } = await sb.auth.signUp({ email, password: pwd });
         if (error) { setErr(error.message); return; }
         if (data?.user) {
+          localStorage.setItem("just_registered", "true");
           await sb.from("profiles").upsert({
             id: data.user.id,
             full_name: name || null,
@@ -681,9 +682,9 @@ function ClientApp({ user, onLogout }) {
   const [profile, setProfile] = useState(() => {
     try {
       const cached = localStorage.getItem("bridge_profile");
-      return cached ? JSON.parse(cached) : { full_name: "", phone: "", date_of_birth: "", nationality: "", whatsapp: "", address: "", kyc_status: "", avatar_url: "", payment_destinations: {}, cancelled_count: 0, last_cancelled_at: null, credits_balance: 0, credits_reserved: 0, total_spent_kz: 0 };
+      return cached ? JSON.parse(cached) : { full_name: "", phone: "", date_of_birth: "", nationality: "", whatsapp: "", address: "", kyc_status: "", avatar_url: "", payment_destinations: {}, cancelled_count: 0, last_cancelled_at: null, credits_balance: 0, credits_reserved: 0, total_spent_kz: 0, manual_seen_at: null };
     } catch {
-      return { full_name: "", phone: "", date_of_birth: "", nationality: "", whatsapp: "", address: "", kyc_status: "", avatar_url: "", payment_destinations: {}, cancelled_count: 0, last_cancelled_at: null, credits_balance: 0, credits_reserved: 0, total_spent_kz: 0 };
+      return { full_name: "", phone: "", date_of_birth: "", nationality: "", whatsapp: "", address: "", kyc_status: "", avatar_url: "", payment_destinations: {}, cancelled_count: 0, last_cancelled_at: null, credits_balance: 0, credits_reserved: 0, total_spent_kz: 0, manual_seen_at: null };
     }
   });
   const [profileLoad, setProfileLoad] = useState(false);
@@ -768,12 +769,15 @@ function ClientApp({ user, onLogout }) {
         localStorage.setItem("bridge_profile", JSON.stringify(p));
 
         // ── Mostrar o Manual automaticamente na primeira vez do utilizador ──
-        // manual_seen_at é NULL apenas antes de ele ver o manual pela primeira
-        // vez; depois disso fica sempre acessível pelo botão de Ajuda, mas
-        // não volta a aparecer sozinho.
-        if (!data.manual_seen_at && !manualAutoShown) {
+        // Para evitar incomodar utilizadores antigos, apenas mostramos automaticamente
+        // se o utilizador acabou de se registar (marcado no localStorage ou se a conta
+        // foi criada após o lançamento do manual em 12 de Julho de 2026).
+        const justRegistered = localStorage.getItem("just_registered") === "true";
+        const isNewUser = user?.created_at && (new Date(user.created_at).getTime() > new Date("2026-07-12T00:00:00.000Z").getTime());
+        if (!data.manual_seen_at && (justRegistered || isNewUser) && !manualAutoShown) {
           setManualAutoShown(true);
           setShowManual(true);
+          localStorage.removeItem("just_registered");
         }
       }
     }).catch(() => { });
@@ -895,16 +899,12 @@ function ClientApp({ user, onLogout }) {
     }
   }
 
-
-  async function handleCalcSubmit({ usd, aoa, dest, account, appliedRate, side, bank, currency }) {
-    // Guardar dados do pedido e mostrar modal de motivo cambial (exigência BNA)
-    setPendingCalcData({ usd, aoa, dest, account, appliedRate, side, bank, currency });
-    setPendingExchangeReason("IM");
-    setPendingExchangeReasonDetail("");
-    setShowExchangeReasonModal(true);
+  async function handleCalcSubmit(calcData) {
+    // Criar o pedido directamente com a margem seleccionada (Bypass do modal BNA)
+    handleCalcSubmitFinal(calcData);
   }
 
-  async function handleCalcSubmitFinal({ usd, aoa, dest, account, appliedRate, side, bank, currency }) {
+  async function handleCalcSubmitFinal({ usd, aoa, dest, account, appliedRate, selectedMargin, finalExchangeRate, side, bank, currency, currencySymbol }) {
     const minUsd = parseFloat(config?.min_amount_usd) || 10;
     const maxUsd = parseFloat(config?.max_amount_usd) || 5000;
 
@@ -976,18 +976,22 @@ function ClientApp({ user, onLogout }) {
       });
     };
 
+    const finalRateValue = parseFloat(finalExchangeRate || appliedRate);
+    const selectedMarginVal = parseFloat(selectedMargin || 0);
+
     try {
       const insertPromise = sb.from("orders").insert({
         user_id: user.id, amount_usd: usd, amount_aoa: aoa,
-        rate_applied: appliedRate, destination: dest,
+        rate_applied: finalRateValue,
+        final_exchange_rate: finalRateValue,
+        selected_margin: selectedMarginVal,
+        destination: dest,
         destination_account: account,
         status: "awaiting_payment",
         side: side || "buy",
         payment_method: bank || "bai",
         currency: currency || "USD",
-        currency_symbol: ({ USD: "$", EUR: "€", BRL: "R$", ZAR: "R" })[currency || "USD"],
-        exchange_reason: pendingExchangeReason || "OU",
-        exchange_reason_detail: pendingExchangeReasonDetail || null
+        currency_symbol: currencySymbol || ({ USD: "$", EUR: "€", BRL: "R$", ZAR: "R" })[currency || "USD"]
       }).select().single();
 
       let result;
@@ -1294,7 +1298,9 @@ function ClientApp({ user, onLogout }) {
       const nowIso = new Date().toISOString();
       const { error } = await sb.from("profiles").update({ manual_seen_at: nowIso }).eq("id", user.id);
       if (!error) {
-        setProfile(prev => ({ ...prev, manual_seen_at: nowIso }));
+        const updatedProfile = { ...profile, manual_seen_at: nowIso };
+        setProfile(updatedProfile);
+        localStorage.setItem("bridge_profile", JSON.stringify(updatedProfile));
       }
     }
   }
@@ -2422,121 +2428,7 @@ function ClientApp({ user, onLogout }) {
     );
   }
 
-  // ── MODAL DE MOTIVO CAMBIAL (Exigência BNA / Lei Cambial Angola) ─────────────
-  const EXCHANGE_REASONS = [
-    { id: "IM", label: "Importação de mercadoria", desc: "Pagamento a fornecedores internacionais", icon: "📦" },
-    { id: "SP", label: "Serviços / Propinas", desc: "Pagamento de propinas ou serviços no exterior", icon: "🎓" },
-    { id: "RF", label: "Remessa familiar", desc: "Transferência para familiares no estrangeiro", icon: "👨‍👩‍👧" },
-    { id: "PS", label: "Prestação de serviços", desc: "Recebimento por serviços prestados", icon: "💼" },
-    { id: "VI", label: "Viagem internacional", desc: "Despesas de viagem ao exterior", icon: "✈️" },
-    { id: "IN", label: "Investimento / Poupança", desc: "Reserva de valor ou investimento", icon: "📈" },
-    { id: "OU", label: "Outro motivo", desc: "Motivo não listado — descrição obrigatória", icon: "📝" },
-  ];
 
-  if (showExchangeReasonModal && pendingCalcData) {
-    return (
-      <div style={{ minHeight: "100vh", background: "#f8fafc", display: "flex", flexDirection: "column" }}>
-        {/* Header */}
-        <div style={{ background: "linear-gradient(135deg, #1e1b4b, #312e81)", padding: "20px 20px 16px", display: "flex", alignItems: "center", gap: 12 }}>
-          <button onClick={() => { setShowExchangeReasonModal(false); setPendingCalcData(null); }}
-            style={{ background: "none", border: "none", color: "#a5b4fc", cursor: "pointer", display: "flex", alignItems: "center", gap: 6, fontSize: 13, fontWeight: 700 }}>
-            <Icon name="arrowLeft" size={16} /> Voltar
-          </button>
-          <div style={{ flex: 1 }}>
-            <div style={{ fontSize: 16, fontWeight: 900, color: "#fff" }}>Declaração Cambial</div>
-            <div style={{ fontSize: 11, color: "#a5b4fc" }}>Exigência do Banco Nacional de Angola</div>
-          </div>
-          <div style={{ fontSize: 22 }}>🏛️</div>
-        </div>
-
-        <div style={{ padding: "20px 16px", flex: 1 }}>
-          {/* Explicação */}
-          <div style={{ background: "#fffbeb", border: "1px solid #fde68a", borderRadius: 12, padding: "12px 14px", marginBottom: 20, display: "flex", gap: 10, alignItems: "flex-start" }}>
-            <span style={{ fontSize: 18, flexShrink: 0 }}>⚖️</span>
-            <div style={{ fontSize: 12.5, color: "#92400e", lineHeight: 1.6 }}>
-              <strong>Declaração obrigatória por lei.</strong> Ao abrigo da Lei Cambial de Angola e dos Avisos do BNA, todas as operações cambiais devem identificar o motivo da transacção. Esta informação é guardada e pode ser reportada à UIF.
-            </div>
-          </div>
-
-          {/* Resumo do pedido */}
-          <div style={{ background: "#fff", borderRadius: 12, border: "1px solid #e2e8f0", padding: "14px 16px", marginBottom: 20 }}>
-            <div style={{ fontSize: 11, fontWeight: 700, color: "#64748b", textTransform: "uppercase", letterSpacing: 1, marginBottom: 10 }}>Resumo do Pedido</div>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-              <div>
-                <div style={{ fontSize: 22, fontWeight: 900, color: "#059669" }}>${parseFloat(pendingCalcData.usd).toFixed(2)}</div>
-                <div style={{ fontSize: 11, color: "#64748b" }}>{parseFloat(pendingCalcData.aoa).toLocaleString("pt-AO")} Kz • {pendingCalcData.dest?.toUpperCase?.()}</div>
-              </div>
-              <div style={{ fontSize: 12, color: "#6366f1", fontWeight: 700 }}>{pendingCalcData.appliedRate} AOA/$</div>
-            </div>
-          </div>
-
-          {/* Selecção do motivo */}
-          <div style={{ fontSize: 13, fontWeight: 700, color: "#1e293b", marginBottom: 12 }}>Qual o motivo desta operação cambial?</div>
-          <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 20 }}>
-            {EXCHANGE_REASONS.map(r => (
-              <button key={r.id}
-                onClick={() => setPendingExchangeReason(r.id)}
-                style={{
-                  display: "flex", alignItems: "center", gap: 12,
-                  background: pendingExchangeReason === r.id ? "#eef2ff" : "#fff",
-                  border: `2px solid ${pendingExchangeReason === r.id ? "#6366f1" : "#e2e8f0"}`,
-                  borderRadius: 12, padding: "12px 14px", cursor: "pointer",
-                  transition: "all 0.15s", textAlign: "left"
-                }}>
-                <span style={{ fontSize: 22, flexShrink: 0 }}>{r.icon}</span>
-                <div style={{ flex: 1 }}>
-                  <div style={{ fontSize: 13, fontWeight: 700, color: pendingExchangeReason === r.id ? "#4f46e5" : "#1e293b" }}>{r.label}</div>
-                  <div style={{ fontSize: 11, color: "#64748b", marginTop: 1 }}>{r.desc}</div>
-                </div>
-                {pendingExchangeReason === r.id && (
-                  <div style={{ width: 20, height: 20, borderRadius: "50%", background: "#6366f1", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                    <span style={{ color: "#fff", fontSize: 12, fontWeight: 900 }}>✓</span>
-                  </div>
-                )}
-              </button>
-            ))}
-          </div>
-
-          {/* Campo de detalhe para "Outro" */}
-          {pendingExchangeReason === "OU" && (
-            <div style={{ marginBottom: 20 }}>
-              <div style={{ fontSize: 12, fontWeight: 700, color: "#374151", marginBottom: 6 }}>Descreve o motivo (obrigatório):</div>
-              <textarea
-                value={pendingExchangeReasonDetail}
-                onChange={e => setPendingExchangeReasonDetail(e.target.value)}
-                placeholder="Descreve o motivo da operação cambial..."
-                rows={3}
-                style={{ width: "100%", borderRadius: 10, border: "1px solid #d1d5db", padding: "10px 12px", fontSize: 13, resize: "none", fontFamily: "inherit" }}
-              />
-            </div>
-          )}
-
-          {/* Botão confirmar */}
-          <button
-            onClick={() => {
-              if (pendingExchangeReason === "OU" && !pendingExchangeReasonDetail.trim()) {
-                toast_("Descreve o motivo da operação para continuar.", "err");
-                return;
-              }
-              setShowExchangeReasonModal(false);
-              handleCalcSubmitFinal(pendingCalcData);
-            }}
-            style={{
-              width: "100%", padding: "16px", borderRadius: 14, border: "none",
-              background: "linear-gradient(135deg, #6366f1, #4f46e5)",
-              color: "#fff", fontSize: 15, fontWeight: 800, cursor: "pointer"
-            }}
-          >
-            Confirmar e Criar Pedido ▶
-          </button>
-
-          <div style={{ fontSize: 10.5, color: "#94a3b8", textAlign: "center", marginTop: 12, lineHeight: 1.5 }}>
-            Ao confirmar, declaro que o motivo indicado é verdadeiro. Declaração falsa constitui crime cambial ao abrigo da Lei Cambial de Angola.
-          </div>
-        </div>
-      </div>
-    );
-  }
 
   if (showActivationScreen) {
     return (

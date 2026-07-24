@@ -341,12 +341,16 @@ export function Calculator({ appliedRate, rate, onSubmit, loading, user, kycStep
   const [showWalletModal, setShowWalletModal] = useState(false);
   const [showBankModal, setShowBankModal] = useState(false);
 
+  const [selectedMargin, setSelectedMargin] = useState(0); // -30, -20, -10, 0, +10, +20, +30
+
   // Taxa actual para a moeda seleccionada
   const currentCurrencyDef = CURRENCIES.find(c => c.id === currency) || CURRENCIES[0];
   const currencyRateAvailable = currency === "USD" || !!multiRates?.[currency];
-  const currentRate = currency === "USD"
+  const baseRate = currency === "USD"
     ? applied
     : (multiRates?.[currency] || applied);
+
+  const finalRate = baseRate + selectedMargin;
 
   // Destinos filtrados pela moeda seleccionada
   const filteredDests = currentCurrencyDef.dests
@@ -359,6 +363,15 @@ export function Calculator({ appliedRate, rate, onSubmit, loading, user, kycStep
       setDest(filteredDests[0].id);
     }
   }, [currency]);
+
+  // Quando a moeda, taxa base ou margem muda, recalcular o valor AOA com base no valor estrangeiro actual
+  useEffect(() => {
+    const n = parseFloat(usd) || 0;
+    if (n > 0) {
+      setAoa(Math.round(n * finalRate).toLocaleString("pt-AO"));
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currency, baseRate, selectedMargin]);
 
   useEffect(() => {
     const isModalOpen = showWalletModal || showBankModal;
@@ -390,14 +403,14 @@ export function Calculator({ appliedRate, rate, onSubmit, loading, user, kycStep
     setUsd(v);
     setField("usd");
     const n = parseFloat(v) || 0;
-    setAoa(n > 0 ? Math.round(n * currentRate).toLocaleString("pt-AO") : "");
+    setAoa(n > 0 ? Math.round(n * finalRate).toLocaleString("pt-AO") : "");
   }
 
   function onAoa(v) {
     setAoa(v);
     setField("aoa");
     const n = parseFloat(v.replace(/\s/g, "").replace(/\./g, "").replace(",", ".")) || 0;
-    setUsd(n > 0 ? (n / currentRate).toFixed(2) : "");
+    setUsd(n > 0 ? (n / finalRate).toFixed(2) : "");
   }
 
   function swap() {
@@ -405,11 +418,11 @@ export function Calculator({ appliedRate, rate, onSubmit, loading, user, kycStep
     if (field === "usd") {
       setField("aoa");
       const n = parseFloat((aoa + "").replace(/\s/g, "").replace(/\./g, "").replace(",", ".")) || 0;
-      if (n > 0) setUsd((n / currentRate).toFixed(2));
+      if (n > 0) setUsd((n / finalRate).toFixed(2));
     } else {
       setField("usd");
       const n = parseFloat(usd) || 0;
-      if (n > 0) setAoa(Math.round(n * currentRate).toLocaleString("pt-AO"));
+      if (n > 0) setAoa(Math.round(n * finalRate).toLocaleString("pt-AO"));
     }
   }
 
@@ -418,13 +431,23 @@ export function Calculator({ appliedRate, rate, onSubmit, loading, user, kycStep
     setAcc(""); // Clear input when toggling mode
   }
 
+  const minAllowedRate = baseRate - 30;
+  const maxAllowedRate = baseRate + 30;
+  const isRateOutOfRange = finalRate < minAllowedRate || finalRate > maxAllowedRate;
+
   function submit() {
+    if (isRateOutOfRange) {
+      alert(`Para manter a segurança do mercado, a taxa para ${currency} deve estar entre ${minAllowedRate.toLocaleString("pt-AO")} Kz e ${maxAllowedRate.toLocaleString("pt-AO")} Kz.`);
+      return;
+    }
     onSubmit({
       usd: usdNum,
-      aoa: Math.round(usdNum * currentRate),
+      aoa: Math.round(usdNum * finalRate),
       dest,
       account,
-      appliedRate: currentRate,
+      appliedRate: finalRate,
+      selectedMargin: selectedMargin,
+      finalExchangeRate: finalRate,
       side: opType,
       bank: selectedBank,
       currency,
@@ -478,8 +501,11 @@ export function Calculator({ appliedRate, rate, onSubmit, loading, user, kycStep
 
       <div className="hero">
         <div style={{ fontSize: 10, fontWeight: 700, opacity: .7, textTransform: "uppercase", letterSpacing: .5, marginBottom: 3 }}>Taxa de hoje</div>
-        <div style={{ fontSize: 34, fontWeight: 900, letterSpacing: -2 }}>{applied.toLocaleString("pt-AO")} Kz</div>
-        <div style={{ fontSize: 11, opacity: .7, fontWeight: 600 }}>por 1 USD · base {parseFloat(rate.base_rate).toLocaleString("pt-AO")} + margem {parseFloat(rate.margin)} Kz</div>
+        <div style={{ fontSize: 34, fontWeight: 900, letterSpacing: -2 }}>{finalRate.toLocaleString("pt-AO")} Kz</div>
+        <div style={{ fontSize: 11, opacity: .7, fontWeight: 600 }}>
+          por 1 {currency} · base {baseRate.toLocaleString("pt-AO")} Kz
+          {selectedMargin !== 0 ? ` (${selectedMargin > 0 ? `+${selectedMargin}` : selectedMargin} Kz)` : " (Taxa Base)"}
+        </div>
       </div>
 
       <div className="card">
@@ -544,9 +570,60 @@ export function Calculator({ appliedRate, rate, onSubmit, loading, user, kycStep
           </div>
         )}
 
+        {/* ── Seletor Rápido de Margem Dinâmica (±30 Kz) ── */}
+        <div style={{ margin: "14px 0 10px", padding: "12px 14px", background: "rgba(99, 102, 241, 0.03)", borderRadius: 16, border: "1.5px solid #e0e7ff" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+            <span style={{ fontSize: 11, fontWeight: 800, color: "#1e1b4b", textTransform: "uppercase", letterSpacing: "0.5px" }}>
+              ⚡ Margem Dinâmica ({selectedMargin > 0 ? `+${selectedMargin}` : selectedMargin} Kz)
+            </span>
+            <span style={{ fontSize: 10, color: "#6366f1", fontWeight: 700 }}>
+              Base: {baseRate.toLocaleString("pt-AO")} Kz
+            </span>
+          </div>
+          <div style={{ display: "flex", gap: 5, overflowX: "auto", paddingBottom: 4 }}>
+            {[
+              { val: -30, lbl: "-30 Kz", tip: "Venda rápida / Maior desconto" },
+              { val: -20, lbl: "-20 Kz", tip: "Desconto alto" },
+              { val: -10, lbl: "-10 Kz", tip: "Desconto leve" },
+              { val: 0, lbl: "0 Kz", tip: "Taxa Oficial Base" },
+              { val: 10, lbl: "+10 Kz", tip: "Lucro leve" },
+              { val: 20, lbl: "+20 Kz", tip: "Lucro alto" },
+              { val: 30, lbl: "+30 Kz", tip: "Lucro máximo" },
+            ].map(m => {
+              const isSelected = selectedMargin === m.val;
+              return (
+                <button
+                  key={m.val}
+                  type="button"
+                  onClick={() => setSelectedMargin(m.val)}
+                  title={m.tip}
+                  style={{
+                    flex: 1,
+                    minWidth: 44,
+                    padding: "7px 4px",
+                    borderRadius: 10,
+                    fontSize: 10.5,
+                    fontWeight: 800,
+                    border: isSelected ? "2px solid #6366f1" : "1.5px solid #e2e8f0",
+                    background: isSelected 
+                      ? "linear-gradient(135deg, #6366f1, #4f46e5)" 
+                      : m.val < 0 ? "#f0fdf4" : m.val > 0 ? "#fffbeb" : "#ffffff",
+                    color: isSelected ? "#ffffff" : m.val < 0 ? "#15803d" : m.val > 0 ? "#b45309" : "#475569",
+                    boxShadow: isSelected ? "0 4px 12px rgba(99,102,241,0.25)" : "none",
+                    cursor: "pointer",
+                    transition: "all 0.15s cubic-bezier(0.16, 1, 0.3, 1)"
+                  }}
+                >
+                  {m.lbl}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
         <div className="rate-note">
-          <span style={{ fontSize: 11, color: "#6b7280", fontWeight: 600 }}>Taxa aplicada</span>
-          <span className="rate-val" style={{ display: "flex", alignItems: "center", gap: 6 }}><Icon name="chart" size={14} /> 1 {currency} = {currentRate.toLocaleString("pt-AO")} Kz</span>
+          <span style={{ fontSize: 11, color: "#6b7280", fontWeight: 600 }}>Taxa final negociada</span>
+          <span className="rate-val" style={{ display: "flex", alignItems: "center", gap: 6 }}><Icon name="chart" size={14} /> 1 {currency} = {finalRate.toLocaleString("pt-AO")} Kz</span>
         </div>
         {!currencyRateAvailable && (
           <div style={{ marginTop: 8, padding: "8px 12px", background: "#fffbeb", border: "1px solid #fde68a", borderRadius: 10, fontSize: 10.5, color: "#92400e", fontWeight: 600, display: "flex", alignItems: "center", gap: 6 }}>
@@ -584,7 +661,7 @@ export function Calculator({ appliedRate, rate, onSubmit, loading, user, kycStep
             {/* Sleek Selector Box 1 (USD Wallet) */}
             <div style={{ display: "flex", flexDirection: "column" }}>
               <span className="slbl" style={{ fontSize: 9, color: "#94a3b8", fontWeight: 800, marginBottom: 6, display: "block" }}>
-                {opType === "buy" ? "Carteira de Destino (USD)" : "Carteira de Origem (USD)"}
+                {opType === "buy" ? `Carteira de Destino (${currency})` : `Carteira de Origem (${currency})`}
               </span>
               <div 
                 onClick={() => setShowWalletModal(true)}

@@ -374,10 +374,10 @@ export function TransactionCenter({ order, user, onBack, onCancel }) {
             <div style={{ fontSize: 11, fontWeight: 700, color: "#64748b", textTransform: "uppercase", letterSpacing: 1, marginBottom: 12 }}>Detalhes da Transacção</div>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
               {[
-                { label: "Valor USD", val: `$${parseFloat(currentOrder.amount_usd).toFixed(2)}`, icon: "💵", color: "#059669" },
+                { label: `Valor ${currentOrder.currency || "USD"}`, val: `${currentOrder.currency_symbol || "$"}${parseFloat(currentOrder.amount_usd).toFixed(2)}`, icon: "💵", color: "#059669" },
                 { label: "Valor AOA", val: `${parseFloat(currentOrder.amount_aoa).toLocaleString("pt-AO")} Kz`, icon: "🇦🇴", color: "#1e1b4b" },
-                { label: "Taxa Aplicada", val: `${currentOrder.rate_applied} AOA/$`, icon: "📊", color: "#6366f1" },
-                { label: "Motivo Cambial", val: motivos[currentOrder.exchange_reason] || "Não especificado", icon: "📋", color: "#d97706" },
+                { label: "Taxa Acordada (Fixa)", val: `1 ${currentOrder.currency || "USD"} = ${currentOrder.final_exchange_rate || currentOrder.rate_applied} Kz`, icon: "🔒", color: "#6366f1" },
+                { label: "Margem Aplicada", val: currentOrder.selected_margin ? `${currentOrder.selected_margin > 0 ? `+${currentOrder.selected_margin}` : currentOrder.selected_margin} Kz` : "0 Kz (Base)", icon: "⚡", color: "#d97706" },
               ].map((item, i) => (
                 <div key={i} style={{ background: "#f8fafc", borderRadius: 10, padding: "10px 12px", border: "1px solid #e2e8f0" }}>
                   <div style={{ fontSize: 10, color: "#94a3b8", marginBottom: 3 }}>{item.icon} {item.label}</div>
@@ -403,8 +403,7 @@ export function TransactionCenter({ order, user, onBack, onCancel }) {
               {[
                 { icon: "🔒", text: "Nunca comuniques fora desta plataforma. Qualquer pedido para continuar no WhatsApp ou outro canal é uma tentativa de burla.", color: "#dc2626", bg: "#fef2f2", border: "#fecaca" },
                 { icon: "✅", text: isBuyer ? "Só confirma o recebimento depois de verificares que o saldo está DISPONÍVEL na tua conta — não retido ou pendente." : "Só marques como enviado depois de a transferência estar efectivamente concluída. Faz upload do comprovativo.", color: "#059669", bg: "#f0fdf4", border: "#bbf7d0" },
-                { icon: "📸", text: "Este chat é rastreado e gravado. Toda a comunicação fica registada e pode ser consultada pelo administrador e autoridades.", color: "#6366f1", bg: "#eef2ff", border: "#c7d2fe" },
-                { icon: "🏛️", text: "Esta transacção está sujeita à Lei Cambial de Angola e aos Avisos do BNA. Os dados da operação são reportados à UIF se necessário.", color: "#d97706", bg: "#fffbeb", border: "#fde68a" },
+                { icon: "📸", text: "Este chat é rastreado e gravado. Toda a comunicação fica registada e pode ser consultada pelo administrador.", color: "#6366f1", bg: "#eef2ff", border: "#c7d2fe" },
               ].map((r, i) => (
                 <div key={i} style={{ display: "flex", gap: 10, background: r.bg, border: `1px solid ${r.border}`, borderRadius: 10, padding: "10px 12px", alignItems: "flex-start" }}>
                   <span style={{ fontSize: 16, flexShrink: 0 }}>{r.icon}</span>

@@ -244,6 +244,16 @@ export function OrderList({ orders, onCancel, currentUserId, onTransact, isMarke
     );
   }
 
+  const sortedOrders = [...filteredOrders].sort((a, b) => {
+    const rateA = parseFloat(a.final_exchange_rate || a.rate_applied || 0);
+    const rateB = parseFloat(b.final_exchange_rate || b.rate_applied || 0);
+    if (a.side === "sell") {
+      return rateA - rateB; // Venda: menor taxa primeiro
+    } else {
+      return rateB - rateA; // Compra: maior taxa primeiro
+    }
+  });
+
   return (
     <>
       {isMarket && (
@@ -272,7 +282,7 @@ export function OrderList({ orders, onCancel, currentUserId, onTransact, isMarke
           ))}
         </div>
       )}
-      {filteredOrders.map(o => {
+      {sortedOrders.map(o => {
         const d = DESTS.find(x => x.id === o.destination);
         const isOwnOrder = o.user_id === currentUserId;
         const showCancel = onCancel && !isMarket && isOwnOrder && (o.status === "awaiting_payment" || o.status === "pending");
