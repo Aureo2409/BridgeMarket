@@ -1572,7 +1572,7 @@ function ClientApp({ user, onLogout }) {
             <div className="card" style={{ padding: "20px 24px", background: "#fff", border: "1px solid #e2e8f0" }}>
               <div style={{ fontSize: 16, fontWeight: 900, color: "#1e1b4b", marginBottom: 6 }}>Email secundário</div>
               <div style={{ fontSize: 12, color: "#64748b", lineHeight: 1.5, marginBottom: 14 }}>
-                Use e-mails secundários para configurar métodos de pagamento com um e-mail diferente do e-mail principal associado à sua conta Airtm.
+                Use um e-mail secundário para configurar métodos de pagamento com um endereço diferente do e-mail principal da sua conta Bridge Market.
               </div>
               <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
                 <input className="inp" type="email" placeholder="Insira o e-mail secundário" style={{ flex: 1 }} defaultValue="" />
@@ -2346,14 +2346,7 @@ function ClientApp({ user, onLogout }) {
                 <Icon name="helpCircle" size={20} />
               </button>
 
-              <button
-                className="notification-bell"
-                onClick={() => toast_("Não tem novas notificações", "ok")}
-                title="Notificações"
-              >
-                <Icon name="bell" size={20} />
-                <span className="bell-badge" />
-              </button>
+
               
               <button
                 className="user-avatar-btn"
