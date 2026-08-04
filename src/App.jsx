@@ -261,106 +261,136 @@ function AuthScreen() {
   }
 
   return (
-    <div className="shell">
+    <div className="auth-split">
       <style>{`.spin { animation: spin 1s linear infinite; } @keyframes spin { 100% { transform: rotate(360deg); } }`}</style>
-      <div className="blob b1" /><div className="blob b2" />
-      <div style={{ position: "relative", zIndex: 2, padding: "44px 22px" }}>
-        <div style={{ textAlign: "center", marginBottom: 28 }}>
-          <div style={{ width: 84, height: 62, display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 12px", filter: "drop-shadow(0 8px 20px rgba(139,83,234,.35))" }}>
-            <img src="/logo.svg" alt="Bridge — Angola" style={{ width: "100%", height: "100%", objectFit: "contain" }} />
+      
+      {/* Left panel (desktop) */}
+      <div className="auth-left">
+        <div className="auth-left-blob1" />
+        <div className="auth-left-blob2" />
+        <div style={{ position: "relative", zIndex: 2 }}>
+          <div className="auth-left-logo">bridge</div>
+          <div className="auth-left-tag">
+            A forma mais rápida e segura de trocar AOA, USD, EUR e BRL — de pessoa para pessoa.
           </div>
-          <div style={{ fontSize: 24, fontWeight: 900, color: "#1e1b4b", letterSpacing: -1 }}>Bridge</div>
-          <div style={{ fontSize: 12, color: "#6b7280", fontWeight: 600, marginTop: 3 }}>MarketPlace de Câmbio Angola</div>
+          <div className="auth-left-bullets">
+            <div className="auth-left-bullet">
+              <div className="auth-left-bullet-icon"><Icon name="shield" size={18} color="#fff" /></div>
+              <span>Não-custodial e seguro</span>
+            </div>
+            <div className="auth-left-bullet">
+              <div className="auth-left-bullet-icon"><Icon name="zap" size={18} color="#fff" /></div>
+              <span>Trocas em minutos</span>
+            </div>
+            <div className="auth-left-bullet">
+              <div className="auth-left-bullet-icon"><Icon name="users" size={18} color="#fff" /></div>
+              <span>P2P directo, sem intermediários</span>
+            </div>
+          </div>
         </div>
+      </div>
 
-        <div className="card" style={{ background: "rgba(255,255,255,.96)" }}>
+      {/* Right panel (form) */}
+      <div className="auth-right">
+        <div className="auth-card">
           {mode !== "reset" ? (
-            <div style={{ display: "flex", gap: 4, background: "#f0efff", borderRadius: 13, padding: 4, marginBottom: 16 }}>
-              {["login", "register"].map(m => (
-                <button key={m} onClick={() => { setMode(m); setErr(""); }}
-                  style={{ flex: 1, padding: "9px", border: "none", borderRadius: 10, fontFamily: "inherit", fontSize: 13, fontWeight: 700, cursor: "pointer", transition: "all .2s", background: mode === m ? "white" : "transparent", color: mode === m ? "#1e1b4b" : "#6b7280", boxShadow: mode === m ? "0 2px 8px rgba(0,0,0,.08)" : "none" }}>
-                  {m === "login" ? "Entrar" : "Criar conta"}
-                </button>
-              ))}
+            <div className="auth-tabs">
+              <button
+                className={`auth-tab-btn ${mode === "login" ? "active" : ""}`}
+                onClick={() => { setMode("login"); setErr(""); }}
+              >
+                Entrar
+              </button>
+              <button
+                className={`auth-tab-btn ${mode === "register" ? "active" : ""}`}
+                onClick={() => { setMode("register"); setErr(""); }}
+              >
+                Registar
+              </button>
             </div>
           ) : (
-            <div style={{ marginBottom: 16, textAlign: "center", fontSize: 14, fontWeight: 800, color: "#1e1b4b" }}>
+            <div style={{ marginBottom: 20, fontSize: 18, fontWeight: 900, color: "#0E0C1E" }}>
               Recuperar Senha
             </div>
           )}
 
           {err && (
-            <div style={{ display: "flex", alignItems: "center", gap: 8, background: err.startsWith("ok:") ? "#f0fdf4" : "#fef2f2", border: `1px solid ${err.startsWith("ok:") ? "#bbf7d0" : "#fecaca"}`, borderRadius: 9, padding: "9px 12px", fontSize: 12, fontWeight: 600, marginBottom: 12, color: err.startsWith("ok:") ? "#16a34a" : "#b91c1c" }}>
+            <div className={`auth-error ${err.startsWith("ok:") ? "ok" : err.startsWith("load:") ? "load" : ""}`}>
               <Icon name={err.startsWith("ok:") ? "checkCircle" : err.startsWith("load:") ? "loader" : err.startsWith("warn:") ? "alertTriangle" : "xCircle"} size={16} className={err.startsWith("load:") ? "spin" : ""} style={{ flexShrink: 0 }} />
-              {err.replace(/ok:|err:|load:|warn:/g, "").trim()}
+              <span>{err.replace(/ok:|err:|load:|warn:/g, "").trim()}</span>
             </div>
           )}
 
           {mode === "register" && (
             <>
-              <label className="lbl">Nome completo</label>
-              <input className="inp" style={{ marginBottom: 9 }} type="text" placeholder="Ex: João Silva"
-                value={name} onChange={e => setName(e.target.value)} />
+              <label className="auth-label">Nome completo</label>
+              <div className="auth-input-wrap">
+                <div className="auth-input-icon"><Icon name="user" size={18} /></div>
+                <input className="auth-inp" type="text" placeholder="Ex: João Silva"
+                  value={name} onChange={e => setName(e.target.value)} />
+              </div>
             </>
           )}
 
-          <label className="lbl">Email</label>
-          <input className="inp" style={{ marginBottom: 9 }} type="email" placeholder="nome@exemplo.com"
-            value={email} onChange={e => setEmail(e.target.value)} />
+          <label className="auth-label">EMAIL</label>
+          <div className="auth-input-wrap">
+            <div className="auth-input-icon"><Icon name="mail" size={18} /></div>
+            <input className="auth-inp" type="email" placeholder="aureo@bridgemarket.ao"
+              value={email} onChange={e => setEmail(e.target.value)} />
+          </div>
 
           {mode === "register" && (
             <>
-              <label className="lbl">Número de telefone</label>
-              <input className="inp" style={{ marginBottom: 9 }} type="tel" placeholder="+244 9XX XXX XXX"
-                value={phone} onChange={e => setPhone(e.target.value)} />
+              <label className="auth-label">NÚMERO DE TELEFONE</label>
+              <div className="auth-input-wrap">
+                <div className="auth-input-icon"><Icon name="phone" size={18} /></div>
+                <input className="auth-inp" type="tel" placeholder="+244 9XX XXX XXX"
+                  value={phone} onChange={e => setPhone(e.target.value)} />
+              </div>
             </>
           )}
 
           {mode !== "reset" && (
             <>
-              <label className="lbl">Senha</label>
-              <input className="inp" style={{ marginBottom: mode === "register" ? 4 : (mode === "login" ? 4 : 14) }} type="password"
-                placeholder={mode === "register" ? "Mínimo 8 caracteres, letras e números" : "A tua senha"}
-                value={pwd} onChange={e => setPwd(e.target.value)}
-                onKeyDown={e => e.key === "Enter" && submit()} />
-              {mode === "register" && (
-                <div style={{ fontSize: 10.5, color: "#9ca3af", marginBottom: 14, lineHeight: 1.4 }}>
-                  Pelo menos 8 caracteres, com letras e números — para a tua conta ficar mais protegida.
-                </div>
-              )}
-              {mode === "login" && (
-                <div style={{ textAlign: "right", marginBottom: 14 }}>
-                  <button onClick={() => { setMode("reset"); setErr(""); }} style={{ background: "none", border: "none", color: "#6366f1", fontSize: 11, fontWeight: 700, cursor: "pointer" }}>Esqueci-me da senha</button>
-                </div>
-              )}
+              <label className="auth-label">PASSWORD</label>
+              <div className="auth-input-wrap">
+                <div className="auth-input-icon"><Icon name="lock" size={18} /></div>
+                <input className="auth-inp" type="password"
+                  placeholder={mode === "register" ? "Mínimo 8 caracteres, letras e números" : "••••••••••"}
+                  value={pwd} onChange={e => setPwd(e.target.value)}
+                  onKeyDown={e => e.key === "Enter" && submit()} />
+              </div>
             </>
           )}
 
           {mode === "register" && (
-            <div style={{ display: "flex", alignItems: "flex-start", gap: 8, marginBottom: 14 }}>
-              <input type="checkbox" id="terms" checked={termsAccepted} onChange={e => setTermsAccepted(e.target.checked)} style={{ marginTop: 2, accentColor: "#6366f1", cursor: "pointer", width: 14, height: 14 }} />
-              <label htmlFor="terms" style={{ fontSize: 11, color: "#475569", lineHeight: 1.4, cursor: "pointer" }}>
-                Confirmo que li e aceito os <a href="#" style={{ color: "#6366f1", textDecoration: "none", fontWeight: 700 }}>Termos e Condições</a> e a <a href="#" style={{ color: "#6366f1", textDecoration: "none", fontWeight: 700 }}>Política de Privacidade</a> da plataforma.
+            <div style={{ display: "flex", alignItems: "flex-start", gap: 8, marginBottom: 16 }}>
+              <input type="checkbox" id="terms" checked={termsAccepted} onChange={e => setTermsAccepted(e.target.checked)} style={{ marginTop: 3, accentColor: "#5B6EF5", cursor: "pointer", width: 14, height: 14 }} />
+              <label htmlFor="terms" style={{ fontSize: 11, color: "#6B7389", lineHeight: 1.4, cursor: "pointer" }}>
+                Confirmo que li e aceito os <a href="#" style={{ color: "#5B6EF5", textDecoration: "none", fontWeight: 700 }}>Termos e Condições</a> e a <a href="#" style={{ color: "#5B6EF5", textDecoration: "none", fontWeight: 700 }}>Política de Privacidade</a>.
               </label>
             </div>
           )}
 
-          <button className="btn btn-p" onClick={submit} disabled={load}>
-            {load ? "A processar..." : mode === "login" ? <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>Entrar <Icon name="arrowRight" size={16} /></div> : mode === "register" ? <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>Criar conta <Icon name="arrowRight" size={16} /></div> : "Receber link no email"}
+          <button className="auth-btn-primary" onClick={submit} disabled={load} style={{ marginTop: 8 }}>
+            {load ? "A processar..." : mode === "login" ? "Entrar na Bridge" : mode === "register" ? "Criar conta na Bridge" : "Receber link no email"}
           </button>
+
+          {mode === "login" && (
+            <div className="auth-forgot" style={{ marginTop: 14, textAlign: "center" }}>
+              <button className="auth-forgot-btn" onClick={() => { setMode("reset"); setErr(""); }}>
+                Esqueceste-te da password?
+              </button>
+            </div>
+          )}
 
           {mode !== "reset" && (
             <>
-              <div style={{ display: "flex", alignItems: "center", margin: "20px 0 16px", color: "#94a3b8", fontSize: 11, fontWeight: 700, letterSpacing: 0.5 }}>
-                <div style={{ flex: 1, height: 1, background: "#e2e8f0" }}></div>
-                <span style={{ padding: "0 12px" }}>OU ENTRAR COM</span>
-                <div style={{ flex: 1, height: 1, background: "#e2e8f0" }}></div>
+              <div className="auth-divider">
+                <span>OU ENTRAR COM</span>
               </div>
 
-              <button onClick={() => handleSocialLogin("google")} disabled={load}
-                style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 10, width: "100%", padding: "12px", border: "1px solid #e2e8f0", borderRadius: 10, background: "#ffffff", cursor: "pointer", transition: "all 0.2s", fontFamily: "inherit", fontSize: 13, fontWeight: 700, color: "#1e1b4b" }}
-                onMouseEnter={e => { e.currentTarget.style.background = "#f8fafc"; e.currentTarget.style.borderColor = "#cbd5e1"; }}
-                onMouseLeave={e => { e.currentTarget.style.background = "#ffffff"; e.currentTarget.style.borderColor = "#e2e8f0"; }}>
+              <button className="auth-social-btn" onClick={() => handleSocialLogin("google")} disabled={load}>
                 <svg width="18" height="18" viewBox="0 0 24 24">
                   <path fill="#ea4335" d="M12 5.04c1.7 0 3.2.6 4.4 1.7l3.3-3.3C17.7 1.6 15 1 12 1 7.3 1 3.3 3.7 1.4 7.6l3.9 3c.9-2.6 3.4-4.56 6.7-4.56z"/>
                   <path fill="#4285f4" d="M23.5 12.3c0-.8-.1-1.6-.2-2.3H12v4.4h6.5c-.3 1.5-1.1 2.8-2.4 3.7l3.7 2.9c2.1-2 3.7-4.9 3.7-8.7z"/>
@@ -373,7 +403,7 @@ function AuthScreen() {
           )}
 
           {mode === "reset" && (
-            <button className="btn btn-o" style={{ marginTop: 8 }} onClick={() => { setMode("login"); setErr(""); }}>
+            <button className="btn btn-o" style={{ marginTop: 12 }} onClick={() => { setMode("login"); setErr(""); }}>
               <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}><Icon name="arrowLeft" size={14} /> Voltar ao Login</div>
             </button>
           )}

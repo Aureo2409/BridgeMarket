@@ -297,229 +297,46 @@ export function OrderList({ orders, onCancel, currentUserId, onTransact, isMarke
         const creatorAvatar = o.profiles?.avatar_url;
 
         if (isMarket) {
+          const curr = o.currency || "USD";
+          const initials = creatorName.split(" ").map(n => n[0]).slice(0, 2).join("").toUpperCase() || "P2P";
+          const bgColors = { USD: "#5B6EF5", EUR: "#F59E0B", BRL: "#10B981", ZAR: "#EF4444" };
+          const avatarBg = bgColors[curr] || "#8B5CF6";
+          const rateVal = parseFloat(o.final_exchange_rate || o.rate_applied || 0).toFixed(0);
+
           return (
             <div
               key={o.id}
-              className="p2p-offer-card"
+              className={`p2p-offer-card currency-${curr}`}
               onClick={() => onSelect && onSelect(o)}
               style={{ cursor: onSelect ? "pointer" : "default" }}
             >
-              <div className="p2p-user-row" onClick={(e) => e.stopPropagation()}>
-                <div className="p2p-avatar-wrapper">
-                  <div className="p2p-avatar">
-                    {creatorAvatar ? (
-                      <img src={creatorAvatar} alt="Avatar" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-                    ) : (
-                      <span>{creatorName.split(" ").map(n => n[0]).slice(0, 2).join("").toUpperCase()}</span>
-                    )}
-                  </div>
-                  <div className="p2p-avatar-badge">
-                    <svg viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5" /></svg>
-                  </div>
-                </div>
-                <div className="p2p-user-details">
-                  <div className="p2p-user-name">
-                    {creatorName}
-                  </div>
-                  <div className="p2p-user-rating">
-                    {displayRating}
-                  </div>
-                  <div className="p2p-user-stats">
-                    <span className="p2p-stat-item">{trocas} {trocas === 1 ? "transação" : "transações"}</span>
-                    <span>·</span>
-                    <span className="p2p-stat-item">{minutes} min</span>
-                  </div>
-                </div>
-              </div>
-
-              <div className="p2p-grid-row" onClick={(e) => e.stopPropagation()}>
-                <div className="p2p-grid-col">
-                  <div className="p2p-grid-label">Câmbio</div>
-                  <div className="p2p-grid-value rate">
-                    {parseFloat(o.rate_applied).toFixed(2)} <span>AOA</span>
-                  </div>
-                </div>
-                <div className="p2p-grid-col">
-                  <div className="p2p-grid-label">Disponível / Limites</div>
-                  <div className="p2p-grid-value limits">
-                    {CURRENCIES.find(c => c.id === (o.currency || "USD"))?.symbol || "$"}{parseFloat(o.amount_usd).toFixed(2)} <span>{o.currency || "USD"}</span>
-                  </div>
-                </div>
-              </div>
-
-              {/* P2P Marketplace Transaction Panel */}
-              {onTransact && (
-                activeTxId === o.id ? (
-                  showBiometric ? (
-                    <BiometricCapture
-                      orderId={o.id}
-                      orderRef={o.order_ref}
-                      amountUsd={o.amount_usd}
-                      currentUserId={currentUserId}
-                      onCaptureDone={() => {
-                        onTransact(o.id);
-                        setActiveTxId(null);
-                        setShowBiometric(false);
-                      }}
-                      onCancel={() => setShowBiometric(false)}
-                    />
+              <div className="p2p-avatar-wrapper">
+                <div className="p2p-avatar" style={{ background: avatarBg }}>
+                  {creatorAvatar ? (
+                    <img src={creatorAvatar} alt="Avatar" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
                   ) : (
-                    <div
-                      style={{
-                        marginTop: 12,
-                        padding: "12px 14px",
-                        background: "#f5f6ff",
-                        border: "1.5px solid #e0e7ff",
-                        borderRadius: 14,
-                      }}
-                      onClick={(e) => e.stopPropagation()}
-                    >
-                      <div style={{ fontSize: 11, fontWeight: 800, color: "#4f46e5", textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 8, display: "flex", alignItems: "center", gap: 5 }}>
-                        <Icon name="info" size={13} /> Instruções de Transação P2P
-                      </div>
-                      <div style={{ fontSize: 11, color: "#4b5563", lineHeight: 1.6, marginBottom: 12 }}>
-                        {o.side === "sell" ? (
-                          <>
-                            1. Envia exatamente <strong style={{ color: "#1e1b4b" }}>{parseFloat(o.amount_aoa).toLocaleString("pt-AO")} Kz</strong> via Transferência Bancária / Multicaixa Express para o IBAN:<br />
-                            <div style={{
-                              margin: "6px 0",
-                              padding: "8px 10px",
-                              background: "#fff",
-                              border: "1px dashed #cbd5e1",
-                              borderRadius: 8,
-                              fontWeight: 700,
-                              color: "#6366f1",
-                              fontSize: 12,
-                              fontFamily: "monospace",
-                              display: "flex",
-                              justifyContent: "space-between",
-                              alignItems: "center"
-                            }}>
-                              <span>{o.destination_account}</span>
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  navigator.clipboard.writeText(o.destination_account);
-                                  alert("IBAN copiado com sucesso!");
-                                }}
-                                style={{
-                                  background: "none",
-                                  border: "none",
-                                  color: "#6366f1",
-                                  cursor: "pointer",
-                                  fontSize: 10,
-                                  fontWeight: 700
-                                }}
-                              >
-                                Copiar
-                              </button>
-                            </div>
-                            2. O criador deste pedido transferirá <strong style={{ color: "#1e1b4b" }}>${parseFloat(o.amount_usd).toFixed(2)} USD</strong> via <strong style={{ color: "#1e1b4b" }}>{d?.label}</strong> para a tua conta.<br />
-                            3. Após enviares os Kwanzas, confirma a transação abaixo.
-                          </>
-                        ) : (
-                          <>
-                            1. Envia exatamente <strong style={{ color: "#1e1b4b" }}>${parseFloat(o.amount_usd).toFixed(2)}</strong> via <strong style={{ color: "#1e1b4b" }}>{d?.label}</strong> para a conta:<br />
-                            <div style={{
-                              margin: "6px 0",
-                              padding: "8px 10px",
-                              background: "#fff",
-                              border: "1px dashed #cbd5e1",
-                              borderRadius: 8,
-                              fontWeight: 700,
-                              color: "#6366f1",
-                              fontSize: 12,
-                              fontFamily: "monospace",
-                              display: "flex",
-                              justifyContent: "space-between",
-                              alignItems: "center"
-                            }}>
-                              <span>{o.destination_account}</span>
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  navigator.clipboard.writeText(o.destination_account);
-                                  alert("Conta copiada com sucesso!");
-                                }}
-                                style={{
-                                  background: "none",
-                                  border: "none",
-                                  color: "#6366f1",
-                                  cursor: "pointer",
-                                  fontSize: 10,
-                                  fontWeight: 700
-                                }}
-                              >
-                                Copiar
-                              </button>
-                            </div>
-                            2. O criador deste pedido transferirá <strong style={{ color: "#1e1b4b" }}>{parseFloat(o.amount_aoa).toLocaleString("pt-AO")} Kz</strong> para o teu IBAN / número.<br />
-                            3. Após enviares os dólares, confirma a transação abaixo.
-                          </>
-                        )}
-                      </div>
-                      <div style={{ display: "flex", gap: 8 }}>
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setShowBiometric(true);
-                          }}
-                          style={{
-                            flex: 1,
-                            display: "flex",
-                            alignItems: "center",
-                            justifyContent: "center",
-                            gap: 5,
-                            background: "#10b981",
-                            border: "none",
-                            color: "#fff",
-                            padding: "8px 12px",
-                            borderRadius: 9,
-                            fontSize: 11,
-                            fontWeight: 800,
-                            cursor: "pointer",
-                            boxShadow: "0 4px 12px rgba(16,185,129,0.2)"
-                          }}
-                        >
-                          <Icon name="check" size={12} color="#fff" />
-                          {o.side === "sell" ? "Já Enviei os Kwanzas" : "Já Enviei os Dólares"}
-                        </button>
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setActiveTxId(null);
-                          }}
-                          style={{
-                            background: "#e2e8f0",
-                            border: "none",
-                            color: "#475569",
-                            padding: "8px 12px",
-                            borderRadius: 9,
-                            fontSize: 11,
-                            fontWeight: 800,
-                            cursor: "pointer"
-                          }}
-                        >
-                          Voltar
-                        </button>
-                      </div>
-                    </div>
-                  )
-                ) : (
-                  <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 8 }} onClick={(e) => e.stopPropagation()}>
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        // Redirecionar directamente para o chat via onTransact
-                        if (onTransact) onTransact(o.id);
-                      }}
-                      className="p2p-negotiate-btn"
-                    >
-                      Negociar &gt;
-                    </button>
-                  </div>
-                )
-              )}
+                    <span>{initials}</span>
+                  )}
+                </div>
+                <div className="p2p-avatar-badge">
+                  <svg viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5" /></svg>
+                </div>
+              </div>
+
+              <div className="p2p-card-info">
+                <div className="p2p-user-name">
+                  <span>{creatorName}</span>
+                  <span className="p2p-verified-badge">✓verificado</span>
+                </div>
+                <div className="p2p-card-meta">
+                  <span className={`p2p-currency-chip ${curr}`}>{curr}</span>
+                  <span>→ AOA · {rateVal} Kz/{curr}</span>
+                </div>
+              </div>
+
+              <button className="p2p-negotiate-btn" onClick={(e) => { e.stopPropagation(); onSelect && onSelect(o); }}>
+                Negociar <Icon name="arrowRight" size={14} />
+              </button>
             </div>
           );
         }
