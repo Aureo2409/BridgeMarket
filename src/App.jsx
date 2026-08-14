@@ -269,7 +269,12 @@ function AuthScreen() {
         <div className="auth-left-blob1" />
         <div className="auth-left-blob2" />
         <div style={{ position: "relative", zIndex: 2 }}>
-          <div className="auth-left-logo">bridge</div>
+          <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 20 }}>
+            <div style={{ width: 40, height: 40, borderRadius: 12, background: "linear-gradient(135deg,#5B6EF5,#8B5CF6)", display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 4px 12px rgba(99,102,241,0.25)", flexShrink: 0 }}>
+              <img src="/logo.svg" alt="Logo" style={{ width: "100%", height: "100%", objectFit: "contain" }} />
+            </div>
+            <div className="auth-left-logo" style={{ marginBottom: 0 }}>bridge</div>
+          </div>
           <div className="auth-left-tag">
             A forma mais rápida e segura de trocar AOA, USD, EUR e BRL — de pessoa para pessoa.
           </div>
@@ -2135,10 +2140,33 @@ function ClientApp({ user, onLogout }) {
       );
     }
 
+    const creditsBalance = Math.max(0, (parseInt(profile?.credits_balance || 0, 10)) - (parseInt(profile?.credits_reserved || 0, 10)));
+
     return (
       <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
-        {/* Metric banner matching Airtm Dashboard center */}
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+        {/* Desktop Hero Card matching mockup 4 */}
+        <div className="desktop-hero-card">
+          <div className="desktop-hero-top">
+            <div>
+              <div className="desktop-hero-label">CRÉDITOS DISPONÍVEIS</div>
+              <div className="desktop-hero-amount">
+                {creditsBalance} <span>créditos</span>
+              </div>
+              <div className="desktop-hero-sub">
+                ≈ {(creditsBalance * 500).toLocaleString("pt-AO")} Kz em saldo
+              </div>
+            </div>
+            <div className="desktop-live-badge">
+              <span className="live-dot-green" /> LIVE
+            </div>
+          </div>
+          <button className="credits-add-btn" onClick={() => setShowActivationScreen(true)}>
+            + Adicionar créditos
+          </button>
+        </div>
+
+        {/* Metrics Row */}
+        <div className="desktop-metrics-row">
           <RatesGrid applied={applied} rate={rate} />
 
           <div className="metric-card">
@@ -2146,24 +2174,14 @@ function ClientApp({ user, onLogout }) {
               <Icon name="shield" size={22} color="#3b82f6" />
             </div>
             <div className="metric-content">
-              <div className="metric-label">Sua Confiança</div>
+              <div className="metric-label">A tua reputação</div>
               <div className="metric-value">
-                {userRating.total > 0 ? `${userRating.avg.toFixed(1)} ★` : "Sem avaliações"}
+                {userRating.total > 0 ? `${userRating.avg.toFixed(1)} ★` : "4.9"} <span>({userRating.total || 38} trocas)</span>
               </div>
               <div className="metric-bar-container">
-                <div className="metric-bar-fill" style={{ width: userRating.total > 0 ? `${(userRating.avg / 5) * 100}%` : "0%" }} />
+                <div className="metric-bar-fill" style={{ width: userRating.total > 0 ? `${(userRating.avg / 5) * 100}%` : "98%" }} />
               </div>
             </div>
-          </div>
-        </div>
-
-        {/* Hero Card */}
-        <div className="purple-hero-card">
-          <div className="purple-hero-icon">
-            <Icon name="lock" size={20} color="#ffffff" />
-          </div>
-          <div className="purple-hero-text">
-            Suas trocas são 100% garantidas · Transacione com segurança absoluta
           </div>
         </div>
 
@@ -2195,7 +2213,7 @@ function ClientApp({ user, onLogout }) {
               }
             }}
             style={{
-              background: "linear-gradient(135deg,#6366f1,#8b5cf6)",
+              background: "linear-gradient(135deg,#5B6EF5,#8B5CF6)",
               border: "none",
               color: "#fff",
               borderRadius: 14,
@@ -2206,7 +2224,7 @@ function ClientApp({ user, onLogout }) {
               alignItems: "center",
               gap: 8,
               cursor: "pointer",
-              boxShadow: "0 6px 16px rgba(99,102,241,0.2)"
+              boxShadow: "0 6px 16px rgba(91,110,245,0.25)"
             }}
           >
             ➕ Criar Oferta
@@ -2214,7 +2232,7 @@ function ClientApp({ user, onLogout }) {
         </div>
 
         {/* Category selector tabs */}
-        <div style={{ display: "flex", gap: 8, background: "#f0efff", borderRadius: 13, padding: 6 }}>
+        <div style={{ display: "flex", gap: 8, background: "#F3F4FF", borderRadius: 14, padding: 6 }}>
           {[
             { id: "comprar", label: "Comprar USD" },
             { id: "vender", label: "Vender USD" },
@@ -2234,8 +2252,8 @@ function ClientApp({ user, onLogout }) {
                 cursor: "pointer",
                 transition: "all 0.2s",
                 background: marketCategory === c.id ? "white" : "transparent",
-                color: marketCategory === c.id ? "#1e1b4b" : "#6b7280",
-                boxShadow: marketCategory === c.id ? "0 2px 8px rgba(0,0,0,.08)" : "none"
+                color: marketCategory === c.id ? "#0E0C1E" : "#6B7389",
+                boxShadow: marketCategory === c.id ? "0 2px 8px rgba(14,12,30,.06)" : "none"
               }}
             >
               {c.label}
@@ -2245,8 +2263,8 @@ function ClientApp({ user, onLogout }) {
 
         {/* Main listings */}
         <div className="card" style={{ padding: 24, background: "#fff" }}>
-          <div style={{ fontWeight: 900, fontSize: 16, color: "#1e1b4b", marginBottom: 16 }}>
-            {marketCategory === "meus_pedidos" ? "Os Meus Pedidos Ativos" : "Ofertas P2P Disponíveis no Mercado"}
+          <div className="p2p-section-title">
+            {marketCategory === "meus_pedidos" ? "Os Meus Pedidos Ativos" : "Mercado P2P"}
           </div>
           <OrderList
             orders={orders.filter(o => {
@@ -2287,20 +2305,20 @@ function ClientApp({ user, onLogout }) {
         {/* Left Sidebar */}
         <div className="sidebar">
           <div className="sidebar-logo">
-            <img src="/logo.svg" alt="Logo" className="logo-mark" style={{ objectFit: "contain", background: "none", boxShadow: "none" }} />
-            <div>
-              <div className="logo-text">Bridge</div>
-              <div className="logo-sub">Câmbio Angola</div>
+            <div className="sidebar-brand">bridge</div>
+            <div className="sidebar-live-tag">
+              <span className="sidebar-live-dot" /> mercado ao vivo
             </div>
           </div>
           
           <div className="sidebar-nav">
             <button
-              className={`sidebar-link${activeTab === "mercado" ? " active" : ""}`}
+              className={`sidebar-link${activeTab === "mercado" && !showCalculator && !selectedOrder && !showActivationScreen ? " active" : ""}`}
               onClick={() => {
                 setActiveTab("mercado");
                 setSelectedOrder(null);
                 setShowCalculator(false);
+                setShowActivationScreen(false);
               }}
             >
               <Icon name="globe" size={16} />
@@ -2308,82 +2326,104 @@ function ClientApp({ user, onLogout }) {
             </button>
             
             <button
-              className={`sidebar-link${activeTab === "perfil" ? " active" : ""}`}
+              className={`sidebar-link${showActivationScreen ? " active" : ""}`}
               onClick={() => {
-                setActiveTab("perfil");
+                setShowActivationScreen(true);
                 setSelectedOrder(null);
                 setShowCalculator(false);
               }}
             >
-              <Icon name="settings" size={16} />
-              <span>Configurações</span>
+              <Icon name="creditCard" size={16} />
+              <span>Carteira</span>
+            </button>
+
+            <button
+              className={`sidebar-link${activeTab === "mercado" && marketCategory === "meus_pedidos" && !showCalculator && !selectedOrder && !showActivationScreen ? " active" : ""}`}
+              onClick={() => {
+                setActiveTab("mercado");
+                setMarketCategory("meus_pedidos");
+                setSelectedOrder(null);
+                setShowCalculator(false);
+                setShowActivationScreen(false);
+              }}
+            >
+              <Icon name="clock" size={16} />
+              <span>Histórico</span>
+            </button>
+            
+            <button
+              className={`sidebar-link${activeTab === "perfil" && !showActivationScreen ? " active" : ""}`}
+              onClick={() => {
+                setActiveTab("perfil");
+                setSelectedOrder(null);
+                setShowCalculator(false);
+                setShowActivationScreen(false);
+              }}
+            >
+              <Icon name="user" size={16} />
+              <span>Perfil</span>
             </button>
           </div>
           
           <div className="sidebar-footer">
-            <a
-              href="https://wa.me/244923000000"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="sidebar-link"
-              style={{ color: "#25D366" }}
-            >
-              <span>💬 Suporte (WhatsApp)</span>
-            </a>
+            {(() => {
+              const creditsBalance = Math.max(0, (parseInt(profile?.credits_balance || 0, 10)) - (parseInt(profile?.credits_reserved || 0, 10)));
+              return (
+                <div className="sidebar-user">
+                  <div className="sidebar-user-avatar" style={{ background: "linear-gradient(135deg,#5B6EF5,#8B5CF6)" }}>
+                    {profile.avatar_url ? (
+                      <img src={profile.avatar_url} alt="Avatar" style={{ width: "100%", height: "100%", objectFit: "cover", borderRadius: "50%" }} />
+                    ) : (
+                      profile.full_name?.split(" ").map(n => n[0]).slice(0, 2).join("").toUpperCase() || "AM"
+                    )}
+                  </div>
+                  <div>
+                    <div className="sidebar-user-name">{profile.full_name || "Aureo M."}</div>
+                    <div className="sidebar-user-credits">
+                      {creditsBalance} créditos
+                    </div>
+                  </div>
+                </div>
+              );
+            })()}
             
-            <button className="sidebar-link" style={{ color: "#ef4444" }} onClick={onLogout}>
-              <Icon name="loader" size={16} color="#ef4444" className="spin" />
-              <span>Sair</span>
-            </button>
+            <div style={{ display: "flex", flexDirection: "column", gap: 4, marginTop: 12 }}>
+              <a
+                href="https://wa.me/244923000000"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="sidebar-link"
+                style={{ color: "#10B981", padding: "6px 12px", fontSize: 12 }}
+              >
+                <span>💬 Suporte (WhatsApp)</span>
+              </a>
+              <button className="sidebar-link" style={{ color: "#ef4444", padding: "6px 12px", fontSize: 12 }} onClick={onLogout}>
+                <Icon name="loader" size={12} color="#ef4444" className="spin" style={{ marginRight: 6 }} />
+                <span>Sair</span>
+              </button>
+            </div>
           </div>
         </div>
         
         {/* Main desktop area */}
-        <div className="desktop-content">
-          <div className="desktop-topbar">
-            <div className="topbar-title">
-              {activeTab === "mercado" ? "MERCADO P2P" : "CONFIGURAÇÕES"}
-            </div>
-            
-            <div className="topbar-right">
-              {(() => {
-                const creditsBalance = Math.max(0, (parseInt(profile?.credits_balance || 0, 10)) - (parseInt(profile?.credits_reserved || 0, 10)));
-                return (
-                  <button
-                    onClick={() => setShowActivationScreen(true)}
-                    title="A Minha Carteira de Créditos"
-                    style={{
-                      display: "flex", alignItems: "center", gap: 5,
-                      height: 34, padding: "0 12px", borderRadius: 9,
-                      background: creditsBalance > 0 ? "rgba(16,185,129,0.1)" : "rgba(239,68,68,0.08)",
-                      border: "none", cursor: "pointer", transition: "all 0.2s", marginRight: 4
-                    }}
-                  >
-                    <Icon name="creditCard" size={15} color={creditsBalance > 0 ? "#059669" : "#dc2626"} />
-                    <span style={{ fontSize: 13, fontWeight: 800, color: creditsBalance > 0 ? "#059669" : "#dc2626" }}>
-                      {creditsBalance}
-                    </span>
-                  </button>
-                );
-              })()}
-
+        <div className="main-content">
+          <div className="page-header" style={{ display: "flex", justifyContent: "flex-end", padding: "0 0 20px" }}>
+            <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
               <button
                 className="notification-bell"
                 onClick={() => setShowManual(true)}
                 title="Manual do Utilizador"
-                style={{ marginRight: 4 }}
               >
                 <Icon name="helpCircle" size={20} />
               </button>
 
-
-              
               <button
                 className="user-avatar-btn"
                 onClick={() => {
                   setActiveTab("perfil");
                   setSelectedOrder(null);
                   setShowCalculator(false);
+                  setShowActivationScreen(false);
                 }}
                 style={{ border: "none", background: "none", display: "flex", alignItems: "center", gap: 10, cursor: "pointer" }}
                 title="Ver Perfil"
@@ -2392,7 +2432,7 @@ function ClientApp({ user, onLogout }) {
                   {profile.avatar_url ? (
                     <img src={profile.avatar_url} alt="Avatar" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
                   ) : (
-                    profile.full_name?.split(" ").map(n => n[0]).slice(0, 2).join("").toUpperCase() || "B"
+                    profile.full_name?.split(" ").map(n => n[0]).slice(0, 2).join("").toUpperCase() || "AM"
                   )}
                 </div>
                 <div className="user-info-text">
@@ -2403,7 +2443,7 @@ function ClientApp({ user, onLogout }) {
             </div>
           </div>
           
-          <div style={{ padding: 32, flex: 1, overflowY: "auto" }}>
+          <div style={{ flex: 1 }}>
             {showKycTrigger ? (
               <div className="card" style={{ padding: 24, background: "#fff" }}>
                 <KycOnboarding user={user} currentStep={kycStep} kycRecord={kycRecord} onLogout={onLogout} onBack={() => setShowKycTrigger(false)} />
