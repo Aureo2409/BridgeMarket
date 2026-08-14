@@ -1,4 +1,4 @@
-﻿// â”€â”€ Destinos de Pagamento â€” logos reais via URL â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// â”€â”€ Destinos de Pagamento â€” logos reais via URL â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 export const DESTS = [
 
   // â”€â”€ CARTÃ•ES INTERNACIONAIS â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
@@ -584,7 +584,7 @@ body{font-family:'Plus Jakarta Sans',sans-serif;background:#EEEEF8;color:#0E0C1E
 .sidebar-user-credits{display:inline-flex;align-items:center;gap:4px;background:#ECFDF5;color:#059669;font-size:10.5px;font-weight:800;padding:3px 8px;border-radius:8px;margin-top:3px}
 
 /* MAIN CONTENT */
-.main-content{margin-left:240px;flex:1;padding:28px 32px;min-height:100vh;max-width:900px}
+.main-content{margin-left:240px;flex:1;padding:28px 32px;min-height:100vh;width:calc(100% - 240px)}
 .page-header{display:flex;align-items:center;justify-content:space-between;padding:0 0 24px;background:transparent}
 .page-header-left{display:flex;flex-direction:column;gap:4px}
 .page-header-brand{font-size:20px;font-weight:900;color:#0E0C1E;letter-spacing:-.4px;display:none}
