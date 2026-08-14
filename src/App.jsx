@@ -270,7 +270,7 @@ function AuthScreen() {
         <div className="auth-left-blob2" />
         <div style={{ position: "relative", zIndex: 2 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 20 }}>
-            <div style={{ width: 40, height: 40, borderRadius: 12, background: "linear-gradient(135deg,#5B6EF5,#8B5CF6)", display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 4px 12px rgba(99,102,241,0.25)", flexShrink: 0 }}>
+            <div style={{ width: 44, height: 44, borderRadius: 12, background: "#ffffff", display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 4px 14px rgba(0,0,0,0.15)", padding: 6, flexShrink: 0 }}>
               <img src="/logo.svg" alt="Logo" style={{ width: "100%", height: "100%", objectFit: "contain" }} />
             </div>
             <div className="auth-left-logo" style={{ marginBottom: 0 }}>bridge</div>
@@ -2176,10 +2176,10 @@ function ClientApp({ user, onLogout }) {
             <div className="metric-content">
               <div className="metric-label">A tua reputação</div>
               <div className="metric-value">
-                {userRating.total > 0 ? `${userRating.avg.toFixed(1)} ★` : "4.9"} <span>({userRating.total || 38} trocas)</span>
+                {userRating.total > 0 ? `${userRating.avg.toFixed(1)} ★` : "Sem avaliações"} {userRating.total > 0 && <span>({userRating.total} {userRating.total === 1 ? "troca" : "trocas"})</span>}
               </div>
               <div className="metric-bar-container">
-                <div className="metric-bar-fill" style={{ width: userRating.total > 0 ? `${(userRating.avg / 5) * 100}%` : "98%" }} />
+                <div className="metric-bar-fill" style={{ width: userRating.total > 0 ? `${(userRating.avg / 5) * 100}%` : "0%" }} />
               </div>
             </div>
           </div>
