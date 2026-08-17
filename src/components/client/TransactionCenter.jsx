@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { sb, uploadProof } from "../../lib/supabase.js";
 import { DESTS } from "../../lib/constants.js";
 import { Icon, StatusPill, ConfirmModal } from "../shared/UI.jsx";
+import { testPaymentProviders } from '../../lib/payments';
 
 export function TransactionCenter({ order, user, onBack, onCancel }) {
   const [tab, setTab] = useState("partner"); // "partner" or "chat"
@@ -448,13 +449,31 @@ export function TransactionCenter({ order, user, onBack, onCancel }) {
         <button onClick={onBack} style={{ background: "none", border: "none", color: "#6366f1", fontSize: 12, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", gap: 6 }}>
           <Icon name="arrowLeft" size={14} /> Voltar aos pedidos
         </button>
+
         {onCancel && isCreator && (currentOrder.status === "awaiting_payment" || currentOrder.status === "pending") && (
           <button onClick={() => onCancel(currentOrder.id)} style={{ background: "none", border: "none", color: "#ef4444", fontSize: 12, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", gap: 6 }}>
             <Icon name="ban" size={14} /> Cancelar Pedido
           </button>
         )}
       </div>
-
+       {/* Botão de teste inserido nos detalhes do parceiro ou na barra de ações */}
+      <div style={{ marginBottom: 12, display: "flex", gap: 8 }}>
+        <button 
+          onClick={() => testPaymentProviders('visa')}
+          style={{
+            padding: "8px 12px",
+            background: "#10b981",
+            color: "#fff",
+            border: "none",
+            borderRadius: 8,
+            fontWeight: 700,
+            fontSize: 12,
+            cursor: "pointer"
+          }}
+        >
+          Testar Visa
+        </button>
+      </div>
       {/* Premium Step Header */}
       <div style={{ display: "flex", justifyContent: "space-between", gap: 6, marginBottom: 24, background: "#f8fafc", padding: "12px 16px", borderRadius: 12, border: "1px solid #e2e8f0" }}>
         {STEPS.map((s, idx) => {

@@ -324,6 +324,212 @@ function SelectionModal({ isOpen, title, items, selectedId, onSelect, onClose, r
   );
 }
 
+function UnifiedMethodModal({ isOpen, onClose, activeModalTab, setActiveModalTab, filteredDests, dest, setDest, selectedBank, setSelectedBank }) {
+  if (!isOpen) return null;
+  return (
+    <div 
+      style={{
+        position: "fixed",
+        inset: 0,
+        background: "rgba(15, 23, 42, 0.75)",
+        backdropFilter: "blur(6px)",
+        display: "flex",
+        alignItems: "flex-end",
+        justifyContent: "center",
+        zIndex: 10000,
+        animation: "fadeIn 0.2s ease-out"
+      }} 
+      onClick={onClose}
+    >
+      <div 
+        style={{
+          background: "#fff",
+          borderTopLeftRadius: 24,
+          borderTopRightRadius: 24,
+          padding: "20px 20px 30px",
+          width: "100%",
+          maxWidth: 540,
+          boxShadow: "0 -10px 40px rgba(0,0,0,0.15)",
+          border: "1px solid rgba(229, 231, 235, 0.5)",
+          maxHeight: "80vh",
+          display: "flex",
+          flexDirection: "column",
+          animation: "slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1)"
+        }} 
+        onClick={e => e.stopPropagation()}
+      >
+        <div style={{ width: 38, height: 4, background: "#cbd5e1", borderRadius: 2, margin: "0 auto 16px", flexShrink: 0 }} />
+
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 18, flexShrink: 0 }}>
+          <h3 style={{ fontSize: 15, fontWeight: 900, color: "#1e1b4b", letterSpacing: "-0.3px" }}>Selecionar Método de Pagamento</h3>
+          <button 
+            onClick={onClose} 
+            style={{ background: "rgba(15, 23, 42, 0.05)", border: "none", color: "#64748b", borderRadius: "50%", width: 28, height: 28, display: "flex", alignItems: "center", justify: "center", cursor: "pointer", fontWeight: 700 }}
+          >
+            ✕
+          </button>
+        </div>
+
+        <div style={{ display: "flex", gap: 8, marginBottom: 16, overflowX: "auto", paddingBottom: 4 }}>
+          <button
+            onClick={() => setActiveModalTab("bridge")}
+            style={activeModalTab === "bridge" 
+              ? { padding: "9px 16px", borderRadius: 10, border: "none", background: "linear-gradient(135deg,#6366f1,#8b5cf6)", color: "#fff", fontWeight: 800, fontSize: 11, cursor: "pointer", flexShrink: 0 }
+              : { padding: "9px 16px", borderRadius: 10, border: "1.5px solid #e2e8f0", background: "#f8fafc", color: "#64748b", fontWeight: 700, fontSize: 11, cursor: "pointer", flexShrink: 0 }}
+          >💳 Bridge</button>
+          <button
+            onClick={() => setActiveModalTab("wallets")}
+            style={activeModalTab === "wallets" 
+              ? { padding: "9px 16px", borderRadius: 10, border: "none", background: "linear-gradient(135deg,#6366f1,#8b5cf6)", color: "#fff", fontWeight: 800, fontSize: 11, cursor: "pointer", flexShrink: 0 }
+              : { padding: "9px 16px", borderRadius: 10, border: "1.5px solid #e2e8f0", background: "#f8fafc", color: "#64748b", fontWeight: 700, fontSize: 11, cursor: "pointer", flexShrink: 0 }}
+          >🌐 Wallets</button>
+          <button
+            onClick={() => setActiveModalTab("banks")}
+            style={activeModalTab === "banks" 
+              ? { padding: "9px 16px", borderRadius: 10, border: "none", background: "linear-gradient(135deg,#6366f1,#8b5cf6)", color: "#fff", fontWeight: 800, fontSize: 11, cursor: "pointer", flexShrink: 0 }
+              : { padding: "9px 16px", borderRadius: 10, border: "1.5px solid #e2e8f0", background: "#f8fafc", color: "#64748b", fontWeight: 700, fontSize: 11, cursor: "pointer", flexShrink: 0 }}
+          >🏦 Bancos</button>
+        </div>
+
+        <div style={{ overflowY: "auto", flex: 1, display: "flex", flexDirection: "column", gap: 8, paddingRight: 4, transition: "opacity 0.2s" }}>
+          {activeModalTab === "bridge" && (
+            <div
+              onClick={() => {
+                setDest("redotpay"); // Ou o primeiro dest configurado
+                onClose();
+              }}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                padding: "16px",
+                borderRadius: 16,
+                cursor: "pointer",
+                transition: "all 0.2s",
+                border: dest === "redotpay" ? "2px solid #eab308" : "1.5px solid #f1f5f9",
+                background: dest === "redotpay" ? "#fefce8" : "#fff",
+                boxShadow: "0 8px 24px rgba(0,0,0,0.04)"
+              }}
+            >
+              <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+                <div style={{ width: 44, height: 44, borderRadius: 12, overflow: "hidden", flexShrink: 0 }}>
+                  <svg width="100%" height="100%" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <rect width="40" height="40" rx="8" fill="url(#bridge-grad)"/>
+                    <defs>
+                      <linearGradient id="bridge-grad" x1="0" y1="0" x2="1" y2="1">
+                        <stop offset="0%" stop-color="#4f46e5"/>
+                        <stop offset="100%" stop-color="#7c3aed"/>
+                      </linearGradient>
+                    </defs>
+                    <rect x="6" y="18" width="28" height="4" rx="2" fill="white" opacity="0.9"/>
+                    <rect x="10" y="12" width="3" height="10" rx="1.5" fill="white"/>
+                    <rect x="27" y="12" width="3" height="10" rx="1.5" fill="white"/>
+                    <path d="M10 14 Q20 8 30 14" stroke="white" stroke-width="2" fill="none" opacity="0.7"/>
+                  </svg>
+                </div>
+                <div>
+                  <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                    <div style={{ fontSize: 14, fontWeight: 800, color: "#1e1b4b" }}>Cartão Virtual Bridge</div>
+                    <span style={{ fontSize: 9, background: "#fef08a", color: "#854d0e", padding: "2px 6px", borderRadius: 6, fontWeight: 800, textTransform: "uppercase" }}>Recomendado</span>
+                  </div>
+                  <div style={{ fontSize: 11, color: "#8b92a9", fontWeight: 600, marginTop: 4 }}>Processamento imediato</div>
+                </div>
+              </div>
+              {dest === "redotpay" && (
+                <div style={{ width: 20, height: 20, borderRadius: "50%", background: "#eab308", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, fontWeight: 900 }}>
+                  ✓
+                </div>
+              )}
+            </div>
+          )}
+
+          {activeModalTab === "wallets" && filteredDests.map(item => {
+            const isSel = item.id === dest;
+            return (
+              <div
+                key={item.id}
+                onClick={() => {
+                  setDest(item.id);
+                  onClose();
+                }}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  padding: "12px 14px",
+                  borderRadius: 14,
+                  cursor: "pointer",
+                  transition: "all 0.2s",
+                  border: isSel ? "2px solid #6366f1" : "1.5px solid #f1f5f9",
+                  background: isSel ? "#f5f6ff" : "#fff"
+                }}
+              >
+                <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                  <div style={{ width: 36, height: 36, borderRadius: 10, overflow: "hidden", flexShrink: 0, background: item.logoBg || item.bg || "#f1f5f9", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                    {item.svg ? (
+                      <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center" }} dangerouslySetInnerHTML={{ __html: item.svg }} />
+                    ) : item.logo ? (
+                      <img src={item.logo} alt={item.label} style={{ width: 36, height: 36, objectFit: "contain", borderRadius: 10 }} onError={e => { e.target.style.display = "none"; }} />
+                    ) : null}
+                  </div>
+                  <div>
+                    <div style={{ fontSize: 13, fontWeight: 800, color: "#1e1b4b" }}>{item.id ? `${item.id} — ${item.label}` : item.label}</div>
+                    <div style={{ fontSize: 10, color: "#8b92a9", fontWeight: 600, marginTop: 1 }}>{item.desc}</div>
+                  </div>
+                </div>
+                {isSel && (
+                  <div style={{ width: 20, height: 20, borderRadius: "50%", background: "#6366f1", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, fontWeight: 900 }}>
+                    ✓
+                  </div>
+                )}
+              </div>
+            );
+          })}
+
+          {activeModalTab === "banks" && ANGOLAN_BANKS.map(item => {
+            const isSel = item.id === selectedBank;
+            return (
+              <div
+                key={item.id}
+                onClick={() => {
+                  setSelectedBank(item.id);
+                  onClose();
+                }}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  padding: "12px 14px",
+                  borderRadius: 14,
+                  cursor: "pointer",
+                  transition: "all 0.2s",
+                  border: isSel ? "2px solid #6366f1" : "1.5px solid #f1f5f9",
+                  background: isSel ? "#f5f6ff" : "#fff"
+                }}
+              >
+                <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                  <div style={{ width: 36, height: 36, borderRadius: 10, overflow: "hidden", flexShrink: 0, background: item.logoBg || item.bg || "#f1f5f9", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                     <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center" }} dangerouslySetInnerHTML={{ __html: BANK_LOGOS[item.id] }} />
+                  </div>
+                  <div>
+                    <div style={{ fontSize: 13, fontWeight: 800, color: "#1e1b4b" }}>{item.id ? `${item.id} — ${item.label}` : item.label}</div>
+                    <div style={{ fontSize: 10, color: "#8b92a9", fontWeight: 600, marginTop: 1 }}>{item.desc}</div>
+                  </div>
+                </div>
+                {isSel && (
+                  <div style={{ width: 20, height: 20, borderRadius: "50%", background: "#6366f1", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, fontWeight: 900 }}>
+                    ✓
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export function Calculator({ appliedRate, rate, onSubmit, loading, user, kycStep, config, multiRates }) {
   const applied = parseFloat(appliedRate) || 1165;
   const [opType, setOpType] = useState("buy"); // "buy" or "sell"
@@ -340,6 +546,8 @@ export function Calculator({ appliedRate, rate, onSubmit, loading, user, kycStep
   // Modal display states
   const [showWalletModal, setShowWalletModal] = useState(false);
   const [showBankModal, setShowBankModal] = useState(false);
+  const [showUnifiedModal, setShowUnifiedModal] = useState(false);
+  const [activeModalTab, setActiveModalTab] = useState("wallets");
 
   const [selectedMargin, setSelectedMargin] = useState(0); // -30, -20, -10, 0, +10, +20, +30
 
@@ -374,7 +582,7 @@ export function Calculator({ appliedRate, rate, onSubmit, loading, user, kycStep
   }, [currency, baseRate, selectedMargin]);
 
   useEffect(() => {
-    const isModalOpen = showWalletModal || showBankModal;
+    const isModalOpen = showWalletModal || showBankModal || showUnifiedModal;
     const nav = document.querySelector(".bottom-nav");
     if (nav) {
       if (isModalOpen) {
@@ -654,38 +862,23 @@ export function Calculator({ appliedRate, rate, onSubmit, loading, user, kycStep
           marginBottom: 16
         }}>
           <span className="slbl" style={{ color: "#6366f1", fontSize: 10.5, fontWeight: 900, marginBottom: 14, display: "block", textTransform: "uppercase", letterSpacing: "0.5px" }}>
-            Métodos de pagamento (carteiras digitais, bancos)
+            Métodos de pagamento
           </span>
 
           <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-            {/* Sleek Selector Box 1 (USD Wallet) */}
-            <div style={{ display: "flex", flexDirection: "column" }}>
-              <span className="slbl" style={{ fontSize: 9, color: "#94a3b8", fontWeight: 800, marginBottom: 6, display: "block" }}>
-                {opType === "buy" ? `Carteira de Destino (${currency})` : `Carteira de Origem (${currency})`}
-              </span>
-              <div 
-                onClick={() => setShowWalletModal(true)}
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "space-between",
-                  background: "#ffffff",
-                  border: "1.5px solid #e2e8f0",
-                  borderRadius: 14,
-                  padding: "12px 14px",
-                  cursor: "pointer",
-                  transition: "all 0.2s"
-                }}
-                onMouseEnter={e => {
-                  e.currentTarget.style.borderColor = "#6366f1";
-                  e.currentTarget.style.boxShadow = "0 4px 12px rgba(99,102,241,0.05)";
-                }}
-                onMouseLeave={e => {
-                  e.currentTarget.style.borderColor = "#e2e8f0";
-                  e.currentTarget.style.boxShadow = "none";
-                }}
-              >
-                <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+            <div 
+              onClick={() => { setActiveModalTab("wallets"); setShowUnifiedModal(true); }}
+              style={{ display: "flex", alignItems: "center", justifyContent: "space-between", background: "#fff", border: "1.5px solid #e2e8f0", borderRadius: 14, padding: "12px 14px", cursor: "pointer", transition: "all 0.2s" }}
+              onMouseEnter={e => {
+                e.currentTarget.style.borderColor = "#6366f1";
+                e.currentTarget.style.boxShadow = "0 4px 12px rgba(99,102,241,0.05)";
+              }}
+              onMouseLeave={e => {
+                e.currentTarget.style.borderColor = "#e2e8f0";
+                e.currentTarget.style.boxShadow = "none";
+              }}
+            >
+              <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
                   <div style={{ width: 36, height: 36, flexShrink: 0, borderRadius: 10, overflow: "hidden", background: destInfo?.logoBg || "#f1f5f9", display: "flex", alignItems: "center", justifyContent: "center" }}>
                     {destInfo?.svg ? (
                       <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center" }} dangerouslySetInnerHTML={{ __html: destInfo.svg }} />
@@ -694,53 +887,36 @@ export function Calculator({ appliedRate, rate, onSubmit, loading, user, kycStep
                     ) : null}
                   </div>
                   <div>
+                    <div style={{ fontSize: 9, color: "#94a3b8", fontWeight: 800, marginBottom: 2 }}>{opType === "buy" ? `Carteira de Destino (${currency})` : `Carteira de Origem (${currency})`}</div>
                     <div style={{ fontSize: 13, fontWeight: 800, color: "#1e1b4b" }}>{destInfo?.label}</div>
-                    <div style={{ fontSize: 9.5, color: "#8b92a9", fontWeight: 600, marginTop: 1 }}>{destInfo?.desc}</div>
                   </div>
-                </div>
-                <div style={{ color: "#6366f1", fontSize: 11, fontWeight: 900 }}>▼</div>
               </div>
+              <div style={{ color: "#6366f1", fontSize: 11, fontWeight: 900 }}>▼</div>
             </div>
 
-            {/* Sleek Selector Box 2 (Angolan Bank) */}
-            <div style={{ display: "flex", flexDirection: "column" }}>
-              <span className="slbl" style={{ fontSize: 9, color: "#94a3b8", fontWeight: 800, marginBottom: 6, display: "block" }}>
-                {opType === "buy" ? "Banco de Pagamento (AOA)" : "Banco de Recebimento (AOA)"}
-              </span>
-              <div 
-                onClick={() => setShowBankModal(true)}
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "space-between",
-                  background: "#ffffff",
-                  border: "1.5px solid #e2e8f0",
-                  borderRadius: 14,
-                  padding: "12px 14px",
-                  cursor: "pointer",
-                  transition: "all 0.2s"
-                }}
-                onMouseEnter={e => {
-                  e.currentTarget.style.borderColor = "#6366f1";
-                  e.currentTarget.style.boxShadow = "0 4px 12px rgba(99,102,241,0.05)";
-                }}
-                onMouseLeave={e => {
-                  e.currentTarget.style.borderColor = "#e2e8f0";
-                  e.currentTarget.style.boxShadow = "none";
-                }}
-              >
-                <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+            <div 
+              onClick={() => { setActiveModalTab("banks"); setShowUnifiedModal(true); }}
+              style={{ display: "flex", alignItems: "center", justifyContent: "space-between", background: "#fff", border: "1.5px solid #e2e8f0", borderRadius: 14, padding: "12px 14px", cursor: "pointer", transition: "all 0.2s" }}
+              onMouseEnter={e => {
+                e.currentTarget.style.borderColor = "#6366f1";
+                e.currentTarget.style.boxShadow = "0 4px 12px rgba(99,102,241,0.05)";
+              }}
+              onMouseLeave={e => {
+                e.currentTarget.style.borderColor = "#e2e8f0";
+                e.currentTarget.style.boxShadow = "none";
+              }}
+            >
+              <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
                   <div 
                     style={{ width: 36, height: 36, flexShrink: 0, borderRadius: 8, overflow: "hidden", display: "flex", alignItems: "center", justifyContent: "center" }} 
                     dangerouslySetInnerHTML={{ __html: BANK_LOGOS[selectedBank] }} 
                   />
                   <div>
+                    <div style={{ fontSize: 9, color: "#94a3b8", fontWeight: 800, marginBottom: 2 }}>{opType === "buy" ? "Banco de Pagamento (AOA)" : "Banco de Recebimento (AOA)"}</div>
                     <div style={{ fontSize: 13, fontWeight: 800, color: "#1e1b4b" }}>{bInfo?.label}</div>
-                    <div style={{ fontSize: 9.5, color: "#8b92a9", fontWeight: 600, marginTop: 1 }}>{bInfo?.desc}</div>
                   </div>
-                </div>
-                <div style={{ color: "#6366f1", fontSize: 11, fontWeight: 900 }}>▼</div>
               </div>
+              <div style={{ color: "#6366f1", fontSize: 11, fontWeight: 900 }}>▼</div>
             </div>
           </div>
         </div>
@@ -759,6 +935,12 @@ export function Calculator({ appliedRate, rate, onSubmit, loading, user, kycStep
         />
       </div>
 
+      {config?.pause_transactions === "true" && (
+        <div style={{ display: "flex", alignItems: "center", gap: 8, background: "#fff5f5", border: "1.5px solid #feb2b2", borderRadius: 14, padding: "12px 16px", fontSize: 12, color: "#c53030", fontWeight: 700, marginBottom: 14 }}>
+          <span style={{ fontSize: 16 }}>⛔</span> Sistema em manutenção. Criação de ordens suspensa temporariamente.
+        </div>
+      )}
+
       {isOutOfLimits && (
         <div style={{ display: "flex", alignItems: "center", gap: 8, background: "#fef2f2", border: "1px solid #fecaca", borderRadius: 11, padding: "9px 13px", fontSize: 12, color: "#b91c1c", fontWeight: 600, marginBottom: 11 }}>
           <Icon name="alertTriangle" size={16} style={{ flexShrink: 0 }} /> O valor deve estar entre ${minUsd} e ${maxUsd}.
@@ -767,37 +949,29 @@ export function Calculator({ appliedRate, rate, onSubmit, loading, user, kycStep
 
       {!user && <div className="warn" style={{ display: "flex", alignItems: "center", gap: 8 }}><Icon name="user" size={16} /> Faz login para criar um pedido.</div>}
 
-      <button className="btn btn-p" onClick={submit} disabled={!user || usdNum <= 0 || isOutOfLimits || !account.trim() || loading}>
+      <button className="btn btn-p" onClick={submit} disabled={!user || usdNum <= 0 || isOutOfLimits || !account.trim() || loading || config?.pause_transactions === "true"}>
         {loading 
           ? `A criar pedido...` 
-          : opType === "buy" 
-            ? `Comprar ${currentCurrencyDef.symbol}${usd || "0"} → ${destInfo?.label}` 
-            : `Vender ${currentCurrencyDef.symbol}${usd || "0"} → Receber em Kwanza`}
+          : config?.pause_transactions === "true"
+            ? `Sistema em manutenção`
+            : opType === "buy" 
+              ? `Comprar ${currentCurrencyDef.symbol}${usd || "0"} → ${destInfo?.label}` 
+              : `Vender ${currentCurrencyDef.symbol}${usd || "0"} → Receber em Kwanza`}
       </button>
       <div style={{ textAlign: "center", marginTop: 7, fontSize: 10, color: "#9ca3af", fontWeight: 600 }}>
         O administrador é notificado instantaneamente
       </div>
 
-      {/* Wallet Selector Bottom Sheet Modal */}
-      <SelectionModal 
-        isOpen={showWalletModal}
-        title={opType === "buy" ? "Selecionar Carteira de Destino (USD)" : "Selecionar Carteira de Origem (USD)"}
-        items={DESTS}
-        selectedId={dest}
-        onSelect={setDest}
-        onClose={() => setShowWalletModal(false)}
-        renderIcon={item => item.svg}
-      />
-
-      {/* Bank Selector Bottom Sheet Modal */}
-      <SelectionModal 
-        isOpen={showBankModal}
-        title="Selecionar Banco Angolano para Receber AOA"
-        items={ANGOLAN_BANKS}
-        selectedId={selectedBank}
-        onSelect={setSelectedBank}
-        onClose={() => setShowBankModal(false)}
-        renderIcon={item => BANK_LOGOS[item.id]}
+      <UnifiedMethodModal
+        isOpen={showUnifiedModal}
+        onClose={() => setShowUnifiedModal(false)}
+        activeModalTab={activeModalTab}
+        setActiveModalTab={setActiveModalTab}
+        filteredDests={filteredDests}
+        dest={dest}
+        setDest={setDest}
+        selectedBank={selectedBank}
+        setSelectedBank={setSelectedBank}
       />
     </>
   );

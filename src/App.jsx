@@ -940,6 +940,11 @@ function ClientApp({ user, onLogout }) {
   }
 
   async function handleCalcSubmitFinal({ usd, aoa, dest, account, appliedRate, selectedMargin, finalExchangeRate, side, bank, currency, currencySymbol }) {
+    if (config?.pause_transactions === "true") {
+      toast_("Sistema em manutenção. Criação de ordens suspensa temporariamente.", "err");
+      return;
+    }
+
     const minUsd = parseFloat(config?.min_amount_usd) || 10;
     const maxUsd = parseFloat(config?.max_amount_usd) || 5000;
 
