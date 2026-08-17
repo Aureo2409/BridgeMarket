@@ -1,6 +1,8 @@
 import { useState, useEffect } from "react";
-import { DESTS, CURRENCIES } from "../../lib/constants.js";
+import { CURRENCIES } from "../../lib/constants.js";
+import { DESTS } from "whatsapp-web.js/src/util/InterfaceController.js";
 import { Icon } from "../shared/UI.jsx";
+
 
 export const ANGOLAN_BANKS = [
   { id: "bai", label: "BAI", desc: "Banco Angolano de Investimentos", color: "#002147", bg: "#f0f4ff" },
