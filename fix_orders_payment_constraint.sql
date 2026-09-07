@@ -24,7 +24,7 @@ ALTER TABLE public.orders DROP CONSTRAINT IF EXISTS orders_destination_check;
 ALTER TABLE public.orders
   ADD CONSTRAINT orders_destination_check
   CHECK (destination = ANY (ARRAY[
-    'visa_virtual', 'mastercard', 'paypal', 'wise',
+    'visa', 'visa_virtual', 'mastercard', 'paypal', 'wise',
     'airtm', 'redotpay', 'binance',
     'iban_eu', 'iban_us', 'mbway', 'pix', 'eft_zar'
   ]));

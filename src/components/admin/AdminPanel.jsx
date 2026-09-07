@@ -173,11 +173,87 @@ function TwoFactorSetup({ user }) {
   );
 }
 
+function PaymentTestComponent() {
+  const [loadingProvider, setLoadingProvider] = useState(null);
+  const [testResult, setTestResult] = useState(null);
+
+  const testPaymentProviders = async (provider) => {
+    setLoadingProvider(provider);
+    setTestResult(null);
+
+    try {
+      const { data, error } = await sb.functions.invoke('test-payment-gateway', {
+        body: { provider }
+      });
+
+      if (error) throw error;
+      setTestResult(data);
+    } catch (err) {
+      setTestResult({ success: false, message: err.message });
+    } finally {
+      setLoadingProvider(null);
+    }
+  };
+
+  return (
+    <div className="adm-card" style={{ cursor: "default", marginBottom: 12 }}>
+      <div style={{ fontSize: 13, fontWeight: 800, color: "#e2e8f0", marginBottom: 10 }}>
+        Testar Conexão Gateway (Sandbox)
+      </div>
+      <div style={{ fontSize: 10.5, color: "#64748b", marginBottom: 14, lineHeight: 1.5 }}>
+        Verifique a comunicação entre as Edge Functions do Supabase e as APIs da Visa e Mastercard na Sandbox.
+      </div>
+      <div style={{ display: "flex", gap: 10, marginBottom: 14 }}>
+        <button 
+          className="adm-btn"
+          onClick={() => testPaymentProviders('visa')} 
+          disabled={loadingProvider !== null}
+          style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}
+        >
+          {loadingProvider === 'visa' ? 'A testar Visa...' : 'Testar Visa'}
+        </button>
+        <button 
+          className="adm-btn"
+          onClick={() => testPaymentProviders('mastercard')} 
+          disabled={loadingProvider !== null}
+          style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 6, background: "linear-gradient(135deg, #ea580c, #f97316)" }}
+        >
+          {loadingProvider === 'mastercard' ? 'A testar Mastercard...' : 'Testar Mastercard'}
+        </button>
+      </div>
+
+      {testResult && (
+        <div style={{ 
+          marginTop: 10, 
+          padding: 12, 
+          background: testResult.success ? "rgba(16, 185, 129, 0.1)" : "rgba(239, 68, 68, 0.1)", 
+          border: `1.5px solid ${testResult.success ? "#10b981" : "#ef4444"}`,
+          borderRadius: 10 
+        }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 11, fontWeight: 800, color: testResult.success ? "#10b981" : "#ef4444", marginBottom: 4 }}>
+            <Icon name={testResult.success ? "checkCircle" : "alertTriangle"} size={14} />
+            <span>Status: {testResult.status || 'Erro'}</span>
+          </div>
+          <p style={{ fontSize: 11, color: "#e2e8f0", lineHeight: 1.4 }}>{testResult.message}</p>
+          {testResult.timestamp && (
+            <div style={{ fontSize: 9, color: "#64748b", marginTop: 6, fontWeight: 600 }}>
+              {new Date(testResult.timestamp).toLocaleString("pt-AO")}
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function ConfigTab({ config, updateConfig, user }) {
   return (
     <>
       <span className="adm-section">Segurança da Conta</span>
       <TwoFactorSetup user={user} />
+
+      <span className="adm-section" style={{ marginTop: 20 }}>Gateways de Pagamento</span>
+      <PaymentTestComponent />
 
       <span className="adm-section" style={{ marginTop: 20 }}>Configurações do marketplace</span>
       {CONFIG_FIELDS.map(f => (

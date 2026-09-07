@@ -1,6 +1,5 @@
 import { useState, useEffect } from "react";
-import { CURRENCIES } from "../../lib/constants.js";
-import { DESTS } from "whatsapp-web.js/src/util/InterfaceController.js";
+import { CURRENCIES, DESTS } from "../../lib/constants.js";
 import { Icon } from "../shared/UI.jsx";
 
 
@@ -308,7 +307,7 @@ function SelectionModal({ isOpen, title, items, selectedId, onSelect, onClose, r
                     ) : null}
                   </div>
                   <div>
-                    <div style={{ fontSize: 13, fontWeight: 800, color: "#1e1b4b" }}>{item.id ? `${item.id} — ${item.label}` : item.label}</div>
+                    <div style={{ fontSize: 13, fontWeight: 800, color: "#1e1b4b" }}>{item.label}</div>
                     <div style={{ fontSize: 10, color: "#8b92a9", fontWeight: 600, marginTop: 1 }}>{item.desc}</div>
                   </div>
                 </div>
@@ -475,7 +474,7 @@ function UnifiedMethodModal({ isOpen, onClose, activeModalTab, setActiveModalTab
                     ) : null}
                   </div>
                   <div>
-                    <div style={{ fontSize: 13, fontWeight: 800, color: "#1e1b4b" }}>{item.id ? `${item.id} — ${item.label}` : item.label}</div>
+                    <div style={{ fontSize: 13, fontWeight: 800, color: "#1e1b4b" }}>{item.label}</div>
                     <div style={{ fontSize: 10, color: "#8b92a9", fontWeight: 600, marginTop: 1 }}>{item.desc}</div>
                   </div>
                 </div>
@@ -514,7 +513,7 @@ function UnifiedMethodModal({ isOpen, onClose, activeModalTab, setActiveModalTab
                      <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center" }} dangerouslySetInnerHTML={{ __html: BANK_LOGOS[item.id] }} />
                   </div>
                   <div>
-                    <div style={{ fontSize: 13, fontWeight: 800, color: "#1e1b4b" }}>{item.id ? `${item.id} — ${item.label}` : item.label}</div>
+                    <div style={{ fontSize: 13, fontWeight: 800, color: "#1e1b4b" }}>{item.label}</div>
                     <div style={{ fontSize: 10, color: "#8b92a9", fontWeight: 600, marginTop: 1 }}>{item.desc}</div>
                   </div>
                 </div>

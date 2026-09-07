@@ -10,3 +10,7 @@ dist
 # Sessão do WhatsApp (gerada em runtime, não versionar)
 .wwebjs_auth
 .wwebjs_cache
+
+# Supabase CLI temp
+supabase/.temp/
+

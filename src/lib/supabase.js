@@ -6,6 +6,7 @@ const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
 const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
 export const sb = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+export const supabase = sb;
 
 export async function checkIsAdmin(userId) {
   // Verifica se o utilizador está na tabela admin_roles
