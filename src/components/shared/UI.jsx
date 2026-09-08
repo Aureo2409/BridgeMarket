@@ -41,7 +41,9 @@ export function Icon({ name, size = 16, color = "currentColor", className, style
     list: <><line x1="8" y1="6" x2="21" y2="6" /><line x1="8" y1="12" x2="21" y2="12" /><line x1="8" y1="18" x2="21" y2="18" /><line x1="3" y1="6" x2="3.01" y2="6" /><line x1="3" y1="12" x2="3.01" y2="12" /><line x1="3" y1="18" x2="3.01" y2="18" /></>,
     zap: <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />,
     users: <><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M23 21v-2a4 4 0 0 0-3-3.87" /><path d="M16 3.13a4 4 0 0 1 0 7.75" /></>,
-    clock: <><circle cx="12" cy="12" r="10" /><polyline points="12 6 12 12 16 14" /></>
+    clock: <><circle cx="12" cy="12" r="10" /><polyline points="12 6 12 12 16 14" /></>,
+    eye: <><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" /><circle cx="12" cy="12" r="3" /></>,
+    eyeOff: <><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24" /><line x1="1" y1="1" x2="23" y2="23" /></>
   };
   return (
     <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" className={className} style={style}>
@@ -84,8 +86,10 @@ export function StatusPill({ status }) {
 export function Header({ appliedRate, rateAnim, onOrdersClick, showOrders, user, onLogout, onProfileClick, showProfile, avatarUrl, creditsBalance, onCreditsClick, onHelpClick }) {
   return (
     <div className="hdr" style={{ position: "sticky", top: 0, zIndex: 1000 }}>
-      <div className="logo">
-        <img src="/logo.svg" alt="Logo" className="logo-mark" style={{ objectFit: "contain", background: "none", boxShadow: "none" }} />
+      <div className="logo" style={{ display: "flex", alignItems: "center", gap: 10 }}>
+        <div style={{ width: 34, height: 34, borderRadius: 10, background: "#ffffff", display: "flex", alignItems: "center", justifyContent: "center", padding: 6, flexShrink: 0, boxShadow: "0 2px 8px rgba(0,0,0,0.06)", border: "1px solid rgba(0,0,0,0.04)" }}>
+          <img src="/logo.svg" alt="Logo" style={{ width: "100%", height: "100%", objectFit: "contain" }} />
+        </div>
         <div>
           <div className="logo-text">Bridge</div>
           <div className="logo-sub">Câmbio Angola</div>

@@ -788,8 +788,11 @@ export function AdminPanel({ user, onLogout }) {
       <Toast toast={toast} />
 
       <div className="adm-hdr">
-        <div className="adm-logo" style={{ display: "flex", alignItems: "center", gap: 8 }}>
-          <Icon name="settings" size={18} /> Bridge Admin
+        <div className="adm-logo" style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          <div style={{ width: 26, height: 26, borderRadius: 8, background: "#ffffff", display: "flex", alignItems: "center", justifyContent: "center", padding: 4, flexShrink: 0 }}>
+            <img src="/logo.svg" alt="Logo" style={{ width: "100%", height: "100%", objectFit: "contain" }} />
+          </div>
+          <span>Bridge Admin</span>
           {unread > 0 && <span className="adm-badge">{unread}</span>}
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>

@@ -23,6 +23,7 @@ function AuthScreen() {
   const [termsAccepted, setTermsAccepted] = useState(false);
   const [needsMfaCode, setNeedsMfaCode] = useState(false);
   const [mfaCode, setMfaCode] = useState("");
+  const [showPwd, setShowPwd] = useState(false);
 
   // Ao montar o ecrã de login, verifica se já existe uma sessão válida do
   // Supabase que ainda não passou o desafio de MFA — cobre o caso de o
@@ -298,6 +299,14 @@ function AuthScreen() {
       {/* Right panel (form) */}
       <div className="auth-right">
         <div className="auth-card">
+          {/* Logo no topo em mobile */}
+          <div className="auth-mobile-logo" style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 10, marginBottom: 20 }}>
+            <div style={{ width: 38, height: 38, borderRadius: 10, background: "#ffffff", display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 4px 12px rgba(0,0,0,0.08)", padding: 6, flexShrink: 0 }}>
+              <img src="/logo.svg" alt="Logo" style={{ width: "100%", height: "100%", objectFit: "contain" }} />
+            </div>
+            <div style={{ fontSize: 24, fontWeight: 900, color: "#0E0C1E", letterSpacing: "-0.8px" }}>bridge</div>
+          </div>
+
           {mode !== "reset" ? (
             <div className="auth-tabs">
               <button
@@ -360,10 +369,36 @@ function AuthScreen() {
               <label className="auth-label">PASSWORD</label>
               <div className="auth-input-wrap">
                 <div className="auth-input-icon"><Icon name="lock" size={18} /></div>
-                <input className="auth-inp" type="password"
+                <input
+                  className="auth-inp"
+                  type={showPwd ? "text" : "password"}
+                  style={{ paddingRight: 42 }}
                   placeholder={mode === "register" ? "Mínimo 8 caracteres, letras e números" : "••••••••••"}
-                  value={pwd} onChange={e => setPwd(e.target.value)}
-                  onKeyDown={e => e.key === "Enter" && submit()} />
+                  value={pwd}
+                  onChange={e => setPwd(e.target.value)}
+                  onKeyDown={e => e.key === "Enter" && submit()}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPwd(!showPwd)}
+                  style={{
+                    position: "absolute",
+                    right: 12,
+                    top: "50%",
+                    transform: "translateY(-50%)",
+                    background: "none",
+                    border: "none",
+                    color: "#9CA3AF",
+                    cursor: "pointer",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    padding: 4
+                  }}
+                  title={showPwd ? "Ocultar senha" : "Ver senha"}
+                >
+                  <Icon name={showPwd ? "eyeOff" : "eye"} size={18} color="#9CA3AF" />
+                </button>
               </div>
             </>
           )}
@@ -713,6 +748,7 @@ function ClientApp({ user, onLogout }) {
   const [showManual, setShowManual] = useState(false);
   const [manualAutoShown, setManualAutoShown] = useState(false);
   const [newPwd, setNewPwd] = useState("");
+  const [showNewPwd, setShowNewPwd] = useState(false);
   const [pwdLoad, setPwdLoad] = useState(false);
   const [profile, setProfile] = useState(() => {
     try {
@@ -1676,7 +1712,37 @@ function ClientApp({ user, onLogout }) {
               <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
                 <div>
                   <label className="lbl">Nova palavra-passe</label>
-                  <input className="inp" type="password" placeholder="Mínimo 6 caracteres" value={newPwd} onChange={e => setNewPwd(e.target.value)} />
+                  <div style={{ position: "relative" }}>
+                    <input
+                      className="inp"
+                      type={showNewPwd ? "text" : "password"}
+                      style={{ paddingRight: 42 }}
+                      placeholder="Mínimo 6 caracteres"
+                      value={newPwd}
+                      onChange={e => setNewPwd(e.target.value)}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowNewPwd(!showNewPwd)}
+                      style={{
+                        position: "absolute",
+                        right: 12,
+                        top: "50%",
+                        transform: "translateY(-50%)",
+                        background: "none",
+                        border: "none",
+                        color: "#9CA3AF",
+                        cursor: "pointer",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        padding: 4
+                      }}
+                      title={showNewPwd ? "Ocultar senha" : "Ver senha"}
+                    >
+                      <Icon name={showNewPwd ? "eyeOff" : "eye"} size={18} color="#9CA3AF" />
+                    </button>
+                  </div>
                 </div>
                 <button className="btn btn-p" style={{ background: "#475569" }} onClick={handleUpdatePassword} disabled={pwdLoad}>
                   {pwdLoad ? "A guardar..." : "Alterar a senha"}
@@ -2310,7 +2376,12 @@ function ClientApp({ user, onLogout }) {
         {/* Left Sidebar */}
         <div className="sidebar">
           <div className="sidebar-logo">
-            <div className="sidebar-brand">bridge</div>
+            <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 4 }}>
+              <div style={{ width: 34, height: 34, borderRadius: 10, background: "#ffffff", display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 2px 8px rgba(0,0,0,0.06)", border: "1px solid rgba(0,0,0,0.04)", padding: 6, flexShrink: 0 }}>
+                <img src="/logo.svg" alt="Logo" style={{ width: "100%", height: "100%", objectFit: "contain" }} />
+              </div>
+              <div className="sidebar-brand" style={{ marginBottom: 0 }}>bridge</div>
+            </div>
             <div className="sidebar-live-tag">
               <span className="sidebar-live-dot" /> mercado ao vivo
             </div>

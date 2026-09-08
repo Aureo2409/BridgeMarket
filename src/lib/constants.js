@@ -322,7 +322,7 @@ body{font-family:'Plus Jakarta Sans',sans-serif;background:#EEEEF8;color:#0E0C1E
 /* â”€â”€â”€ AUTH SPLIT SCREEN â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .auth-split{display:flex;min-height:100vh;width:100%;background:#F0F1FA}
 .auth-left{display:none;flex-direction:column;justify-content:center;padding:60px 52px;background:linear-gradient(160deg,#0F0D1A 0%,#1a1040 60%,#251660 100%);position:relative;overflow:hidden;flex-shrink:0}
-@media(min-width:768px){.auth-left{display:flex;width:42%}}
+@media(min-width:768px){.auth-left{display:flex;width:42%}.auth-mobile-logo{display:none !important}}
 .auth-left-blob1{position:absolute;width:320px;height:320px;border-radius:50%;background:radial-gradient(circle,rgba(99,102,241,.22) 0%,transparent 70%);top:-80px;left:-80px;pointer-events:none}
 .auth-left-blob2{position:absolute;width:260px;height:260px;border-radius:50%;background:radial-gradient(circle,rgba(139,92,246,.18) 0%,transparent 70%);bottom:-60px;right:-60px;pointer-events:none}
 .auth-left-logo{font-size:36px;font-weight:900;color:#ffffff;letter-spacing:-1.5px;margin-bottom:10px}
