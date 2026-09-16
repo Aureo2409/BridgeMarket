@@ -1,0 +1,62 @@
+import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-webhook-secret",
+};
+
+serve(async (req) => {
+  if (req.method === "OPTIONS") {
+    return new Response("ok", { headers: corsHeaders });
+  }
+
+  try {
+    const body = await req.json();
+    console.log("Notificação de pagamento recebida no Webhook:", body);
+
+    const transactionId = body.transactionId || body.transaction_id || body.orderId || body.order_id || body.id;
+    const rawStatus = (body.status || "").toUpperCase();
+    const provider = body.provider || "gateway";
+
+    // Inicializa o cliente do Supabase com privilégios administrativos
+    const supabaseAdmin = createClient(
+      Deno.env.get("SUPABASE_URL") ?? "",
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
+    );
+
+    // Se a transação foi paga com sucesso no provedor (SIBS, Binance, RedotPay, Airtm, etc.)
+    if (["PAID", "SUCCESS", "COMPLETED", "SETTLED"].includes(rawStatus)) {
+      if (transactionId) {
+        // Tenta atualizar por id da ordem ou por transaction_id / order_ref
+        const { error } = await supabaseAdmin
+          .from("orders")
+          .update({ 
+            status: "completed", 
+            updated_at: new Date().toISOString() 
+          })
+          .or(`id.eq.${transactionId},order_ref.eq.${transactionId}`);
+
+        if (error) {
+          console.error("Erro ao atualizar status da ordem:", error);
+        }
+      }
+    }
+
+    return new Response(
+      JSON.stringify({ 
+        success: true, 
+        message: "Webhook processado com sucesso!",
+        received: { transactionId, status: rawStatus, provider }
+      }),
+      { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 }
+    );
+
+  } catch (error) {
+    console.error("Erro no processamento do Webhook:", error.message);
+    return new Response(
+      JSON.stringify({ success: false, error: error.message }),
+      { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 400 }
+    );
+  }
+});

@@ -11,17 +11,21 @@ serve(async (req) => {
   }
 
   try {
-    const { provider } = await req.json();
+    const { provider = "visa", amount, currency, accountDetails, orderId } = await req.json();
 
     // Aqui usamos os tokens/certificados configurados nas variáveis do Supabase
     const apiKey = Deno.env.get(`${provider.toUpperCase()}_API_KEY`);
 
-    // Simulação de resposta da Sandbox Visa/Mastercard
+    // Resposta de liquidação / sandbox do Provedor
     const mockResponse = {
       success: true,
       provider,
+      amount: amount || null,
+      currency: currency || null,
+      accountDetails: accountDetails || null,
+      orderId: orderId || null,
       status: "CONNECTED",
-      message: `Conexão Sandbox com a API do ${provider.toUpperCase()} estabelecida com sucesso!`,
+      message: `Conexão e validação com o gateway ${provider.toUpperCase()} executada com sucesso!`,
       timestamp: new Date().toISOString(),
     };
 

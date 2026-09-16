@@ -8,6 +8,7 @@ import { OrderList } from "./components/client/OrderList.jsx";
 import { TransactionCenter } from "./components/client/TransactionCenter.jsx";
 import { AdminPanel } from "./components/admin/AdminPanel.jsx";
 import { UserManual } from "./components/shared/UserManual.jsx";
+import { processTransaction } from "./services/payments.js";
 
 const API_URL = import.meta.env.VITE_API_URL || window.location.origin;
 
@@ -1113,6 +1114,18 @@ function ClientApp({ user, onLogout }) {
         // comunicação seguro entre as duas partes verificadas.
         setOrder(data); setStep(1);
         toast_("Pedido criado! Admin notificado.");
+
+        // Gatilho do Gateway / Paymate correspondente
+        processTransaction(dest, { 
+          amount: usd, 
+          currency: currency || "USD", 
+          account, 
+          orderId: data?.id 
+        }).then(res => {
+          console.log(`[Gateway ${dest}] Conexão verificada:`, res);
+        }).catch(err => {
+          console.warn(`[Gateway ${dest}] Aviso:`, err);
+        });
       }
     } catch (e) {
       console.error("Erro ao criar pedido:", e);

@@ -249,6 +249,22 @@ export const DESTS = [
   },
 ];
 
+// ── Mapeamento Centralizado de Gateways / Paymates ──────────────────────────
+export const PAYMENT_METHODS = {
+  visa: { id: 'visa', name: 'Visa Virtual', functionEndpoint: 'test-payment-gateway' },
+  mastercard: { id: 'mastercard', name: 'Mastercard', functionEndpoint: 'test-payment-gateway' },
+  binance: { id: 'binance', name: 'Binance Pay', functionEndpoint: 'test-payment-gateway' },
+  redotpay: { id: 'redotpay', name: 'RedotPay', functionEndpoint: 'test-payment-gateway' },
+  airtm: { id: 'airtm', name: 'Airtm', functionEndpoint: 'test-payment-gateway' },
+  paypal: { id: 'paypal', name: 'PayPal', functionEndpoint: 'test-payment-gateway' },
+  wise: { id: 'wise', name: 'Wise', functionEndpoint: 'test-payment-gateway' },
+  mbway: { id: 'mbway', name: 'MB WAY', functionEndpoint: 'test-payment-gateway' },
+  pix: { id: 'pix', name: 'Pix', functionEndpoint: 'test-payment-gateway' },
+  iban_eu: { id: 'iban_eu', name: 'IBAN Europeu (SEPA)', functionEndpoint: 'test-payment-gateway' },
+  iban_us: { id: 'iban_us', name: 'ACH / Wire EUA', functionEndpoint: 'test-payment-gateway' },
+  eft_zar: { id: 'eft_zar', name: 'EFT África do Sul', functionEndpoint: 'test-payment-gateway' },
+};
+
 // ── Definições de Moedas Suportadas ──────────────────────────────────────────
 export const CURRENCIES = [
   {
