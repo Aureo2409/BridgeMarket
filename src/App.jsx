@@ -892,8 +892,15 @@ function ClientApp({ user, onLogout }) {
         localStorage.setItem("bridge_rate", JSON.stringify(p.new));
         toast_("Novo câmbio: " + parseFloat(p.new.applied_rate).toLocaleString("pt-AO") + " Kz/$");
       })
-      .on("postgres_changes", { event: "*", schema: "public", table: "orders" },
-        () => loadOrders())
+      .on("postgres_changes", { event: "*", schema: "public", table: "orders" }, (p) => {
+        loadOrders();
+        if (p.new && order && p.new.id === order.id) {
+          setOrder(p.new);
+          if (p.new.status === "completed" || p.new.status === "COMPLETED") {
+            toast_("✅ Pagamento confirmado via Webhook!", "ok");
+          }
+        }
+      })
       .on("postgres_changes", { event: "UPDATE", schema: "public", table: "kyc_verifications", filter: `user_id=eq.${user.id}` },
         (p) => {
           const k = p.new;

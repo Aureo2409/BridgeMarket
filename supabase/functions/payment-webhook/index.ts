@@ -12,6 +12,21 @@ serve(async (req) => {
   }
 
   try {
+    // ── 1. Validação de Segurança do Webhook ──
+    const expectedSecret = Deno.env.get("PAYMENT_WEBHOOK_SECRET");
+    if (expectedSecret) {
+      const webhookSecret = req.headers.get("x-webhook-secret") ||
+                            req.headers.get("authorization")?.replace("Bearer ", "").trim();
+      
+      if (webhookSecret !== expectedSecret) {
+        console.warn("Tentativa de acesso ao Webhook sem secret válido.");
+        return new Response(
+          JSON.stringify({ success: false, error: "Acesso não autorizado ao Webhook" }),
+          { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 401 }
+        );
+      }
+    }
+
     const body = await req.json();
     console.log("Notificação de pagamento recebida no Webhook:", body);
 
