@@ -13,18 +13,30 @@ serve(async (req) => {
 
   try {
     // ── 1. Validação de Segurança do Webhook ──
+    // CRÍTICO: esta validação é OBRIGATÓRIA, não opcional. Se
+    // PAYMENT_WEBHOOK_SECRET não estiver configurada no servidor, a função
+    // recusa TODOS os pedidos — não os aceita sem verificação. Sem isto,
+    // e como esta função tem verify_jwt=false (chamável por qualquer pessoa
+    // na internet, sem conta), qualquer um poderia marcar qualquer
+    // transacção como paga sem nunca ter transferido dinheiro real.
     const expectedSecret = Deno.env.get("PAYMENT_WEBHOOK_SECRET");
-    if (expectedSecret) {
-      const webhookSecret = req.headers.get("x-webhook-secret") ||
-                            req.headers.get("authorization")?.replace("Bearer ", "").trim();
-      
-      if (webhookSecret !== expectedSecret) {
-        console.warn("Tentativa de acesso ao Webhook sem secret válido.");
-        return new Response(
-          JSON.stringify({ success: false, error: "Acesso não autorizado ao Webhook" }),
-          { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 401 }
-        );
-      }
+    if (!expectedSecret) {
+      console.error("PAYMENT_WEBHOOK_SECRET não está configurado no servidor — a recusar pedido por segurança.");
+      return new Response(
+        JSON.stringify({ success: false, error: "Webhook não configurado — contacte o suporte." }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 503 }
+      );
+    }
+
+    const webhookSecret = req.headers.get("x-webhook-secret") ||
+                          req.headers.get("authorization")?.replace("Bearer ", "").trim();
+
+    if (webhookSecret !== expectedSecret) {
+      console.warn("Tentativa de acesso ao Webhook sem secret válido.");
+      return new Response(
+        JSON.stringify({ success: false, error: "Acesso não autorizado ao Webhook" }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 401 }
+      );
     }
 
     const body = await req.json();
