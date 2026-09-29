@@ -6,7 +6,13 @@ entrypoint = "./functions/visa-mastercard/index.ts"
 
 [functions.payment-webhook]
 enabled = true
-verify_jwt = false
+# verify_jwt = true: webhooks externos de fornecedores (Visa, Binance, etc.)
+# não enviam um JWT do nosso Supabase, por isso a autenticação real desta
+# função é feita pelo PAYMENT_WEBHOOK_SECRET dentro do próprio código, não
+# por este mecanismo. Mantido como true por defeito de segurança do deploy;
+# se os fornecedores externos não conseguirem autenticar via JWT, mudar
+# para false e confiar exclusivamente na validação de secret já implementada.
+verify_jwt = true
 entrypoint = "./functions/payment-webhook/index.ts"
 
 [functions.test-payment-gateway]
