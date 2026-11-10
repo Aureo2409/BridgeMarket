@@ -414,6 +414,7 @@ create policy proofs_insert on public.payment_proofs
 drop policy if exists audit_logs_insert on public.audit_logs;
 
 drop policy if exists notif_insert_admin_or_system on public.notifications;
+drop policy if exists notif_insert_admin_only on public.notifications;
 create policy notif_insert_admin_only on public.notifications
   for insert with check (public.is_admin());
 
