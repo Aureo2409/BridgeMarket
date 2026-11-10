@@ -536,7 +536,15 @@ function KycOnboarding({ user, currentStep, kycRecord, onLogout, onBack }) {
   }
 
   async function handleRetry() {
-    await sb.from("kyc_verifications").update({ liveness_status: null, ocr_status: null, step_personal_done: false }).eq("user_id", user.id);
+    // Servidor limpa o processo recusado (as colunas de estado são NOT NULL, por isso
+    // o antigo "update ... = null" feito no browser nunca funcionou e o utilizador ficava preso).
+    const { data, error } = await sb.rpc("kyc_retry");
+    if (error || (data && data.ok === false && data.reason !== "already_verified")) {
+      console.error("Erro ao reiniciar KYC:", error || data);
+      alert("Não foi possível reiniciar a verificação agora. Tenta novamente ou fala com o nosso suporte.");
+      return;
+    }
+    try { localStorage.removeItem("bridge_kyc"); } catch (_) { /* sem armazenamento local */ }
     window.location.reload();
   }
 
