@@ -41,13 +41,13 @@ export async function uploadProof(userId, orderId, file) {
   const path = `${userId}/${orderId}/${Date.now()}.${ext}`;
 
   const { error } = await sb.storage
-    .from("comprovantes de pagamento")
+    .from("payment-proofs")
     .upload(path, file, { cacheControl: "3600", contentType: file.type });
 
   if (error) throw error;
 
   const { data } = await sb.storage
-    .from("comprovantes de pagamento")
+    .from("payment-proofs")
     .createSignedUrl(path, 3600);
 
   return { path, signedUrl: data?.signedUrl ?? null };
@@ -58,7 +58,7 @@ export async function uploadKycDocument(userId, file, type) {
   const path = `${userId}/${type}_${Date.now()}.${ext}`;
 
   const { error } = await sb.storage
-    .from("Documentos kyc")
+    .from("kyc-documents")
     .upload(path, file, { cacheControl: "3600", contentType: file.type });
 
   if (error) throw error;
@@ -68,16 +68,16 @@ export async function uploadKycDocument(userId, file, type) {
 
 export async function uploadAvatar(userId, file) {
   const ext = file.name.split(".").pop().toLowerCase();
-  const path = `avatars/${userId}.${ext}`;
+  const path = `${userId}/avatar_${Date.now()}.${ext}`;
 
   const { error } = await sb.storage
-    .from("comprovantes de pagamento")
-    .upload(path, file, { cacheControl: "3600", contentType: file.type, upsert: true });
+    .from("payment-proofs")
+    .upload(path, file, { cacheControl: "3600", contentType: file.type });
 
   if (error) throw error;
 
   const { data } = await sb.storage
-    .from("comprovantes de pagamento")
+    .from("payment-proofs")
     .createSignedUrl(path, 31536000); // 1 year signed url
 
   return { path, signedUrl: data?.signedUrl ?? null };
@@ -86,7 +86,7 @@ export async function uploadAvatar(userId, file) {
 export async function uploadBiometricVideo(userId, orderId, videoBlob) {
   const path = `biometric/${orderId}/${userId}_${Date.now()}.webm`;
   const { error } = await sb.storage
-    .from("transação-biometria")
+    .from("transaction-biometrics")
     .upload(path, videoBlob, { cacheControl: "3600", contentType: "video/webm" });
 
   if (error) throw error;
@@ -107,10 +107,10 @@ export async function uploadBiometricVideo(userId, orderId, videoBlob) {
 
 export async function uploadAccessProof(userId, file) {
   const ext = file.name.split(".").pop().toLowerCase();
-  const path = `weekly_access/${userId}/${Date.now()}.${ext}`;
+  const path = `${userId}/recharge_${Date.now()}.${ext}`;
 
   const { error } = await sb.storage
-    .from("comprovantes de pagamento")
+    .from("payment-proofs")
     .upload(path, file, { cacheControl: "3600", contentType: file.type });
 
   if (error) throw error;

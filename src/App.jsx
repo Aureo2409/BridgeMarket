@@ -1153,59 +1153,39 @@ function ClientApp({ user, onLogout }) {
       "Cancelar Pedido",
       "Tens a certeza que queres cancelar este pedido? Esta ação não pode ser desfeita.",
       async () => {
-        const { error } = await sb.from("orders").update({ status: "cancelled" }).eq("id", orderId).eq("user_id", user.id);
-        if (error) { toast_("Erro ao cancelar: " + error.message, "err"); }
-        else {
-          toast_("Pedido cancelado.");
+        // O cancelamento, o reembolso de crédito (se já houve matching) e o contador de
+        // cancelamentos acontecem NO SERVIDOR (função cancel_order), numa única transacção.
+        // O browser nunca altera saldos: o saldo devolvido vem na resposta.
+        const { data: res, error } = await sb.rpc("cancel_order", { p_order_id: orderId });
+        if (error) { toast_("Erro ao cancelar: " + error.message, "err"); return; }
 
-          // ── Devolver crédito do comprador, SE o cancelamento acontecer depois do
-          // matching (ou seja, o crédito já foi debitado em handleTransactOrder).
-          // Se o pedido ainda estava só no mercado sem vendedor (awaiting_payment/pending),
-          // nunca houve cobrança — criar pedido continua a ser gratuito.
-          const cancelledOrder = orders.find(o => o.id === orderId) || currentOrder;
-          if (cancelledOrder?.fee_debited_at) {
-            const { data: freshProfile } = await sb.from("profiles").select("credits_balance").eq("id", user.id).maybeSingle();
-            const newBalanceBack = (parseInt(freshProfile?.credits_balance || 0, 10)) + 1;
-            const { error: refundErr } = await sb.from("profiles")
-              .update({ credits_balance: newBalanceBack })
-              .eq("id", user.id);
-            if (!refundErr) {
-              setProfile(prev => ({ ...prev, credits_balance: newBalanceBack }));
-              await sb.from("credit_transactions").insert({
-                user_id: user.id, order_id: orderId, type: "refund_cancel", amount: 1,
-                balance_after: newBalanceBack
-              });
-            }
-          }
-
-          // Incrementar contador de cancelamentos no perfil
-          const currentCount = parseInt(profile?.cancelled_count || 0, 10);
-          const newCount = currentCount + 1;
-          const nowIso = new Date().toISOString();
-          
-          const { error: profileError } = await sb.from("profiles").update({
-            cancelled_count: newCount,
-            last_cancelled_at: nowIso
-          }).eq("id", user.id);
-
-          if (!profileError) {
-            const updatedP = { ...profile, cancelled_count: newCount, last_cancelled_at: nowIso };
-            setProfile(updatedP);
-            localStorage.setItem("bridge_profile", JSON.stringify(updatedP));
-          } else {
-            console.error("Erro ao atualizar contador de cancelamentos no perfil:", profileError);
-          }
-
-          const oRef = (orders.find(o => o.id === orderId) || currentOrder)?.order_ref || `#${orderId.slice(0, 8).toUpperCase()}`;
-          sb.from("admin_alerts").insert({
-            type: "cancelled",
-            title: "Pedido Cancelado",
-            body: `O cliente cancelou o pedido ${oRef}.`,
-            order_id: orderId
-          }).then();
-          if (currentOrder?.id === orderId) resetFlow();
+        if (!res?.ok) {
+          const msg = res?.reason === "not_cancellable" ? "Este pedido já não pode ser cancelado."
+            : res?.reason === "not_found" ? "Só o criador do pedido o pode cancelar."
+            : "Não foi possível cancelar o pedido.";
+          toast_(msg, "err");
           loadOrders();
+          return;
         }
+
+        toast_(res.refunded ? "Pedido cancelado. 1 crédito devolvido à tua carteira." : "Pedido cancelado.");
+
+        // O servidor só limpa a referência ao vídeo biométrico; o ficheiro apaga-se pela Storage API.
+        if (res.biometric_video_url) {
+          sb.storage.from("transaction-biometrics").remove([res.biometric_video_url]).catch(() => { });
+        }
+
+        const updatedP = {
+          ...profile,
+          credits_balance: res.balance,
+          cancelled_count: res.cancelled_count,
+          last_cancelled_at: res.last_cancelled_at
+        };
+        setProfile(updatedP);
+        localStorage.setItem("bridge_profile", JSON.stringify(updatedP));
+
+        if (currentOrder?.id === orderId) resetFlow();
+        loadOrders();
       },
       "Sim, Cancelar",
       "Voltar"
@@ -1226,90 +1206,36 @@ function ClientApp({ user, onLogout }) {
       "Iniciar Negociação P2P",
       "Confirmas que queres aceitar este pedido P2P e iniciar a correspondência com a outra parte? Este passo desconta 1 crédito (500 Kz) da tua carteira — é o que abre o canal de comunicação seguro entre vocês.",
       async () => {
-        const { data: orderData, error } = await sb.from("orders").update({
-          status: "processing",
-          funder_id: user.id,
-          admin_notes: `Correspondência P2P iniciada pelo parceiro ${user.email}`
-        }).eq("id", orderId).select().maybeSingle();
+        // ── COBRANÇA NO MATCHING — momento em que o serviço é entregue de facto ──
+        // Tudo acontece NO SERVIDOR (função match_order), numa única transacção:
+        // validações (KYC, disponibilidade, pausa), débito de 1 crédito a CADA parte
+        // (quem aceitou e quem criou o pedido), registo no ledger, mensagem inicial
+        // no chat e alerta ao admin. Se alguma parte não tiver crédito, nada é cobrado.
+        const { data: res, error } = await sb.rpc("match_order", { p_order_id: orderId });
+        if (error) { toast_("Erro ao iniciar correspondência: " + error.message, "err"); return; }
 
-        if (error) {
-          toast_("Erro ao iniciar correspondência: " + error.message, "err");
-        } else {
-          // ── COBRANÇA NO MATCHING — momento em que o serviço é entregue de facto ──
-          // O crédito é debitado AQUI, não na criação do pedido nem na conclusão.
-          // É neste instante que a Bridge entrega o valor real: liga duas identidades
-          // verificadas e abre um canal de comunicação seguro entre elas.
-          // Acontece sempre dos DOIS lados — quem clicou "Negociar" agora (funder_id)
-          // E quem criou o pedido originalmente (user_id) — não importa qual dos
-          // dois é o "comprador" ou "vendedor" de USD nesta transacção específica.
-          try {
-            // Débito de quem está a aceitar o pedido agora (clicou "Negociar")
-            const partnerNewBalance = Math.max(0, (parseInt(profile?.credits_balance || 0, 10)) - 1);
-            await sb.from("profiles").update({ credits_balance: partnerNewBalance }).eq("id", user.id);
-            setProfile(prev => ({ ...prev, credits_balance: partnerNewBalance }));
-            await sb.from("credit_transactions").insert({
-              user_id: user.id, order_id: orderId, type: "debit_matching", amount: -1, balance_after: partnerNewBalance
-            });
-
-            // Débito de quem criou o pedido originalmente
-            if (orderData?.user_id) {
-              const { data: creatorProfile } = await sb.from("profiles")
-                .select("credits_balance, credits_reserved")
-                .eq("id", orderData.user_id)
-                .maybeSingle();
-              if (creatorProfile) {
-                const creatorAvailable = (parseInt(creatorProfile.credits_balance || 0, 10)) - (parseInt(creatorProfile.credits_reserved || 0, 10));
-                if (creatorAvailable < 1) {
-                  // O criador do pedido ficou sem créditos entre a criação e agora.
-                  // Não bloqueamos quem aceitou — já pagou e o canal já abriu — mas
-                  // registamos a situação para o admin acompanhar.
-                  await sb.from("admin_alerts").insert({
-                    type: "credit_warning",
-                    title: "Criador do pedido sem créditos no matching",
-                    body: `O utilizador que criou a transacção ${orderId} ficou sem créditos disponíveis no momento do matching. Pode ser necessário intervir.`,
-                    order_id: orderId
-                  });
-                } else {
-                  const creatorNewBalance = Math.max(0, (parseInt(creatorProfile.credits_balance || 0, 10)) - 1);
-                  await sb.from("profiles").update({ credits_balance: creatorNewBalance }).eq("id", orderData.user_id);
-                  await sb.from("credit_transactions").insert({
-                    user_id: orderData.user_id, order_id: orderId, type: "debit_matching", amount: -1, balance_after: creatorNewBalance
-                  });
-                }
-              }
-            }
-
-            await sb.from("orders").update({
-              buyer_credit_reserved: true,
-              seller_credit_reserved: true,
-              fee_debited_at: new Date().toISOString()
-            }).eq("id", orderId);
-          } catch (creditErr) {
-            console.error("Erro ao debitar créditos no matching:", creditErr);
-          }
-
-          toast_("Correspondência iniciada — canal de chat desbloqueado!");
-
-          if (orderData) {
-            await sb.from("chat_messages").insert({
-              order_id: orderId,
-              user_id: orderData.user_id,
-              sender_id: user.id,
-              sender_role: "partner",
-              body: `👋 Olá! Aceitei o teu pedido P2P. Vamos conversar por aqui para transacionar com segurança.`
-            });
-          }
-
-          sb.from("admin_alerts").insert({
-            type: "payment_received",
-            title: "Parceiro P2P Correspondido",
-            body: `O usuário ${user.email} aceitou parear o pedido do usuário.`,
-            order_id: orderId
-          }).then();
-
-          if (orderData) setSelectedOrder(orderData);
+        if (!res?.ok) {
+          const reasons = {
+            partner_no_credits: "Não tens créditos suficientes. Recarrega a tua carteira para continuar.",
+            creator_no_credits: "O criador deste pedido não tem créditos disponíveis neste momento. Tenta outro pedido.",
+            not_available: "Este pedido já não está disponível.",
+            not_found: "Pedido não encontrado.",
+            own_order: "Não podes aceitar o teu próprio pedido.",
+            kyc_required: "Conclui a verificação de identidade (KYC) para negociar.",
+            paused: "Sistema em manutenção. Novas negociações estão suspensas temporariamente.",
+            not_authenticated: "A tua sessão expirou. Entra novamente."
+          };
+          if (res?.reason === "partner_no_credits") setShowActivationScreen(true);
+          if (res?.reason === "kyc_required") setShowKycTrigger(true);
+          toast_(reasons[res?.reason] || "Não foi possível iniciar a correspondência.", "err");
           loadOrders();
+          return;
         }
+
+        setProfile(prev => ({ ...prev, credits_balance: res.balance }));
+        toast_("Correspondência iniciada — canal de chat desbloqueado!");
+        if (res.order) setSelectedOrder(res.order);
+        loadOrders();
       },
       "Confirmar e Iniciar",
       "Cancelar"

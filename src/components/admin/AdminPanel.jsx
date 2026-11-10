@@ -393,9 +393,9 @@ export function AdminPanel({ user, onLogout }) {
         .map(o => (new Date(o.updated_at) - new Date(o.created_at)) / 60000);
       const avgMinutes = times.length > 0 ? (times.reduce((a, b) => a + b, 0) / times.length) : 0;
       
-      const { count: kycCount } = await sb.from("kyc_submissions")
+      const { count: kycCount } = await sb.from("kyc_verifications")
         .select("id", { count: "exact", head: true })
-        .eq("status", "passed");
+        .eq("ocr_status", "passed");
       
       setMetrics({
         total,
@@ -419,11 +419,11 @@ export function AdminPanel({ user, onLogout }) {
         let docSigned = k.document_url;
         let selfieSigned = k.selfie_url;
         if (k.document_url && !k.document_url.startsWith("http")) {
-          const { data: dData } = await sb.storage.from("Documentos kyc").createSignedUrl(k.document_url, 3600);
+          const { data: dData } = await sb.storage.from("kyc-documents").createSignedUrl(k.document_url, 3600);
           if (dData) docSigned = dData.signedUrl;
         }
         if (k.selfie_url && !k.selfie_url.startsWith("http")) {
-          const { data: sData } = await sb.storage.from("Documentos kyc").createSignedUrl(k.selfie_url, 3600);
+          const { data: sData } = await sb.storage.from("kyc-documents").createSignedUrl(k.selfie_url, 3600);
           if (sData) selfieSigned = sData.signedUrl;
         }
         return { ...k, docSigned, selfieSigned };
@@ -466,7 +466,7 @@ export function AdminPanel({ user, onLogout }) {
       const requestsWithUrls = await Promise.all(data.map(async (r) => {
         let signedUrl = r.proof_url;
         if (r.proof_url && !r.proof_url.startsWith("http")) {
-          const { data: sData } = await sb.storage.from("comprovantes de pagamento").createSignedUrl(r.proof_url, 3600);
+          const { data: sData } = await sb.storage.from("payment-proofs").createSignedUrl(r.proof_url, 3600);
           if (sData) signedUrl = sData.signedUrl;
         }
         return {
@@ -488,57 +488,45 @@ export function AdminPanel({ user, onLogout }) {
     }
   }
 
+  // Traduz os erros das funções do servidor para mensagens claras ao administrador
+  function rechargeErrMsg(err) {
+    const m = String(err?.message || "");
+    if (m.includes("RECARGA_NAO_PENDENTE")) return "Esta recarga já foi tratada (aprovada, rejeitada ou cancelada). A lista foi actualizada.";
+    if (m.includes("RECARGA_NAO_ENCONTRADA")) return "Recarga não encontrada.";
+    if (m.includes("UTILIZADOR_NAO_ENCONTRADO")) return "O utilizador desta recarga já não existe.";
+    if (m.includes("RECARGA_INVALIDA")) return "Recarga inválida (créditos em falta).";
+    if (m.includes("FORBIDDEN")) return "Sem permissão de administrador.";
+    return m;
+  }
+
   async function approveRecharge(recharge) {
     setRL(true);
     try {
-      // 1. Buscar saldo actual do utilizador
-      const { data: profileData, error: profErr } = await sb
-        .from("profiles")
-        .select("credits_balance")
-        .eq("id", recharge.user_id)
-        .maybeSingle();
-      if (profErr) throw profErr;
+      // Tudo acontece NO SERVIDOR, numa única transacção (função approve_recharge):
+      // trava a recarga, credita a carteira, marca como confirmada e escreve no livro de créditos.
+      // Se qualquer passo falhar, nada é alterado — e é impossível creditar duas vezes a mesma recarga.
+      const { data: res, error } = await sb.rpc("approve_recharge", { p_recharge_id: recharge.id });
+      if (error) throw error;
 
-      const newBalance = (parseInt(profileData?.credits_balance || 0, 10)) + recharge.credits_added;
-
-      // 2. Creditar a carteira do utilizador
-      const { error: updErr } = await sb.from("profiles")
-        .update({ credits_balance: newBalance })
-        .eq("id", recharge.user_id);
-      if (updErr) throw updErr;
-
-      // 3. Marcar recarga como confirmada
-      const { error: rechErr } = await sb.from("credit_recharges")
-        .update({ status: "confirmed", confirmed_at: new Date().toISOString() })
-        .eq("id", recharge.id);
-      if (rechErr) throw rechErr;
-
-      // 4. Log de auditoria
-      await sb.from("credit_transactions").insert({
-        user_id: recharge.user_id,
-        recharge_id: recharge.id,
-        type: "recharge",
-        amount: recharge.credits_added,
-        balance_after: newBalance
-      });
-
-      // 5. Notificar o utilizador via WhatsApp
+      // Notificar o utilizador via WhatsApp (o bot envia as notificações 'pending')
       if (recharge.phone) {
         await sb.from("notifications").insert({
           user_id: recharge.user_id,
           channel: "whatsapp",
+          template: "recharge_confirmed",
+          destination: recharge.phone,
           recipient_phone: recharge.phone,
-          message_body: `Olá ${recharge.full_name || "Cliente"}, a tua recarga de ${recharge.amount_kz?.toLocaleString("pt-AO")} Kz foi confirmada! ${recharge.credits_added} créditos já estão disponíveis na tua conta — cada crédito dá direito a 1 transacção completa na Bridge. Bons negócios!`,
+          message_body: `Olá ${recharge.full_name || "Cliente"}, a tua recarga de ${recharge.amount_kz?.toLocaleString("pt-AO")} Kz foi confirmada! ${res?.credits_added ?? recharge.credits_added} créditos já estão disponíveis na tua conta — cada crédito dá direito a 1 transacção completa na Bridge. Bons negócios!`,
           status: "pending"
         });
       }
 
-      toast_(`Recarga aprovada — ${recharge.credits_added} créditos creditados!`, "ok");
-      fetchPendingRecharges();
+      toast_(`Recarga aprovada — ${res?.credits_added ?? recharge.credits_added} créditos creditados!`, "ok");
     } catch (err) {
-      toast_("Erro ao aprovar recarga: " + err.message, "err");
+      toast_("Erro ao aprovar recarga: " + rechargeErrMsg(err), "err");
     } finally {
       setRL(false);
+      fetchPendingRecharges();
     }
   }
 
@@ -546,29 +534,36 @@ export function AdminPanel({ user, onLogout }) {
     const reason = window.prompt("Motivo da rejeição (será enviado por notificação):");
     if (reason === null) return;
 
-    const { error } = await sb.from("credit_recharges")
-      .update({ status: "rejected", rejection_reason: reason || "Comprovativo inválido ou ilegível" })
-      .eq("id", recharge.id);
+    const { data: res, error } = await sb.rpc("reject_recharge", {
+      p_recharge_id: recharge.id,
+      p_reason: reason || null
+    });
 
     if (error) {
-      toast_("Erro ao rejeitar: " + error.message, "err");
-    } else {
-      toast_("Recarga rejeitada.");
+      toast_("Erro ao rejeitar: " + rechargeErrMsg(error), "err");
       fetchPendingRecharges();
+      return;
+    }
 
-      if (recharge.proof_url && !recharge.proof_url.startsWith("http")) {
-        await sb.storage.from("comprovantes de pagamento").remove([recharge.proof_url]);
-      }
+    toast_("Recarga rejeitada.");
+    fetchPendingRecharges();
 
-      if (recharge.phone) {
-        await sb.from("notifications").insert({
-          user_id: recharge.user_id,
-          channel: "whatsapp",
-          recipient_phone: recharge.phone,
-          message_body: `Olá ${recharge.full_name || "Cliente"}, a tua recarga de ${recharge.amount_kz?.toLocaleString("pt-AO")} Kz foi recusada. Motivo: ${reason || "Comprovativo inválido ou ilegível"}. Por favor, tenta novamente submetendo o comprovativo correto.`,
-          status: "pending"
-        });
-      }
+    const finalReason = res?.reason || reason || "Comprovativo inválido ou ilegível";
+
+    if (recharge.proof_url && !recharge.proof_url.startsWith("http")) {
+      await sb.storage.from("payment-proofs").remove([recharge.proof_url]).catch(() => { });
+    }
+
+    if (recharge.phone) {
+      await sb.from("notifications").insert({
+        user_id: recharge.user_id,
+        channel: "whatsapp",
+        template: "recharge_rejected",
+        destination: recharge.phone,
+        recipient_phone: recharge.phone,
+        message_body: `Olá ${recharge.full_name || "Cliente"}, a tua recarga de ${recharge.amount_kz?.toLocaleString("pt-AO")} Kz foi recusada. Motivo: ${finalReason}. Por favor, tenta novamente submetendo o comprovativo correto.`,
+        status: "pending"
+      });
     }
   }
 
@@ -632,7 +627,7 @@ export function AdminPanel({ user, onLogout }) {
       if (k.selfie_url && !k.selfie_url.startsWith("http")) toRemove.push(k.selfie_url);
 
       if (toRemove.length > 0) {
-        await sb.storage.from("Documentos kyc").remove(toRemove);
+        await sb.storage.from("kyc-documents").remove(toRemove);
       }
       updates.document_url = null;
       updates.selfie_url = null;
