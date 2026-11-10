@@ -698,7 +698,7 @@ body{font-family:'Plus Jakarta Sans',sans-serif;background:#EEEEF8;color:#0E0C1E
 }
 @media(max-width:480px){
   .shell{margin:0;border-radius:0;max-width:100%}
-  .adm-shell{margin:0;border-radius:0;max-width:100%;min-height:100vh;border:none}
+  .adm-shell{margin:0;border-radius:0;width:100%;max-width:100%;min-height:100vh;border:none}
   body{background:#F0F1FA}
 }
 

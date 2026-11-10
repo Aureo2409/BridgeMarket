@@ -1,7 +1,20 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, lazy, Suspense } from "react";
 import { sb } from "../../lib/supabase.js";
 import { DESTS, STATUS_META } from "../../lib/constants.js";
 import { Toast, StatusPill, Icon } from "../shared/UI.jsx";
+import { fetchDashboardRows } from "./dashboardApi.js";
+
+// O dashboard só é descarregado quando o ADM abre esse separador (não pesa no resto da app).
+// Se o ficheiro não carregar (sem rede, ou nova versão publicada), mostra um aviso em vez de partir o painel.
+const Dashboard = lazy(() =>
+  import("./Dashboard.jsx").catch(() => ({
+    default: () => (
+      <div style={{ padding: "40px 16px", textAlign: "center", color: "#94a3b8", fontWeight: 600, fontSize: 13, lineHeight: 1.5 }}>
+        Não foi possível carregar o dashboard. Verifica a ligação e recarrega a página.
+      </div>
+    ),
+  }))
+);
 
 
 // ── ConfigField — each field needs its own component so hooks work correctly ──
@@ -294,7 +307,8 @@ export function AdminPanel({ user, onLogout }) {
   const [showAuditLogs, setShowAuditLogs] = useState(false);
   const [editingOrder, setEditingOrder] = useState(null);
   const [editForm, setEditForm] = useState({});
-  const [metrics, setMetrics] = useState(null);
+  const [dashVersion, setDashVersion] = useState(0);
+  const dashTimer = useRef(null);
   const [systemPaused, setSystemPaused] = useState(false);
   const [pauseLoading, setPauseLoading] = useState(false);
 
@@ -322,15 +336,21 @@ export function AdminPanel({ user, onLogout }) {
         toast_("Comprovante recebido!");
       })
       .on("postgres_changes", { event: "*", schema: "public", table: "kyc_verifications" }, () => fetchKycs())
-      .on("postgres_changes", { event: "*", schema: "public", table: "orders" }, () => { fetchOrders(); fetchStats(); })
-      .on("postgres_changes", { event: "*", schema: "public", table: "credit_recharges" }, () => fetchPendingRecharges())
+      .on("postgres_changes", { event: "*", schema: "public", table: "orders" }, () => { fetchOrders(); fetchStats(); refreshDashSoon(); })
+      .on("postgres_changes", { event: "*", schema: "public", table: "credit_recharges" }, () => { fetchPendingRecharges(); refreshDashSoon(); })
       .on("postgres_changes", { event: "INSERT", schema: "public", table: "exchange_rates" }, p => setRate(p.new))
       .subscribe();
-    return () => sb.removeChannel(ch);
+    return () => { sb.removeChannel(ch); clearTimeout(dashTimer.current); };
   }, []);
 
+  // Pede ao dashboard para recarregar, mas só uma vez por rajada de alterações (evita pedidos repetidos).
+  function refreshDashSoon() {
+    clearTimeout(dashTimer.current);
+    dashTimer.current = setTimeout(() => setDashVersion(v => v + 1), 2000);
+  }
+
   async function boot() {
-    await Promise.all([fetchAlerts(), fetchOrders(), fetchProofs(), fetchStats(), fetchConfig(), fetchKycs(), fetchPendingRecharges(), fetchAuditLogs(), fetchMetrics()]);
+    await Promise.all([fetchAlerts(), fetchOrders(), fetchProofs(), fetchStats(), fetchConfig(), fetchKycs(), fetchPendingRecharges(), fetchAuditLogs()]);
     const { data } = await sb.from("exchange_rates").select("*").order("fetched_at", { ascending: false }).limit(1).maybeSingle();
     if (data) setRate(data);
   }
@@ -372,44 +392,6 @@ export function AdminPanel({ user, onLogout }) {
       toast_("Erro: " + error.message, "err");
     }
     setPauseLoading(false);
-  }
-
-  async function fetchMetrics() {
-    try {
-      const { data: orders_all } = await sb.from("orders")
-        .select("id, amount_usd, amount_aoa, status, created_at, updated_at");
-      
-      if (!orders_all) return;
-      
-      const completed = orders_all.filter(o => o.status === "completed");
-      const cancelled = orders_all.filter(o => o.status === "cancelled");
-      const total = orders_all.length;
-      
-      const totalUsd = completed.reduce((s, o) => s + (parseFloat(o.amount_usd) || 0), 0);
-      const totalAoa = completed.reduce((s, o) => s + (parseFloat(o.amount_aoa) || 0), 0);
-      
-      const times = completed
-        .filter(o => o.created_at && o.updated_at)
-        .map(o => (new Date(o.updated_at) - new Date(o.created_at)) / 60000);
-      const avgMinutes = times.length > 0 ? (times.reduce((a, b) => a + b, 0) / times.length) : 0;
-      
-      const { count: kycCount } = await sb.from("kyc_verifications")
-        .select("id", { count: "exact", head: true })
-        .eq("ocr_status", "passed");
-      
-      setMetrics({
-        total,
-        completed: completed.length,
-        cancelled: cancelled.length,
-        successRate: total > 0 ? ((completed.length / total) * 100).toFixed(1) : "0.0",
-        totalUsd: totalUsd.toFixed(0),
-        totalAoa: Math.round(totalAoa).toLocaleString("pt-AO"),
-        avgMinutes: avgMinutes.toFixed(0),
-        kycVerified: kycCount || 0,
-      });
-    } catch (e) {
-      console.error("fetchMetrics error:", e);
-    }
   }
 
   async function fetchKycs() {
@@ -768,18 +750,19 @@ export function AdminPanel({ user, onLogout }) {
   }
 
   const TABS = [
-    { id: "alerts", icon: "bell", label: unread > 0 ? ` (${unread})` : "" },
-    { id: "orders", icon: "list" },
-    { id: "cancelled", icon: "ban" },
-    { id: "rate", icon: "chart" },
-    { id: "kyc", icon: "user" },
-    { id: "metrics", icon: "chart" },
-    { id: "audit", icon: "shield" },
-    { id: "config", icon: "settings" },
+    { id: "alerts", icon: "bell", title: "Alertas", label: unread > 0 ? ` (${unread})` : "" },
+    { id: "orders", icon: "list", title: "Pedidos" },
+    { id: "cancelled", icon: "ban", title: "Cancelados" },
+    { id: "rate", icon: "chart", title: "Câmbio" },
+    { id: "kyc", icon: "user", title: "KYC e recargas" },
+    { id: "metrics", icon: "dashboard", title: "Dashboard" },
+    { id: "audit", icon: "shield", title: "Auditoria" },
+    { id: "config", icon: "settings", title: "Configurações" },
   ];
+  const wide = tab === "metrics";
 
   return (
-    <div className="adm-shell">
+    <div className={`adm-shell${wide ? " adm-wide" : ""}`}>
       <Toast toast={toast} />
 
       <div className="adm-hdr">
@@ -798,14 +781,14 @@ export function AdminPanel({ user, onLogout }) {
 
       <div className="adm-tabs">
         {TABS.map(t => (
-          <button key={t.id} className={`adm-tab${tab === t.id ? " on" : ""}`} onClick={() => setTab(t.id)}>
+          <button key={t.id} className={`adm-tab${tab === t.id ? " on" : ""}`} onClick={() => setTab(t.id)} title={t.title} aria-label={t.title + (t.label || "")} aria-current={tab === t.id ? "page" : undefined}>
             <Icon name={t.icon} size={16} />
             {t.label && <span style={{ marginLeft: 4 }}>{t.label}</span>}
           </button>
         ))}
       </div>
 
-      <div className="adm-pg">
+      <div className={`adm-pg${wide ? " adm-pg-flush" : ""}`}>
 
         {/* ── ALERTS ── */}
         {tab === "alerts" && (
@@ -1292,89 +1275,11 @@ export function AdminPanel({ user, onLogout }) {
           </>
         )}
 
-        {/* ── MÉTRICAS DE MERCADO ── */}
+        {/* ── DASHBOARD (métricas) ── */}
         {tab === "metrics" && (
-          <>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
-              <span className="adm-section" style={{ marginBottom: 0 }}>Métricas de Validação de Mercado</span>
-              <button onClick={fetchMetrics} style={{ background: "none", border: "none", fontSize: 10, fontWeight: 700, color: "#6366f1", cursor: "pointer" }}>
-                <div style={{ display: "flex", alignItems: "center", gap: 6 }}><Icon name="refresh" size={14} /> Actualizar</div>
-              </button>
-            </div>
-
-            {!metrics ? (
-              <div style={{ textAlign: "center", padding: "36px 0", color: "#94a3b8", fontWeight: 600, fontSize: 13 }}>A carregar métricas...</div>
-            ) : (
-              <>
-                {/* Volume Cards */}
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 14 }}>
-                  <div className="adm-stat" style={{ cursor: "default" }}>
-                    <div className="adm-stat-val" style={{ color: "#10b981" }}>${metrics.totalUsd}</div>
-                    <div className="adm-stat-lbl">Volume total (USD)</div>
-                  </div>
-                  <div className="adm-stat" style={{ cursor: "default" }}>
-                    <div className="adm-stat-val" style={{ fontSize: 16 }}>{metrics.totalAoa} Kz</div>
-                    <div className="adm-stat-lbl">Volume total (AOA)</div>
-                  </div>
-                  <div className="adm-stat" style={{ cursor: "default" }}>
-                    <div className="adm-stat-val" style={{ color: "#6366f1" }}>{metrics.successRate}%</div>
-                    <div className="adm-stat-lbl">Taxa de sucesso</div>
-                  </div>
-                  <div className="adm-stat" style={{ cursor: "default" }}>
-                    <div className="adm-stat-val">{metrics.kycVerified}</div>
-                    <div className="adm-stat-lbl">Utilizadores KYC</div>
-                  </div>
-                  <div className="adm-stat" style={{ cursor: "default" }}>
-                    <div className="adm-stat-val">{metrics.completed}</div>
-                    <div className="adm-stat-lbl">Ordens concluídas</div>
-                  </div>
-                  <div className="adm-stat" style={{ cursor: "default" }}>
-                    <div className="adm-stat-val" style={{ color: "#ef4444" }}>{metrics.cancelled}</div>
-                    <div className="adm-stat-lbl">Ordens canceladas</div>
-                  </div>
-                </div>
-
-                {/* Avg Resolution Time */}
-                <div className="adm-card" style={{ cursor: "default", marginBottom: 12 }}>
-                  <div style={{ fontSize: 10, color: "#64748b", fontWeight: 700, textTransform: "uppercase", marginBottom: 6, letterSpacing: 0.4 }}>
-                    Tempo médio de resolução
-                  </div>
-                  <div style={{ fontSize: 24, fontWeight: 900, color: "#1e1b4b" }}>
-                    {metrics.avgMinutes < 60
-                      ? `${metrics.avgMinutes} min`
-                      : `${(metrics.avgMinutes / 60).toFixed(1)} h`}
-                  </div>
-                  <div style={{ fontSize: 10.5, color: "#94a3b8", marginTop: 2 }}>
-                    Tempo médio entre criação e conclusão de uma ordem
-                  </div>
-                </div>
-
-                {/* Funnel */}
-                <div className="adm-card" style={{ cursor: "default" }}>
-                  <div style={{ fontSize: 10, color: "#64748b", fontWeight: 700, textTransform: "uppercase", marginBottom: 10, letterSpacing: 0.4 }}>
-                    Funil de Conversão
-                  </div>
-                  <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                    {[
-                      { label: "Total de ordens criadas", val: metrics.total, color: "#6366f1", pct: 100 },
-                      { label: "Concluídas com sucesso", val: metrics.completed, color: "#10b981", pct: metrics.total > 0 ? (metrics.completed / metrics.total * 100) : 0 },
-                      { label: "Canceladas / Falhou", val: metrics.cancelled, color: "#ef4444", pct: metrics.total > 0 ? (metrics.cancelled / metrics.total * 100) : 0 },
-                    ].map(row => (
-                      <div key={row.label}>
-                        <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
-                          <span style={{ fontSize: 11, fontWeight: 700, color: "#334155" }}>{row.label}</span>
-                          <span style={{ fontSize: 11, fontWeight: 900, color: row.color }}>{row.val}</span>
-                        </div>
-                        <div style={{ height: 6, borderRadius: 3, background: "#f1f5f9", overflow: "hidden" }}>
-                          <div style={{ height: "100%", width: `${Math.min(100, row.pct)}%`, background: row.color, borderRadius: 3, transition: "width 0.6s ease" }} />
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </>
-            )}
-          </>
+          <Suspense fallback={<div style={{ padding: "48px 16px", textAlign: "center", color: "#94a3b8", fontWeight: 600, fontSize: 13 }}>A carregar o dashboard…</div>}>
+            <Dashboard loadRows={fetchDashboardRows} version={dashVersion} />
+          </Suspense>
         )}
 
         {/* ── AUDITORIA / SEGURANÇA ── */}
